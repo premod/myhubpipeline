@@ -2217,7 +2217,7 @@ global proc creaturerig()
 	
 	columnLayout -adj true;
 	text " ";
-	text -fn "boldLabelFont" -l "Advance Creature Rig Setup";
+	text -fn "boldLabelFont" -l "Advance Creature Rig Setup for 4Legged Character";
 	text " ";
 	columnLayout -adj true;
     button -h 50 -w 250 -label "Clamp To Root Control " -command "clampNode2Root" -bgc .5 .5 .5;
