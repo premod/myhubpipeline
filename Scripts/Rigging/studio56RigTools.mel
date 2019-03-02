@@ -2217,41 +2217,10 @@ global proc creaturerig()
 	
 	columnLayout -adj true;
 	text " ";
-<<<<<<< HEAD
-	text -fn "boldLabelFont" -l "Advance Creature Rig Setup for";
-=======
 	text -fn "boldLabelFont" -l "Advance Creature Rig for 4leg";
->>>>>>> cd0c97448af45a76c81a9e242d411bcc4b50ae7c
 	text " ";
 	columnLayout -adj true;
     button -h 50 -w 250 -label "Clamp To Root Control " -command "clampNode2Root" -bgc .5 .5 .5;
-   
-      
-    //columnLayout -adj on ;
-    //separator -st "in";
-    //text -l "Additional Attributes" -fn "boldLabelFont" -h 20;
-    //separator -st "in";
-    //rowColumnLayout -nc 6 ;
-    
-    //checkBox -l "Cloth Controls" -h 20 -onc "Con" -ofc "Coff" -v 0;
-    //checkBox -l "Hair Controls" -h 20 -onc "Hon" -ofc "Hoff" -v 0;
-    
-    //setParent -u;
-	//setParent..;
-	
-	//columnLayout -adj on ;
-    //separator -st "in";
-    //text -l "Remove Attributes" -fn "boldLabelFont" -h 20;
-    //separator -st "in";
-    //rowColumnLayout -nc 6 ;
-    
-    //checkBox -l "RigLevel" -h 20  -ofc "Roff" -v 1;
-    //checkBox -l "Hair Controls" -h 20 -onc "Hon" -ofc "Hoff" -v 0;
-    
-    //setParent -u;
-	//setParent..;
-	
-	
 	columnLayout -adj true;
 	separator -st "in";
 	text  -l " Auto Scapula To Front Legs  " -fn "boldLabelFont" -h 20;
