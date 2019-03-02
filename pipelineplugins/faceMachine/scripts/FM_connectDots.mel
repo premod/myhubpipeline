@@ -1,0 +1,147 @@
+//-------------------------------------------
+//connectDots
+//
+//set up unique relationships between the controls and the spline influences.
+//createFC handles the bulk of these connections internally.  
+//INPUTS:	
+//-------------------------------------------
+
+global proc connectDots()
+{
+	//make assignments for points not covered by regular FCs (upperSkull and jawSkull)
+	for ($a = 0; $a < 2; $a++)
+	{
+			//make pointList (these are all special cases, so each pointList is manually defined by the loop number)
+		string $tempPoints;
+		string $matrixStack[];
+		if ($a == 0)
+		{
+			$matrixStack = {"jawSkull_buffer"};
+			$tempPoints = "underChin_curve.cp[0] underChin_curve.cp[1] underChin_curve.cp[2] underChin_curve.cp[3] lowerMouthBag1_curve.cp[0] lowerMouthBag1_curve.cp[1] lowerMouthBag1_curve.cp[2] lowerMouthBag1_curve.cp[3] lowerMouthBag1_curve.cp[4]";
+		}
+		else
+		{
+			$matrixStack = {"upperSkull_buffer"};
+			$tempPoints = "brow3_curve.cp[0] brow3_curve.cp[4] R_underEye3_curve.cp[5] L_underEye3_curve.cp[5] R_cheekPuff_curve.cp[0] R_cheekPuff_curve.cp[4] L_cheekPuff_curve.cp[0] L_cheekPuff_curve.cp[4] R_jaw_curve.cp[0] L_jaw_curve.cp[0] upperMouthBag1_curve.cp[0] upperMouthBag1_curve.cp[1] upperMouthBag1_curve.cp[2] upperMouthBag1_curve.cp[3] upperMouthBag1_curve.cp[4] brow2_curve.cp[0] R_brow_curve.cp[6] brow2_curve.cp[4] L_brow_curve.cp[6]";
+		}
+		string $pointList[];
+		tokenize $tempPoints " " $pointList;
+		
+		//set point relationships between object and splines		
+			//make pointList
+		string $pointList[];
+		tokenize $tempPoints " " $pointList;
+	
+			//make a fmSpaceSwitcherArray for the FC
+		string $switcherArray = `createNode -n ($matrixStack[0] + "_switcherArray") fmSpaceSwitcherArray`;
+			
+			//set the offset matrices to the inverse matrixes of the FC's parents from matrixStack in reverse order
+		float $f[];
+		for ($i = 0; $i < size($matrixStack); $i++)
+		{
+			$f = `getAttr ($matrixStack[(size($matrixStack) - 1 - $i)] + ".inverseMatrix")`;
+			setAttr ($switcherArray + ".om[" + (size($matrixStack) - 1 - $i) + "]") -type "matrix" $f[0] $f[1] $f[2] $f[3] $f[4] $f[5] $f[6] $f[7] $f[8] $f[9] $f[10] $f[11] $f[12] $f[13] $f[14] $f[15];
+		}
+		
+			//connect matrixes of the FC's parents from matrixStack
+		for ($i = 0; $i < size($matrixStack); $i++)
+			connectAttr ($matrixStack[$i] + ".m") ($switcherArray + ".im[" + (size($matrixStack) - 1 - $i) + "]");
+			
+			//for each point, test for existing connections and either connect to the switcherArray or a fmPointBlend
+		for ($i = 0; $i < size($pointList); $i++)
+		{
+			//derive curve name, point number, and point position
+			string $tempArray[];
+			tokenize $pointList[$i] "." $tempArray;
+			string $curveName = $tempArray[0];
+			string $CP = `match "[0-9]+" $tempArray[1]`;
+			float $move[] = `getAttr $pointList[$i]`;		
+	
+			//set the switcher in values to the point's original position
+			setAttr ($switcherArray + ".in[" + $i + "].inX") $move[0];
+			setAttr ($switcherArray + ".in[" + $i + "].inY") $move[1];
+			setAttr ($switcherArray + ".in[" + $i + "].inZ") $move[2];
+				
+			//test to see if this point is already connected or not
+			if (`connectionInfo -id $pointList[$i]`)
+			{
+				// It's important to skip conversion nodes here, otherwise the numbers get really messed up
+				string $connection[] = `listConnections -skipConversionNodes true -d 0 $pointList[$i]`;
+				string $strings[] = `listConnections -skipConversionNodes true -p true -d 0 $pointList[$i]`;
+				string $connectionAttribute = $strings[0];
+				if (nodeType($connection[0]) == "fmPointBlend") //connect to an existing fmPointBlend
+				{
+					string $tempArray[] = `listConnections -d 0 ($connection[0] + ".in")`;
+					connectAttr ($switcherArray + ".out[" + $i + "]") ($connection[0] + ".in[" + size($tempArray) + "].point");
+					setAttr ($connection[0] + ".in[" + size($tempArray) + "].weight") 1;
+				}
+				else //create a fmPointBlend between the original input and the new switcher
+				{
+					string $blender = `createNode -n ($curveName + "_cp_" + $CP + "_fmPointBlend") fmPointBlend`;	
+					connectAttr $connectionAttribute ($blender + ".in[0].point");
+					setAttr ($blender + ".in[0].weight") 1;
+					connectAttr ($switcherArray + ".out[" + $i + "]") ($blender + ".in[1].point");
+					setAttr ($blender + ".in[1].weight") 1;
+					connectAttr -f ($blender + ".out") $pointList[$i];
+				}
+			}
+			else //connect the switcher output back to the point
+				connectAttr ($switcherArray + ".out[" + $i + "]") $pointList[$i];
+		}
+	}
+	
+	
+	//alter weighting for specific points
+		//upperNose vs. innerEye
+	setAttr upperNose_curve_cp_2_fmPointBlend.in[0].weight .25;
+	setAttr upperNose_curve_cp_2_fmPointBlend.in[1].weight .75;
+	
+	setAttr R_underEye3_curve_cp_0_fmPointBlend.in[0].weight .25;
+	setAttr R_underEye3_curve_cp_0_fmPointBlend.in[1].weight .75;
+	setAttr L_underEye3_curve_cp_0_fmPointBlend.in[0].weight .25;
+	setAttr L_underEye3_curve_cp_0_fmPointBlend.in[1].weight .75;
+	
+	setAttr R_overEye2_curve_cp_0_fmPointBlend.in[0].weight .75;
+	setAttr R_overEye2_curve_cp_0_fmPointBlend.in[1].weight .25;
+	setAttr L_overEye2_curve_cp_0_fmPointBlend.in[0].weight .75;
+	setAttr L_overEye2_curve_cp_0_fmPointBlend.in[1].weight .25;
+	
+	setAttr R_underEye2_curve_cp_0_fmPointBlend.in[0].weight .75;
+	setAttr R_underEye2_curve_cp_0_fmPointBlend.in[1].weight .25;
+	setAttr L_underEye2_curve_cp_0_fmPointBlend.in[0].weight .75;
+	setAttr L_underEye2_curve_cp_0_fmPointBlend.in[1].weight .25;
+	
+		//brow1 vs eye
+	setAttr R_overEye2_curve_cp_1_fmPointBlend.in[0].weight .25;
+	setAttr R_overEye2_curve_cp_1_fmPointBlend.in[1].weight .75;
+	setAttr L_overEye2_curve_cp_1_fmPointBlend.in[0].weight .25;
+	setAttr L_overEye2_curve_cp_1_fmPointBlend.in[1].weight .75;
+	
+		//lowerMouth vs chin
+	setAttr chin_curve_cp_4_fmPointBlend.in[0].weight .8;
+	setAttr chin_curve_cp_4_fmPointBlend.in[1].weight .2;
+	setAttr chin_curve_cp_0_fmPointBlend.in[0].weight .8;
+	setAttr chin_curve_cp_0_fmPointBlend.in[1].weight .2;
+	
+	setAttr R_cheek1_curve_cp_4_fmPointBlend.in[0].weight .9;
+	setAttr R_cheek1_curve_cp_4_fmPointBlend.in[1].weight .1;
+	setAttr L_cheek1_curve_cp_4_fmPointBlend.in[0].weight .9;
+	setAttr L_cheek1_curve_cp_4_fmPointBlend.in[1].weight .1;
+	
+		//mouth vs cheek
+	setAttr R_cheek1_curve_cp_1_fmPointBlend.in[0].weight .2;		//cheekbone
+	setDrivenKeyframe -itt spline -cd FM_data.R_nasalCrease -dv -1 -v 0 R_cheek1_curve_cp_1_fmPointBlend.in[1].weight;	
+	setDrivenKeyframe -itt spline -ott spline -cd FM_data.R_nasalCrease -dv 0 -v .4 R_cheek1_curve_cp_1_fmPointBlend.in[1].weight;
+	setDrivenKeyframe -itt spline -cd FM_data.R_nasalCrease -dv 1 -v 1 R_cheek1_curve_cp_1_fmPointBlend.in[1].weight;
+	setAttr R_cheek1_curve_cp_1_fmPointBlend.in[2].weight .4;		//upperMouth
+	setAttr L_cheek1_curve_cp_1_fmPointBlend.in[0].weight .2;		//cheekbone
+	setDrivenKeyframe -itt spline -cd FM_data.L_nasalCrease -dv -1 -v 0 L_cheek1_curve_cp_1_fmPointBlend.in[1].weight;	
+	setDrivenKeyframe -itt spline -ott spline -cd FM_data.L_nasalCrease -dv 0 -v .4 L_cheek1_curve_cp_1_fmPointBlend.in[1].weight;
+	setDrivenKeyframe -itt spline -cd FM_data.L_nasalCrease -dv 1 -v 1 L_cheek1_curve_cp_1_fmPointBlend.in[1].weight;
+	setAttr L_cheek1_curve_cp_1_fmPointBlend.in[2].weight .4;		//upperMouth
+		
+	setAttr R_cheek1_curve_cp_2_fmPointBlend.in[0].weight .25;	//cheek
+	setAttr R_cheek1_curve_cp_2_fmPointBlend.in[1].weight .75;	//mouth
+	setAttr L_cheek1_curve_cp_2_fmPointBlend.in[0].weight .25;	//cheek
+	setAttr L_cheek1_curve_cp_2_fmPointBlend.in[1].weight .75;	//mouth
+}

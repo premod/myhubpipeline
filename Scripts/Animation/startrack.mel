@@ -1,0 +1,110 @@
+global proc startrack() {
+string $username= getenv ("USERNAME");
+global string $T_user_N;
+$tusers =  "//sanstoo/Track$/users.txt";
+
+$fileId=`fopen $tusers "r"`;
+string $nextLine = `fgetline $fileId`;
+while ( size( $nextLine ) > 0 ) {
+    	//print ( $nextLine );
+    	$nextLine = `fgetline $fileId`;
+	string $buffer[];
+	tokenize($nextLine,",",$buffer);
+	if ($username == $buffer[0]) {
+		$T_user_N = $buffer[1];
+		int $ObjSel = `scriptJob -e "SelectionChanged" "idleTrack(\"objSelected\")"`;
+}
+}
+fclose $fileId;
+global float $oldTime;
+string $usertime = `date -f "hh:mm:ss"`;
+string $buffer2[]; tokenize ($usertime,":",$buffer2);
+$oldTime = ($buffer2[0] +"."+$buffer2[1]);
+}
+
+
+global proc idleTrack(string $inp) {
+global float $oldTime;
+float $newTime;
+global string $oldIdleInp;
+string $usertime = `date -f "hh:mm:ss"`;
+string $buffer2[]; tokenize ($usertime,":",$buffer2);
+$newTime = ($buffer2[0] +"."+$buffer2[1]);
+float $breakTimeLimit = 0.03;
+
+//print ("\nOld Inp="+$oldIdleInp);
+//print ("\nNew Inp="+$inp);
+//---------------------------------------------------
+if ($newTime < ($oldTime+$breakTimeLimit)) {
+ if ($inp == "objSelected") {
+  logIdle ($usertime);
+ } else if (($inp == "TimeChanged")&&($oldIdleInp == "PB start")){
+  logIdle ($usertime+"\tPlayblast");
+ } else if ($inp == "TimeChanged"){
+  logIdle ($usertime);
+ }
+} else {
+ if ($oldIdleInp!="PB start"){
+  $breakTime = timeDifference ($oldTime,$newTime);
+  logIdle ($usertime+"\tBreak (in Hrs)"+"\t"+$breakTime);
+ }
+}
+//---------------------------------------------------
+$oldTime = $newTime;
+$oldIdleInp = $inp;
+}
+
+//================================================================================================================
+global proc float timeDifference (float $startTime, float $endTime) {
+float $difference;
+//--------------------------
+string $startHr = $startTime;
+string $buffer[]; 
+tokenize ($startHr,".",$buffer);
+int $stHr = $buffer[0];
+//----------------------------
+string $endHr = $endTime;
+string $buffer[];
+tokenize ($endHr,".",$buffer);
+int $enHr = $buffer[0];
+//--------------------------
+$differHr = $enHr -$stHr;
+if ($differHr>=1){
+ $difference = ($endTime - $startTime)-.4;
+ } else {
+ $difference = ($endTime - $startTime);
+}
+string $buffer[];
+string $differenceStr = $difference;
+tokenize ($differenceStr,".",$buffer);
+float $decim = ("."+$buffer[1]);
+if ($decim>=0.6) {
+ $difference = ($difference + 1)-0.6;
+}
+return $difference;
+}
+
+//================================================================================================================
+
+global proc logIdle (string $whichTime) {
+global string $prjpath;
+global string $T_user_N;
+
+string $buffer[];
+tokenize ($T_user_N,"\n",$buffer);
+$T_user_N = $buffer[0];
+
+$prjpath = "//sanstoo/Track$/";
+string $username= getenv ("USERNAME");
+string $userdate = `date -f "YYYY_MM"`;
+string $filename = ($username+ "_" + $T_user_N + "_" + $userdate  + ".csv");
+string $userdateCsv = `date -f "YYYY_MM_DD"`;
+string $userdata = ($userdateCsv+"\t"+$whichTime+"\n");
+
+$exampleFileName = ($prjpath+$filename);
+$fileId=`fopen $exampleFileName "a"`;
+fwrite $fileId $userdata;
+fclose $fileId;
+}
+//end of idleTrack
+

@@ -1,0 +1,59 @@
+global proc setPropCleaner()
+{
+	string $default[] = {"initialShadingGroup","initialParticleSE"};
+	string $list[] = `ls -type "shadingEngine"`;
+	string $diff[] = stringArrayRemove($default, $list);
+	for($each in $diff)
+	{
+		lockNode -lock off $each;
+	}
+	print ("--------------------------------------\n");
+	print ("All SENodes UnLocked"); 
+	print ("\n--------------------------------------");
+	
+	//Deletes UnUsed Nodes.
+	catch(hyperShadePanelMenuCommand("hyperShadePanel1", "deleteUnusedNodes"));
+	print ("--------------------------------------\n");
+	print ("All UnUsed Nodes Deleted");
+	print ("\n--------------------------------------");
+
+	string $list[] = `polyUVSet -q -auv`; 	
+	for($i in $list)
+	{
+		if($i == "map1")
+		continue;
+		else
+		catch( `polyUVSet -d -uvSet $i` );
+		print ($i+" deleted"+"\n");
+	}
+	print ("--------------------------------------\n");
+	print ("Empty UVSets deleted");
+	print ("\n--------------------------------------\n");
+
+	catch(`delete uiConfigurationScriptNode`);
+	catch(`delete sceneConfigurationScriptNode`);
+	print ("--------------------------------------\n");
+	print ("Empty Script Nodes deleted");
+	print ("\n--------------------------------------\n");
+
+	string $SC_brushnodes[] = `ls -typ brush`; 
+	for ($SC_brush in $SC_brushnodes)
+	{ 
+		delete $SC_brush; 
+	} 
+	print ("--------------------------------------\n");
+	print ("BrushNodes deleted");
+	print ("\n--------------------------------------\n");
+
+	string $unKnown[] = `ls -typ unknown`;
+	for($each in $unKnown)
+	{
+		delete $each;
+	}
+	print ("--------------------------------------\n");
+	print ("UnKnown Nodes deleted");
+	print ("\n--------------------------------------\n");
+	
+	$gUseSaveScenePanelConfig = false;file -uc false;
+	savePrefsChanges;
+}

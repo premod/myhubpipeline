@@ -1,0 +1,256 @@
+global proc tnnTextureManagerSE()
+{
+	if( (`window -exists textureManWin`) == true ){deleteUI textureManWin;}
+	window -widthHeight 313 450 -t "TNN Texture Manager                  Sanraa Media..." -s 0 -mb true textureManWin;
+	menu -l " Item List ";
+	menuItem -l "CHARS"  -c referCharsShaderSE forRefChars;
+	//menuItem -l "SETS" -c referSetsShaderSE forRefSets;
+	menuItem -l "PROPS" -c referPropsShaderSE forRefProps;
+	
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 refShaders`;
+	formLayout -edit
+	     -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+	
+	string $child = `columnLayout -adj true DEFAULT`;
+		textScrollList -ams false -fn "fixedWidthFont" -h 313 propslistDefaultSE;
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Assign Shader To Selected Asset" -c getSelectedDefaultSE;
+		button  -h 25 -l "Refresh List";
+       setParent ..;
+
+	 string $child5 = `columnLayout -adj true LOWRES`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistLowresSE;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Assign Shader To Selected Asset" -c getSelectedDefaultSE;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $smooth = `columnLayout -adj true SMOOTH`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistSmootSE;	
+		button -h 25 -bgc 0.5 0.7 0.9 -l "Assign &Smooth To Selected Asset" -c getSelectedSmoothSE;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $unSmooth = `columnLayout -adj true UNSMOOTH`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistUnSmootSE;	
+		button -h 25 -bgc 0.5 0.7 0.9 -l "Un Smooth Selected Asset" -c getSelectedUnSmoothSE;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	tabLayout -edit -tabLabel $child "DEFAULT" -tabLabel $child5 "LOWRES" -tabLabel $smooth "SMOOTH" -tabLabel $unSmooth "UNSMOOTH" $tabs ;
+	
+ showWindow;
+}
+
+global proc referCharsShaderSE()
+{
+	textScrollList -e -ra propslistDefaultSE;
+	textScrollList -e -ra propslistLowresSE;
+	textScrollList -e -ra propslistSmootSE;
+	textScrollList -e -ra propslistUnSmootSE;
+	string $refNodes[] = `file -q -r`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "CHARS") || ($buffer[6] == "CHARS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistDefaultSE;
+				textScrollList -e -append $name propslistLowresSE;
+				textScrollList -e -append $name propslistSmootSE;
+				textScrollList -e -append $name propslistUnSmootSE;
+
+			}
+		}
+	}
+} 
+
+global proc referSetsShaderSE()
+{
+	textScrollList -e -ra propslistDefaultSE;
+	textScrollList -e -ra propslistLowresSE;
+	textScrollList -e -ra propslistSmootSE;
+	textScrollList -e -ra propslistUnSmootSE;
+	string $refNodes[] = `file -q -r`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "SETS") || ($buffer[6] == "SETS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistDefaultSE;
+				textScrollList -e -append $name propslistLowresSE;
+				textScrollList -e -append $name propslistSmootSE;
+				textScrollList -e -append $name propslistUnSmootSE;
+			}
+		}
+	}
+} 
+
+global proc referPropsShaderSE()
+{
+	textScrollList -e -ra propslistDefaultSE;
+	textScrollList -e -ra propslistLowresSE;
+	textScrollList -e -ra propslistSmootSE;
+	textScrollList -e -ra propslistUnSmootSE;
+	string $refNodes[] = `file -q -r`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "PROPS") || ($buffer[6] == "PROPS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistDefaultSE;
+				textScrollList -e -append $name propslistLowresSE;
+				textScrollList -e -append $name propslistSmootSE;
+				textScrollList -e -append $name propslistUnSmootSE;
+			}
+		}
+	}
+} 
+
+global proc getSelectedDefaultSE()
+{
+	string $chars = `menuItem -q -l forRefChars`;
+	//string $sets = `menuItem -q -l forRefSets`;
+	string $props = `menuItem -q -l forRefProps`;
+
+	string $defaultList[] = `textScrollList -q -si propslistDefaultSE`;
+	string $lowresList[] = `textScrollList -q -si propslistLowresSE`;
+	string $shaderType = `tabLayout -q -st refShaders`;
+
+	textScrollList -e -da propslistDefaultSE;
+	textScrollList -e -da propslistLowresSE;
+	textScrollList -e -da propslistSmootSE;
+	textScrollList -e -da propslistUnSmootSE;
+	
+	string $refNodes[] = `file -q -r`;
+	for($r in $refNodes)
+	{ 
+		string $buffer[];
+		$numTokens = `tokenize $r "/" $buffer`;
+		string $fName = basenameEx($r);
+		if(($defaultList[0] == $fName) && ($shaderType == "DEFAULT"))
+		{
+			dConnectAttruburesLighting();
+			select ($fName+"*:Rig");
+			hyperShade -assign initialShadingGroup;
+			select -cl;	
+			string $ns[];
+			$numTokens = `tokenize $defaultList[0] "_" $ns`;
+			string $nameSpace = `namespace -ex ($ns[0]+"_SHA")`;
+			file -rr ("Q:/THE99/PRODUCTION/REFERENCES/"+$buffer[4]+"/"+$buffer[5]+"/COMMON_SHADERS/"+$ns[0]+"_SHA"+".ma");
+		}
+
+		else if(($lowresList[0] == $fName) && ($shaderType == "LOWRES"))
+		{
+			string $ns[];
+			$numTokens = `tokenize $lowresList[0] "_" $ns`;
+			string $nameSpace = `namespace -ex ($ns[0]+"_SHA")`;
+			if($nameSpace == "1")
+			{
+				warning "Already Loaded.Please Check Reference Editor.";
+			}
+			else if($nameSpace == "0")
+			{
+				string $path = `file -r -ns ($ns[0]+"_SHA") ("Q:/THE99/PRODUCTION/REFERENCES/"+$buffer[4]+"/"+$buffer[5]+"/COMMON_SHADERS/"+$ns[0]+"_SHA"+".ma")`;
+				assignShaderInfoSE($lowresList[0]);
+			}
+		}	
+	}
+}
+
+global proc assignShaderInfoSE(string $assignChar)
+{
+	dConnectAttruburesLighting();
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel4`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel2`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel3`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel1`);
+	string $default[] = {"lambert1","particleCloud1"};
+	string $lowresList = $assignChar;
+	string $ns[];
+	$numTokens = `tokenize $lowresList "_" $ns`;
+	string $mat[] = `ls -typ "shadingEngine"`;
+	string $final[] = stringArrayRemove($default, $mat);
+	for($i=0; $i<size($final); $i++)
+	{
+		int $val = startsWith($final[$i],$ns[0]);
+		if($val == "1")
+		{
+			select -r $final[$i];
+			hyperShade -objects "";
+			string $attr[] = `listAttr -l $final[$i]`;
+			for($j=0; $j<size($attr); $j++)
+			{
+				string $name = getAttr ($final[$i]+"."+"Assigned"+$j);
+				string $shaderName[] = `ls -r 1 ("*"+$name)`;
+				for($k=0; $k<size($shaderName); $k++)
+				{
+					catch(`select -tgl ($shaderName[$k])`);
+					catch(`sets -e -forceElement $final[$i]`);
+				}
+			}
+		select -cl;
+		}
+	}
+	dConnectAttruburesLighting();
+	print "Assigned Successfully"; 
+}
+
+global proc getSelectedSmoothSE()
+{
+	string $smootList[] = `textScrollList -q -si propslistSmootSE`;
+	textScrollList -e -da propslistSmootSE;
+	textScrollList -e -da propslistUnSmootSE;
+	select ($smootList[0]+"*:Rig");
+	SelectAllPolygonGeometry;
+	string $lst[] = `ls -sl`;
+	for($each in $lst)
+	{
+		int $val = startsWith($each, $smootList[0]);
+		if($val == "0")
+		{
+			select -d $each;
+		}
+	}
+	
+	string $list[] = `ls -sl`;
+	for($a in $list)
+	{
+		string $smtName[] = `polySmooth $a`;
+		rename $smtName[0] ($smootList[0]+"_"+$smtName[0]);
+	}
+}
+
+global proc getSelectedUnSmoothSE()
+{
+	string $smootList[] = `textScrollList -q -si propslistSmootSE`;
+	string $smootList[] = `textScrollList -q -si propslistUnSmootSE`;
+	textScrollList -e -da propslistSmootSE;
+	textScrollList -e -da propslistUnSmootSE;
+	string $smtNode[] = `ls -typ "polySmoothFace"`;
+	for($node in $smtNode)
+	{
+		string $mat = `match ($smootList[0]+"_") $node`;
+		if(`size($mat)` == "1")
+		{
+			delete $node;
+		}
+	}
+}

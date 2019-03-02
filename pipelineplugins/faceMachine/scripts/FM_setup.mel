@@ -1,0 +1,1043 @@
+//-------------------------------------------
+//Face Machine master rigging script
+//
+//select parent object, head mesh, Left eye, Right eye, upper teeth, lower teeth, tongue, then execute
+//INPUTS:	string $neck		= a list of splines to be clusterized
+//			string $headSurface
+//			string $L_eyeSurface
+//			string $R_eyeSurface
+//			string $upperTeethSurface
+//			string $lowerTeethSurface
+//			string $tongueSurface
+//-------------------------------------------
+
+
+
+global proc fmRiggingIncreaseProgress()
+{
+	global int $fmGlobalProgressAmount;
+	++$fmGlobalProgressAmount;
+	progressWindow -edit -progress $fmGlobalProgressAmount;
+}
+
+global proc rigFaceMachine(string $neck, string $headSurfaces[], string $L_eyeSurface, string $R_eyeSurface, string $upperTeethSurface, string $lowerTeethSurface, string $tongueSurface, int $useSmartWeighting, int $controlEyePosition, int $controlTeethPosition, int $controlTonguePosition)
+{
+	global int $fmGlobalProgressAmount;
+	
+	source FM_tools.mel;
+	source FM_eyeStructure.mel;
+	
+	
+	// Source the Face Machine UI files.  Note: we'll probably need to change this once the files are concatenated / in their final directory.
+	source "ui_global.mel";
+	source "ui_anzovin.mel";
+	source "ui_poses.mel";
+	source "FM_interface.mel";
+	source "FM_menus.mel";
+	source "FM_poses.mel";
+	
+	
+	// Start a progress window:
+	
+	$fmGlobalProgressAmount = 0;
+	
+	int $faceMeshCount = size(`sets -q fmFaceMeshesObject`);
+	int $maxValue = 45 + (82 * $faceMeshCount) + 39;
+	if ($useSmartWeighting == 0)
+		$maxValue -= 3 * $faceMeshCount;
+	
+	progressWindow
+		-title "The Face Machine is rigging..."
+		-progress 0
+		-minValue 0
+		-maxValue $maxValue
+		-status "This may take several minutes..."
+		-isInterruptable false;
+	
+	
+	// Extra scriptJob to make sure that the progress window closes if there's an error
+	scriptJob -idleEvent "progressWindow -endProgress;" -runOnce true ;
+	
+	
+	//print statement for the user:
+	warning "The Face Machine is rigging, please wait.  This may take several moments.\n";
+	refresh -f;
+
+	//------------------------------------//
+	//--create plugin check script node---//
+	//------------------------------------//
+	
+	// We have to do this here, otherwise the script node isn't loaded when the scene is loaded with no plug-in.  Why?  Who knows! *
+	// * I know!  It's because Maya aborts loading the scene after setting the weightList data for an unknown node causes some kind of
+	// buffer overflow error!
+	
+	string $noPluginWarningTitle = "This scene requires TFM or ARN plug-in";
+	string $noPluginWarningMessage = "WARNING: This scene requires either The Face Machine or Anzovin Rig Nodes plug-in in order to load correctly. To download a free copy of the Anzovin Rig Nodes plug-in, go to URL in the text field below. You should close this scene immediately, otherwise Maya might crash. (Note: Maya will probably crash anyway.)";
+	string $noPluginWarningURL = "http://www.anzovin.com/products/arn1mayaDownloads.html";
+	
+	string $warningScript = "";
+	$warningScript += "global proc fm_pluginNotLoadedDialog()\n";
+	$warningScript += "{\n";
+	$warningScript += "string $form = `setParent -q`;\n";
+	$warningScript += "int $formWidth = 350;\n";
+	$warningScript += "int $spacer = 5;\n";
+	$warningScript += "int $top = 0;\n";
+	$warningScript += "int $edge = 5;\n";
+	$warningScript += "int $textWidth = $formWidth - $edge*2;\n";
+	$warningScript += "formLayout -e -width $formWidth $form;";
+	$warningScript += ("string $messageText = \"" + encodeString($noPluginWarningMessage) + "\";\n");
+	$warningScript += "string $words[];\n";
+	$warningScript += "int $count = `tokenize $messageText \" \" $words`;\n";
+	$warningScript += "string $currentText = $words[0];\n";
+	$warningScript += "string $text = `text -l $currentText`;\n";
+	$warningScript += "for($i = 1; $i < $count; ++$i) {\n";
+	$warningScript += "    text -edit -l ($currentText + \" \" + $words[$i]) $text;\n";
+	$warningScript += "    if (`text -q -width $text` > $textWidth) {\n";
+	$warningScript += "        $currentText += (\"\\n\" + $words[$i]);\n";
+	$warningScript += "        text -edit -l $currentText $text;\n";
+	$warningScript += "    } else\n";
+	$warningScript += "        $currentText += (\" \" + $words[$i]);\n";
+	$warningScript += "}\n";
+	$warningScript += "string $textField;\n";
+	$warningScript += "if (`about -mac` == 1)\n";
+	$warningScript += ("     $textField = `textField -editable true -text \"" + encodeString($noPluginWarningURL) + "\"`;\n");
+	$warningScript += "else\n";
+	$warningScript += ("     $textField = `textField -editable false -text \"" + encodeString($noPluginWarningURL) + "\"`;\n");
+	$warningScript += "string $button = `button -l \"OK\" -c \"layoutDialog -dismiss \\\"OK\\\"\"`;\n";
+	$warningScript += "formLayout -edit\n";
+	$warningScript += "    -attachForm $text \"top\" $top\n";
+	$warningScript += "    -attachForm $text \"left\" $edge\n";
+	$warningScript += "    -attachNone $text \"bottom\"\n";
+	$warningScript += "    -attachForm $text \"right\" $edge\n";
+	$warningScript += "    -attachControl $textField \"top\" $spacer $text\n";
+	$warningScript += "    -attachForm $textField \"left\" $edge\n";
+	$warningScript += "    -attachNone $textField \"bottom\"\n";
+	$warningScript += "    -attachForm $textField \"right\" $edge\n";
+	$warningScript += "    -attachControl $button \"top\" $spacer $textField\n";
+	$warningScript += "    -attachPosition $button \"left\" -40 50 \n";
+	$warningScript += "    -attachNone $button \"bottom\"\n";
+	$warningScript += "    -attachPosition $button \"right\" -40 50\n";
+	$warningScript += "    $form;\n";
+	$warningScript += "}\n";
+	$warningScript += "if (`pluginInfo -q -loaded \"faceMachine\"` == 0 && `pluginInfo -q -loaded \"anzovinRigNodes\"` == 0)\n";
+	$warningScript += ("    layoutDialog -title \"" + encodeString($noPluginWarningTitle) + "\" -ui \"fm_pluginNotLoadedDialog\";");
+	
+	scriptNode -scriptType 2 -beforeScript $warningScript -name "fmSceneOpenPluginCheckScript";
+	
+	
+	
+	
+	//------------------------------------//
+	//--------calculate world scale-------//
+	//------------------------------------//
+	
+	setAttr FM_data.worldScale ((`getAttr Face_Machine_WC.sx` + `getAttr Face_Machine_WC.sy` + `getAttr Face_Machine_WC.sz`) / 3);
+	
+	// Move FM_controls to match position of the Face_Machine_WC
+	//string $strings[] = `parentConstraint Face_Machine_WC FM_controls`;
+	//delete $strings[0];
+	
+	
+	
+	//------------------------------------//
+	//---Unmirror any mirrored widgets----//
+	//------------------------------------//
+	select -cl;
+	string $strings[] = `ls -type "transform" "*_WC"`;
+	select -add $strings;
+	$strings = `ls -type "transform" "*_eyePivot"`;
+	select -add $strings;
+	$strings = `ls -sl`;
+	select -cl;
+	JM_unMirror($strings, "L_", "R_");
+	
+	
+	//------------------------------------//
+	//----fix rotate pivots and scale-----//
+	//------------------------------------//
+	
+	float $f[] = `getAttr Face_Machine_WC.translate`;
+	xform -ws -rp $f[0] $f[1] $f[2] upperSkull_buffer;
+	xform -ws -sp $f[0] $f[1] $f[2] upperSkull_buffer;
+	xform -ws -rp $f[0] $f[1] $f[2] cheekSkull_buffer;
+	xform -ws -sp $f[0] $f[1] $f[2] cheekSkull_buffer;
+	xform -ws -rp $f[0] $f[1] $f[2] jawSkull_buffer;
+	xform -ws -sp $f[0] $f[1] $f[2] jawSkull_buffer;
+	
+	// Important to do this now:
+	delete other_deformers_scaleConstraint1;
+	delete IK_eye_FC_staticBuffer_parentConstraint1;
+	delete IK_eye_FC_staticBuffer_scaleConstraint1;
+	
+	setAttr other_deformers.s 1 1 1;
+	
+	/*
+	//------------------------------------//
+	//--------create display layers-------//
+	//------------------------------------//
+	
+	createDisplayLayer -name "secondaryControls" -number 2 -empty;
+	setAttr secondaryControls.color 24;
+	createDisplayLayer -name "primaryControls" -number 1 -empty;
+	setAttr primaryControls.color 4;
+	*/
+	
+	if (attributeExists("secondaryControls", "FM_data") != 1) {
+		addAttr -at short -minValue 0 -maxValue 1  -ln "secondaryControls" -storable true -keyable false FM_data;
+		setAttr -cb true FM_data.secondaryControls;
+	}
+	
+	setAttr FM_data.primaryControls 1;
+	setAttr FM_data.secondaryControls 1;
+	
+	//------------------------------------//
+	//-----------unskin objects-----------//
+	//------------------------------------//
+	
+	//unskin the spline influences
+	delete -ch `ls "influenceCurves|*"`;
+	
+	
+	//------------------------------------//
+	//----------assign parents------------//
+	//------------------------------------//
+	
+	
+	//cheeks
+	// Fix for aimConstraint problem on the cheeks:
+	
+	string $transformBuffer = `createNode transform -n "transformation_buffer"`;
+	parent $transformBuffer "faceMachine";
+	
+	string $jawSkullBuffer2 = `createNode transform -n "jawSkull_staticSpaceBuffer"`;
+	string $upperSkullBuffer2 = `createNode transform -n "upperSkull_staticSpaceBuffer"`;
+	string $cheekSkullBuffer2 = `createNode transform -n "cheekSkull_staticSpaceBuffer"`;
+	
+	float $f[] = `xform -q -os -rp "jawSkull_buffer"`;
+	xform -os -rp $f[0] $f[1] $f[2] $jawSkullBuffer2;
+	$f = `xform -q -os -rp "cheekSkull_buffer"`;
+	xform -os -rp $f[0] $f[1] $f[2] $cheekSkullBuffer2;
+	$f = `xform -q -os -rp "upperSkull_buffer"`;
+	xform -os -rp $f[0] $f[1] $f[2] $upperSkullBuffer2;
+	
+	parent $jawSkullBuffer2 $transformBuffer;
+	parent $upperSkullBuffer2 $transformBuffer;
+	parent $cheekSkullBuffer2 $transformBuffer;
+	parent "cheekRoll_target" $transformBuffer;
+	parent "chin_target" $jawSkullBuffer2;
+	
+	connectAttr "jawSkull_buffer.t" ($jawSkullBuffer2 + ".t");
+	connectAttr "jawSkull_buffer.r" ($jawSkullBuffer2 + ".r");
+	
+	pointConstraint -mo $upperSkullBuffer2 $jawSkullBuffer2 $cheekSkullBuffer2;
+	aimConstraint -mo -aim 0 -1 0 -u 0 0 1 -wuo "cheekRoll_target" -wut "object" chin_target $cheekSkullBuffer2;
+	
+	connectAttr ($cheekSkullBuffer2 + ".t") "cheekSkull_buffer.t";
+	connectAttr ($cheekSkullBuffer2 + ".r") "cheekSkull_buffer.r";
+	
+	setAttr ($transformBuffer + ".v") 0;
+	
+	//pointConstraint -mo upperSkull_buffer jawSkull_buffer cheekSkull_buffer;
+	//aimConstraint -mo -aim 0 -1 0 -u 0 0 1 -wuo "cheekRoll_target" -wut "object" chin_target cheekSkull_buffer;
+	
+	
+	
+	//jaw
+	parentConstraint -mo jaw_FC jawSkull_buffer;
+
+	//lowerTeeth
+	delete lowerTeeth_FC_staticBuffer_parentConstraint1 lowerTeeth_FC_staticBuffer_scaleConstraint1 lowerTeeth_JT_parentConstraint1;
+	parentConstraint -mo lowerTeeth_FC lowerTeeth_JT;
+	scaleConstraint -mo lowerTeeth_FC lowerTeeth_JT;
+
+	//upperTeeth
+	delete upperTeeth_FC_staticBuffer_parentConstraint1 upperTeeth_FC_staticBuffer_scaleConstraint1 upperTeeth_JT_parentConstraint1;
+	parentConstraint -mo upperTeeth_FC upperTeeth_JT;
+	scaleConstraint -mo upperTeeth_FC upperTeeth_JT;
+	
+	//tongue
+	delete tongue_FC_staticBuffer_parentConstraint1 tongue_FC_staticBuffer_scaleConstraint1 tongue1_JT_parentConstraint1 tongue2_JT_parentConstraint1 tongue3_JT_parentConstraint1 tongue4_JT_parentConstraint1 tongue5_JT_parentConstraint1;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 tongue_FC_staticBuffer;
+	parent tongue3_JT tongue2_JT;
+	parent tongue4_JT tongue3_JT;
+	parent tongue5_JT tongue4_JT;
+	
+	if ($controlTonguePosition == 1) {
+		parentConstraint -mo jaw_FC tongue1_JT;
+		scaleConstraint -mo jaw_FC tongue1_JT;
+		pointConstraint -mo tongue_FC tongue2_JT;
+		orientConstraint -mo tongue_FC tongue2_JT;
+	} else {
+		
+		string $jawLocal1 = `createNode transform -n "jaw_FC_local"`;
+		parent $jawLocal1 "FM_controls";
+		string $tongueLocal1 = `createNode transform -n "tongue_FC_local"`;
+		parent $tongueLocal1 "FM_controls";
+		
+		parentConstraint jaw_FC $jawLocal1;
+		scaleConstraint jaw_FC $jawLocal1;
+		parentConstraint tongue_FC $tongueLocal1;
+		scaleConstraint tongue_FC $tongueLocal1;
+		
+		string $jawLocal2 = `createNode transform -n "jaw_FC_localWorld"`;
+		string $tongueLocal2 = `createNode transform -n "tongue_FC_localWorld"`;
+		parent $jawLocal2 other_deformers;
+		parent $tongueLocal2 other_deformers;
+		connectAttr ($jawLocal1 + ".t") ($jawLocal2 + ".t");
+		connectAttr ($jawLocal1 + ".r") ($jawLocal2 + ".r");
+		connectAttr ($jawLocal1 + ".s") ($jawLocal2 + ".s");
+		connectAttr ($tongueLocal1 + ".t") ($tongueLocal2 + ".t");
+		connectAttr ($tongueLocal1 + ".r") ($tongueLocal2 + ".r");
+		connectAttr ($tongueLocal1 + ".s") ($tongueLocal2 + ".s");
+		
+		parentConstraint -mo $jawLocal2 tongue1_JT;
+		scaleConstraint -mo $jawLocal2 tongue1_JT;
+		pointConstraint -mo $tongueLocal2 tongue2_JT;
+		orientConstraint -mo $tongueLocal2 tongue2_JT;
+		
+	}
+	
+	connectAttr tongue_FC.r tongue3_JT.r;
+	connectAttr tongue_FC.r tongue4_JT.r;
+	connectAttr tongue_FC.r tongue5_JT.r;
+	
+	string $mult1 = `shadingNode -asUtility multiplyDivide -n "FC_tongue_mult1"`;
+	string $mult2 = `shadingNode -asUtility multiplyDivide -n "FC_tongue_mult2"`;
+	connectAttr tongue_FC_boxBuffer.s ($mult1 + ".input1");
+	connectAttr tongue_FC.s ($mult1 + ".input2");
+	connectAttr tongue1_JT.s ($mult2 + ".input1");
+	connectAttr ($mult1 + ".output") ($mult2 + ".input2");
+	connectAttr ($mult2 + ".output") tongue2_JT.s;
+	connectAttr tongue2_JT.s tongue3_JT.s;
+	connectAttr tongue2_JT.s tongue4_JT.s;
+	connectAttr tongue2_JT.s tongue5_JT.s;
+	
+	//skulls
+	parent upperSkull1_WC upperSkull_buffer;
+	rename upperSkull1_WC upperSkull_SP1;
+	setAttr upperSkull_SP1.v 0;
+	parent upperSkull2_WC upperSkull_buffer;
+	rename upperSkull2_WC upperSkull_SP2;
+	setAttr upperSkull_SP2.v 0;
+	
+	parent cheekSkull_WC cheekSkull_buffer;
+	rename cheekSkull_WC cheekSkull_SP;
+	setAttr cheekSkull_SP.v 0;
+	
+	parent jawSkull_WC jawSkull_buffer;
+	rename jawSkull_WC jawSkull_SP;
+	setAttr jawSkull_SP.v 0;
+	
+	
+	//------------------------------------//
+	//------------create eyes-------------//
+	//------------------------------------//
+	
+	//build eyeShapes & run the eyeStructure script
+	if (!`objExists("L_eyeShape")`)
+		rename L_eyeShape_WC L_eyeShape;
+		
+	buildEye("L", $L_eyeSurface, $controlEyePosition);
+	fmRiggingIncreaseProgress;
+	
+	if (!`objExists("R_eyeShape")`)
+		rename R_eyeShape_WC R_eyeShape;
+	
+	buildEye("R", $R_eyeSurface, $controlEyePosition);
+	fmRiggingIncreaseProgress;
+	
+	
+	//------------------------------------//
+	//---------create FCs, etc.-----------//
+	//------------------------------------//
+	
+	//first, delete the existing clusters made by the widget
+	delete widget_curve_clusters;
+	
+	
+	//build all the FCs and assign the majority of point deformations
+	source FM_createFC.mel;
+	rigControls;
+	
+	//fix a few points
+	source FM_connectDots.mel;
+	connectDots;
+	
+	//------------------------------------//
+	//-----------delete widget------------//
+	//------------------------------------//
+
+	//first eliminate the connections between the widget and the controls
+		//controls
+	//delete IK_eye_FC_staticBuffer_parentConstraint1 IK_eye_FC_staticBuffer_scaleConstraint1;
+	delete jaw_FC_staticBuffer_parentConstraint1 jaw_FC_staticBuffer_scaleConstraint1;
+	if (`objExists "FM_options_buffer_scaleConstraint1"`)
+		delete FM_options_buffer_scaleConstraint1;
+	if (`objExists "FM_options_buffer_parentConstraint1"`)
+		delete FM_options_buffer_parentConstraint1;
+	setAttr FM_options_buffer.v 1;
+	
+		//targets
+	delete R_brow_target_parentConstraint1;
+	delete brow_target_parentConstraint1;
+	delete L_brow_target_parentConstraint1;
+	delete nose_target_parentConstraint1;
+	delete cheekRoll_target_parentConstraint1;
+	delete upperSkullUpObject_parentConstraint1;
+	delete chin_target_parentConstraint1;
+	
+		//deformers
+	//delete other_deformers_scaleConstraint1;
+	fmRiggingIncreaseProgress;
+	
+	
+		// object definition sets
+	if (`objExists fmFaceMeshObject`)
+		delete fmFaceMeshObject;
+	if (`objExists fmLeftEyeObject`)
+		delete fmLeftEyeObject;
+	if (`objExists fmRightEyeObject`)
+		delete fmRightEyeObject;
+	if (`objExists fmTongueObject`)
+		delete fmTongueObject;
+	if (`objExists fmUpperTeethObject`)
+		delete fmUpperTeethObject;
+	if (`objExists fmLowerTeethObject`)
+		delete fmLowerTeethObject;
+	if (`objExists fmHeadJointObject`)
+		delete fmHeadJointObject;
+	
+	//------------------------------------//
+	//-----------connect things-----------//
+	//------------------------------------//
+	
+	//nasal crease
+	addAttr -at "float" -ln "crease" -dv 0 -hnv 1 -min -1 -hxv 1 -max 1 "R_cheekBone_FC";
+	setAttr -k 1 R_cheekBone_FC.crease;
+	connectAttr R_cheekBone_FC.crease FM_data.R_nasalCrease;
+	
+	addAttr -at "float" -ln "crease" -dv 0 -hnv 1 -min -1 -hxv 1 -max 1 "L_cheekBone_FC";
+	setAttr -k 1 L_cheekBone_FC.crease;
+	connectAttr L_cheekBone_FC.crease FM_data.L_nasalCrease;
+	
+	//brow crease
+	addAttr -at "float" -ln "crease" -dv -.5 -hxv 1 -max 0 "browCrease_directFC";
+	setAttr -k 1 browCrease_directFC.crease;
+	connectAttr browCrease_directFC.crease FM_data.browCrease;
+	fmRiggingIncreaseProgress;
+	
+	//------------------------------------//
+	//------------attach head-------------//
+	//------------------------------------//
+	
+	if (objExists($neck))
+	{
+		// We need to make some new buffers to make sure the neck moves around correctly:
+		string $controlsStaticBuffer = `createNode transform -n "FM_controls_staticBuffer"`;
+		string $controlsAutoBuffer = `createNode transform -n "FM_controls_autoBuffer"`;
+		string $controlsTempBuffer = `createNode transform -n "FM_controls_tempBuffer"`;
+		
+		parent $controlsTempBuffer faceMachine;
+		
+		string $strings[], $temp1, $temp2, $temp3, $temp4;
+		$strings = `parentConstraint FM_controls $controlsTempBuffer`;
+		delete $strings[0];
+		$strings = `scaleConstraint FM_controls $controlsTempBuffer`;
+		delete $strings[0];
+		
+		
+		parent $controlsStaticBuffer faceMachine;
+		parent $controlsAutoBuffer $controlsStaticBuffer;
+		parent FM_controls $controlsAutoBuffer;
+		
+		$strings = `parentConstraint -mo $controlsTempBuffer FM_controls`;
+		$temp1 = $strings[0];
+		$strings = `scaleConstraint -mo $controlsTempBuffer FM_controls`;
+		$temp2 = $strings[0];
+		
+		
+		$strings = `parentConstraint $neck $controlsStaticBuffer`;
+		$temp3 = $strings[0];
+		$strings = `scaleConstraint $neck $controlsStaticBuffer`;
+		$temp4 = $strings[0];
+		delete $temp3;
+		delete $temp4;
+		
+		parentConstraint $neck $controlsAutoBuffer;
+		scaleConstraint $neck $controlsAutoBuffer;
+		
+		delete $temp1;
+		delete $temp2;
+		
+		delete $controlsTempBuffer;
+		
+	}
+	
+	
+	string $allBlends[];
+	string $allSkinClusters[];
+	
+	for($headSurface in $headSurfaces) {
+		
+		//------------------------------------//
+		//---------duplicate mesh(s)----------//
+		//------------------------------------//
+		
+		string $strings[];
+		/*string $baseHead[] = `duplicate -renameChildren -n "FM_baseHeadMesh" $headSurface`;
+		
+		// Delete extra objects we don't need:
+		$strings = `listRelatives -type transform $baseHead[0]`;
+		for($obj in $strings)
+			delete $obj;
+		
+		setAttr -l false ($baseHead[0] + ".t");
+		setAttr -l false ($baseHead[0] + ".tx");
+		setAttr -l false ($baseHead[0] + ".ty");
+		setAttr -l false ($baseHead[0] + ".tz");
+		setAttr -l false ($baseHead[0] + ".r");
+		setAttr -l false ($baseHead[0] + ".rx");
+		setAttr -l false ($baseHead[0] + ".ry");
+		setAttr -l false ($baseHead[0] + ".rz");
+		setAttr -l false ($baseHead[0] + ".s");
+		setAttr -l false ($baseHead[0] + ".sx");
+		setAttr -l false ($baseHead[0] + ".sy");
+		setAttr -l false ($baseHead[0] + ".sz");
+		parent $baseHead[0] deformation_buffer;
+		*/
+		
+		string $defHead[] = `duplicate -renameChildren -n "FM_headMesh" $headSurface`;
+		
+		// Delete extra objects we don't need:
+		$strings = `listRelatives -type transform $defHead[0]`;
+		for($obj in $strings)
+			delete $obj;
+			
+		setAttr -l false ($defHead[0] + ".t");
+		setAttr -l false ($defHead[0] + ".tx");
+		setAttr -l false ($defHead[0] + ".ty");
+		setAttr -l false ($defHead[0] + ".tz");
+		setAttr -l false ($defHead[0] + ".r");
+		setAttr -l false ($defHead[0] + ".rx");
+		setAttr -l false ($defHead[0] + ".ry");
+		setAttr -l false ($defHead[0] + ".rz");
+		setAttr -l false ($defHead[0] + ".s");
+		setAttr -l false ($defHead[0] + ".sx");
+		setAttr -l false ($defHead[0] + ".sy");
+		setAttr -l false ($defHead[0] + ".sz");
+		parent $defHead[0] deformation_buffer;
+		
+		//create blendShape
+		//string $blendNode[] = `blendShape -frontOfChain -n "FM_headBlend" $defHead[0] $headSurface`;
+		//setAttr ($blendNode[0] + "." + $defHead[0]) 1;
+		
+		//create fmRelativeBlend deformer
+		
+		//string $blendNode[] = `deformer -type fmRelativeBlend -frontOfChain -n "FM_fmRelativeBlend" $headSurface`;
+		//$allBlends[size($allBlends)] = $blendNode[0];
+		
+		//connectAttr ($defHead[0] + ".im") ($blendNode[0] + ".offsetMatrix");
+		//disconnectAttr ($defHead[0] + ".im") ($blendNode[0] + ".offsetMatrix");
+		
+		//makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $baseHead[0];
+		//delete -ch $baseHead[0];
+		makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $defHead[0];
+		delete -ch $defHead[0];
+		
+		//$strings = `listRelatives -shapes $baseHead[0]`;
+		//connectAttr -f ($strings[0] + ".outMesh") ($blendNode[0] + ".inBase");
+		//$strings = `listRelatives -shapes $defHead[0]`;
+		//connectAttr -f ($strings[0] + ".outMesh") ($blendNode[0] + ".inTarget");
+		//connectAttr ($headSurface + ".im") ($blendNode[0] + ".offsetMatrix");
+		
+		//lock out duplicate head mesh
+		setAttr -lock true ($defHead[0] + ".tx");
+		setAttr -lock true ($defHead[0] + ".ty");
+		setAttr -lock true ($defHead[0] + ".tz");
+		setAttr -lock true ($defHead[0] + ".rx");
+		setAttr -lock true ($defHead[0] + ".ry");
+		setAttr -lock true ($defHead[0] + ".rz");
+		setAttr -lock true ($defHead[0] + ".sx");
+		setAttr -lock true ($defHead[0] + ".sy");
+		setAttr -lock true ($defHead[0] + ".sz");	
+		setAttr ($defHead[0] + ".v") 0;
+		/*
+		setAttr -lock true ($baseHead[0] + ".tx");
+		setAttr -lock true ($baseHead[0] + ".ty");
+		setAttr -lock true ($baseHead[0] + ".tz");
+		setAttr -lock true ($baseHead[0] + ".rx");
+		setAttr -lock true ($baseHead[0] + ".ry");
+		setAttr -lock true ($baseHead[0] + ".rz");
+		setAttr -lock true ($baseHead[0] + ".sx");
+		setAttr -lock true ($baseHead[0] + ".sy");
+		setAttr -lock true ($baseHead[0] + ".sz");	
+		setAttr ($baseHead[0] + ".v") 0;
+		*/
+		fmRiggingIncreaseProgress;	
+		
+		
+		
+		//------------------------------------//
+		//------------add weights-------------//
+		//------------------------------------//
+
+			
+		source FM_weightFace.mel;
+		
+		
+		
+		string $nullInfluence = "fm_null_influence";
+		
+		// Create a null influence with a shape
+		if (!objExists($nullInfluence)) {
+			//string $strings[] = `polyPlane -w 1 -h 1 -sx 1 -sy 1 -ax 0 1 0 -ch 0 -n "fm_null_influence"`;
+			string $strings[] = `circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "fm_null_influence"`;
+			$nullInfluence = $strings[0];
+			parent $nullInfluence deformation_buffer;
+			
+			setAttr -lock true ($nullInfluence + ".tx");
+			setAttr -lock true ($nullInfluence + ".ty");
+			setAttr -lock true ($nullInfluence + ".tz");
+			setAttr -lock true ($nullInfluence + ".rx");
+			setAttr -lock true ($nullInfluence + ".ry");
+			setAttr -lock true ($nullInfluence + ".rz");
+			setAttr -lock true ($nullInfluence + ".sx");
+			setAttr -lock true ($nullInfluence + ".sy");
+			setAttr -lock true ($nullInfluence + ".sz");
+			setAttr ($nullInfluence + ".v") 0;
+		}
+		
+		
+		//bind the deformation mesh to the deformation_joint, then to the null influence, then remove the joint
+		//rename deformation_joint $nullInfluence;
+		//skinCluster -maximumInfluences 4 $nullInfluence $defHead[0];
+		skinCluster -maximumInfluences 4 deformation_joint $defHead[0];	
+		string $skinCluster = `findRelatedSkinCluster($defHead[0])`;
+		skinCluster -e -ug -dr 3 -ns 1 -ai $nullInfluence $skinCluster;
+		skinCluster -e -removeInfluence deformation_joint $skinCluster;
+		
+		//weight the face
+		
+		$skinCluster = weightFace($defHead[0], $headSurface, 3, $useSmartWeighting);
+		//progressWindow -endProgress;
+		//return;
+		$allSkinClusters[size($allSkinClusters)] = $skinCluster;
+		
+		
+		// Now that we have the fm_skinCluster, we don't need this node anymore!
+		delete $defHead[0];
+		
+	}
+	
+	
+	delete deformation_joint;
+	
+	string $strings[];
+
+	//weight the tongue and attach, or delete the unnecessary joints + FC
+	if (`objExists($tongueSurface)`)
+	{
+		string $skinCluster = findRelatedSkinCluster($tongueSurface);
+		if ($skinCluster == "") {
+			skinCluster -n "tongue_skinCluster" tongue1_JT $tongueSurface;
+			skinCluster -e -ai tongue2_JT -ai tongue3_JT -ai tongue4_JT -ai tongue5_JT tongue_skinCluster;
+			$allSkinClusters[size($allSkinClusters)] = "tongue_skinCluster";
+		} else {
+			
+			
+			
+			string $baseTongue[] = `duplicate -renameChildren -n "FM_baseTongueMesh" $tongueSurface`;
+			
+			// Delete extra objects we don't need:
+			$strings = `listRelatives -type transform $baseTongue[0]`;
+			for($obj in $strings)
+				delete $obj;
+			
+			setAttr -l false ($baseTongue[0] + ".t");
+			setAttr -l false ($baseTongue[0] + ".tx");
+			setAttr -l false ($baseTongue[0] + ".ty");
+			setAttr -l false ($baseTongue[0] + ".tz");
+			setAttr -l false ($baseTongue[0] + ".r");
+			setAttr -l false ($baseTongue[0] + ".rx");
+			setAttr -l false ($baseTongue[0] + ".ry");
+			setAttr -l false ($baseTongue[0] + ".rz");
+			setAttr -l false ($baseTongue[0] + ".s");
+			setAttr -l false ($baseTongue[0] + ".sx");
+			setAttr -l false ($baseTongue[0] + ".sy");
+			setAttr -l false ($baseTongue[0] + ".sz");
+			parent $baseTongue[0] deformation_buffer;
+			
+			
+			string $defTongue[] = `duplicate -renameChildren -n "FM_tongueMesh" $tongueSurface`;
+			
+			// Delete extra objects we don't need:
+			$strings = `listRelatives -type transform $defTongue[0]`;
+			for($obj in $strings)
+				delete $obj;
+				
+			setAttr -l false ($defTongue[0] + ".t");
+			setAttr -l false ($defTongue[0] + ".tx");
+			setAttr -l false ($defTongue[0] + ".ty");
+			setAttr -l false ($defTongue[0] + ".tz");
+			setAttr -l false ($defTongue[0] + ".r");
+			setAttr -l false ($defTongue[0] + ".rx");
+			setAttr -l false ($defTongue[0] + ".ry");
+			setAttr -l false ($defTongue[0] + ".rz");
+			setAttr -l false ($defTongue[0] + ".s");
+			setAttr -l false ($defTongue[0] + ".sx");
+			setAttr -l false ($defTongue[0] + ".sy");
+			setAttr -l false ($defTongue[0] + ".sz");
+			parent $defTongue[0] deformation_buffer;
+			
+			
+			
+			string $blendNode[] = `deformer -type fmRelativeBlend -frontOfChain -n "FM_fmRelativeBlendTongue" $tongueSurface`;
+			$allBlends[size($allBlends)] = $blendNode[0];
+			
+			connectAttr ($defTongue[0] + ".im") ($blendNode[0] + ".offsetMatrix");
+			disconnectAttr ($defTongue[0] + ".im") ($blendNode[0] + ".offsetMatrix");
+			
+			makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $baseTongue[0];
+			delete -ch $baseTongue[0];
+			makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $defTongue[0];
+			delete -ch $defTongue[0];
+			
+			$strings = `listRelatives -shapes $baseTongue[0]`;
+			connectAttr -f ($strings[0] + ".outMesh") ($blendNode[0] + ".inBase");
+			$strings = `listRelatives -shapes $defTongue[0]`;
+			connectAttr -f ($strings[0] + ".outMesh") ($blendNode[0] + ".inTarget");
+			//connectAttr ($headSurface + ".im") ($blendNode[0] + ".offsetMatrix");
+			
+			//lock out duplicate tongue mesh
+			setAttr -lock true ($defTongue[0] + ".tx");
+			setAttr -lock true ($defTongue[0] + ".ty");
+			setAttr -lock true ($defTongue[0] + ".tz");
+			setAttr -lock true ($defTongue[0] + ".rx");
+			setAttr -lock true ($defTongue[0] + ".ry");
+			setAttr -lock true ($defTongue[0] + ".rz");
+			setAttr -lock true ($defTongue[0] + ".sx");
+			setAttr -lock true ($defTongue[0] + ".sy");
+			setAttr -lock true ($defTongue[0] + ".sz");	
+			setAttr ($defTongue[0] + ".v") 0;
+			
+			setAttr -lock true ($baseTongue[0] + ".tx");
+			setAttr -lock true ($baseTongue[0] + ".ty");
+			setAttr -lock true ($baseTongue[0] + ".tz");
+			setAttr -lock true ($baseTongue[0] + ".rx");
+			setAttr -lock true ($baseTongue[0] + ".ry");
+			setAttr -lock true ($baseTongue[0] + ".rz");
+			setAttr -lock true ($baseTongue[0] + ".sx");
+			setAttr -lock true ($baseTongue[0] + ".sy");
+			setAttr -lock true ($baseTongue[0] + ".sz");	
+			setAttr ($baseTongue[0] + ".v") 0;
+			
+			
+			skinCluster -n "tongue_skinCluster" tongue1_JT $defTongue[0];
+			skinCluster -e -ai tongue2_JT -ai tongue3_JT -ai tongue4_JT -ai tongue5_JT tongue_skinCluster;
+			$allSkinClusters[size($allSkinClusters)] = "tongue_skinCluster";
+		}
+	}
+	
+	//weight the teeth
+		//upper
+	if (`objExists($upperTeethSurface)`) {
+		string $shapes[] = `listRelatives -shapes $upperTeethSurface`;
+		string $nodeType = "";
+		if (size($shapes) > 0)
+			$nodeType = `nodeType $shapes[0]`;
+		// We want to use a cluster if this object is some kind of geometry
+		if ($nodeType == "mesh" || $nodeType == "nurbsSurface" || $nodeType == "subdiv") {
+			string $skinCluster = findRelatedSkinCluster($upperTeethSurface);
+			$strings = `cluster -frontOfChain -n "FM_upperTeethCluster" $upperTeethSurface`;
+			// And now we manually move the cluster in front of the skinCluster, because the cluster command often won't do that on its own
+			if ($skinCluster != "")
+				reorderDeformers $skinCluster $strings[0] $upperTeethSurface;
+			
+			if ($controlTeethPosition == 0) {
+				// Creata a node that will be the teeth control's location in face-relative space
+				string $teethLocal = `createNode transform -n "FM_upperTeethLocal"`;
+				parent $teethLocal FM_controls;
+				parentConstraint upperTeeth_FC $teethLocal;
+				scaleConstraint upperTeeth_FC $teethLocal;
+				
+				// Now connect that to another node so that it'll only move when the teeth control moves locally 
+				string $teethJT2 = `createNode transform -n "upperTeeth2_JT"`;
+				parent $teethJT2 other_deformers;
+				connectAttr -f ($teethLocal + ".t") ($teethJT2 + ".t");
+				connectAttr -f ($teethLocal + ".r") ($teethJT2 + ".r");
+				connectAttr -f ($teethLocal + ".s") ($teethJT2 + ".s");
+				
+				// Parent the cluster to that.
+				parent $strings[1] $teethJT2; 
+			} else
+				parent $strings[1] upperTeeth_JT;
+			
+		} else {
+			parentConstraint -mo upperTeeth_JT $upperTeethSurface;
+			scaleConstraint -mo upperTeeth_JT $upperTeethSurface;
+		}
+	}
+		//lower
+	if (`objExists($lowerTeethSurface)`) {
+		string $shapes[] = `listRelatives -shapes $lowerTeethSurface`;
+		string $nodeType = "";
+		if (size($shapes) > 0)
+			$nodeType = `nodeType $shapes[0]`;
+		// We want to use a cluster if this object is some kind of geometry
+		if ($nodeType == "mesh" || $nodeType == "nurbsSurface" || $nodeType == "subdiv") {
+			string $skinCluster = findRelatedSkinCluster($lowerTeethSurface);
+			$strings = `cluster -frontOfChain -n "FM_lowerTeethCluster" $lowerTeethSurface`;
+			// And now we manually move the cluster in front of the skinCluster, because the cluster command often won't do that on its own
+			if ($skinCluster != "")
+				reorderDeformers $skinCluster $strings[0] $lowerTeethSurface;
+			
+			if ($controlTeethPosition == 0) {
+				// Creata a node that will be the teeth control's location in face-relative space
+				string $teethLocal = `createNode transform -n "FM_lowerTeethLocal"`;
+				parent $teethLocal FM_controls;
+				parentConstraint lowerTeeth_FC $teethLocal;
+				scaleConstraint lowerTeeth_FC $teethLocal;
+				
+				// Now connect that to another node so that it'll only move when the teeth control moves locally 
+				string $teethJT2 = `createNode transform -n "lowerTeeth2_JT"`;
+				parent $teethJT2 other_deformers;
+				connectAttr -f ($teethLocal + ".t") ($teethJT2 + ".t");
+				connectAttr -f ($teethLocal + ".r") ($teethJT2 + ".r");
+				connectAttr -f ($teethLocal + ".s") ($teethJT2 + ".s");
+				
+				// Parent the cluster to that.
+				parent $strings[1] $teethJT2;
+			} else
+				parent $strings[1] lowerTeeth_JT;
+		} else {
+			parentConstraint -mo lowerTeeth_JT $lowerTeethSurface;
+			scaleConstraint -mo lowerTeeth_JT $lowerTeethSurface;
+		}
+	}
+	
+	//delete the widget structure itself
+	delete "faceMachine|widget";
+	delete "faceMachine|extras";
+			
+		
+	//------------------------------------//
+	//-----------update display-----------//
+	//------------------------------------//
+	
+	//turn off spline influence visibility
+	setAttr FM_data.influenceSplines 0;
+	setAttr FM_data.primaryControls 1;
+	setAttr FM_data.secondaryControls 0;
+	
+	
+	string $tempArray[] = `listRelatives -shapes R_eye_FC`;
+	setAttr ($tempArray[0] + ".overrideEnabled") 1;
+	connectAttr FM_data.primaryControls ($tempArray[0] + ".overrideVisibility");
+	setAttr ($tempArray[0] + ".overrideColor") 4;
+	string $tempArray[] = `listRelatives -shapes L_eye_FC`;
+	setAttr ($tempArray[0] + ".overrideEnabled") 1;
+	connectAttr FM_data.primaryControls ($tempArray[0] + ".overrideVisibility");
+	setAttr ($tempArray[0] + ".overrideColor") 4;
+	string $tempArray[] = `listRelatives -shapes IK_eye_FC`;
+	setAttr ($tempArray[0] + ".overrideEnabled") 1;
+	connectAttr FM_data.primaryControls ($tempArray[0] + ".overrideVisibility");
+	setAttr ($tempArray[0] + ".overrideColor") 4;
+	string $tempArray[] = `listRelatives -shapes jaw_FC`;
+	setAttr ($tempArray[0] + ".overrideEnabled") 1;
+	connectAttr FM_data.primaryControls ($tempArray[0] + ".overrideVisibility");
+	setAttr ($tempArray[0] + ".overrideColor") 4;
+		
+	string $tempArray[] = `listRelatives -shapes upperTeeth_FC`;
+	setAttr ($tempArray[0] + ".overrideEnabled") 1;
+	connectAttr FM_data.secondaryControls ($tempArray[0] + ".overrideVisibility");
+	setAttr ($tempArray[0] + ".overrideColor") 24;
+	string $tempArray[] = `listRelatives -shapes lowerTeeth_FC`;
+	setAttr ($tempArray[0] + ".overrideEnabled") 1;
+	connectAttr FM_data.secondaryControls ($tempArray[0] + ".overrideVisibility");
+	setAttr ($tempArray[0] + ".overrideColor") 24;
+	string $tempArray[] = `listRelatives -shapes tongue_FC`;
+	setAttr ($tempArray[0] + ".overrideEnabled") 1;
+	connectAttr FM_data.secondaryControls ($tempArray[0] + ".overrideVisibility");
+	setAttr ($tempArray[0] + ".overrideColor") 24;
+	
+	//connect FM_options to FM_data
+	connectAttr FM_options.showInfluenceObjects FM_data.influenceSplines;
+	connectAttr -f FM_data.influenceSplines influenceCurves.v;
+	connectAttr FM_options.showInfluenceObjects other_deformers.v;
+	//for ($mesh in $defHead)
+	//connectAttr FM_options.showDeformationObjects ($defHead[0] + ".v");
+	if (`objExists FM_tongueMesh`)
+		connectAttr FM_options.showDeformationObjects ("FM_tongueMesh.v");
+	connectAttr FM_options.showSkullObjects upperSkull_SP1.v;
+	connectAttr FM_options.showSkullObjects upperSkull_SP2.v;
+	connectAttr FM_options.showSkullObjects cheekSkull_SP.v;
+	connectAttr FM_options.showSkullObjects jawSkull_SP.v;
+	connectAttr FM_options.showSkullObjects R_eyeShape.v;
+	connectAttr FM_options.showSkullObjects L_eyeShape.v;
+	connectAttr FM_options.showIK_eye_FC IK_eye_FC_staticBuffer.v;
+	hide FM_options;
+	fmRiggingIncreaseProgress;
+	
+	
+	
+	
+	
+	//------------------------------------//
+	//---------add user interface---------//
+	//------------------------------------//
+	
+	anzUI_setupSceneForAnzovinProducts;
+	fm_setupSceneForFaceMachine;
+	
+	
+	
+	//------------------------------------//
+	//---------build box controls---------//
+	//------------------------------------//
+	
+	string $FMsandbox = "FM";
+	
+	JM_sandbox($FMsandbox, "", "Right Eyebrow", $neck, 1, 1, -1, 1, -1);
+	xform -t -6 3 0 -s .6 .6 .6 "Right_Eyebrow_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Left Eyebrow", "", 1, 1, -1, 1, -1);
+	xform -t 6 3 0 -s .6 .6 .6 "Left_Eyebrow_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Right Eyelid", "", 1, 1, -1, 1, -1);
+	xform -t -6 .8 0 -s .6 .6 .6 "Right_Eyelid_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Left Eyelid", "", 1, 1, -1, 1, -1);
+	xform -t 6 .8 0 -s .6 .6 .6 "Left_Eyelid_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Sync", "", 1, 1, -1, 1, -1);
+	xform -t 0 -2.5 0 -s .8 .8 .8 "Sync_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Upper Lip", "", 1, 1, -1, 1, -1);
+	xform -t 0 .2 0 "Upper_Lip_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Lower Lip", "", 1, 1, -1, 1, -1);
+	xform -t 0 -5 0 "Lower_Lip_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Right Corner", "", 1, 1, -1, 1, -1);
+	xform -t -2.5 -2.5 0 "Right_Corner_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Left Corner", "", 1, 1, -1, 1, -1);
+	xform -t 2.5 -2.5 0 "Left_Corner_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Jaw", "", 1, 1, -1, 1, -1);
+	xform -t -2 -5 0 "Jaw_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Tongue", "", 1, 1, -1, 1, -1);
+	xform -t 2 -5 0 "Tongue_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Sneer", "", 1, 1, -1, 1, 0);
+	xform -t 2 .2 0 "Sneer_box";
+	fmRiggingIncreaseProgress;
+	JM_sandbox($FMsandbox, "", "Mouth", "", 1, 1, -1, 1, -1);
+	xform -t -2 .2 0 "Mouth_box";
+	fmRiggingIncreaseProgress;
+	
+	parent FM_boxControlsBuffer faceMachine;
+	setAttr "FM_boxControlsPerspCamShape.centerOfInterest" 25;
+
+	// Add locator that's in the middle of the head for hiding the box controls
+	string $strings[] = `spaceLocator`;
+	string $middleOfHeadLocator = `rename $strings[0] "FM_middleOfHead"`;
+	parent $middleOfHeadLocator "FM_controls";
+	setAttr ($middleOfHeadLocator + ".v") 0;
+	float $floats[] = `xform -q -ws -t jaw_FC`;
+	xform -ws -t $floats[0] $floats[1] $floats[2] $middleOfHeadLocator;
+	float $middleOfHead[] = `xform -q -ws -t $middleOfHeadLocator`;
+	$floats = `xform -q -ws -t browCrease_FC`;
+	$middleOfHead[1] = $floats[1];
+	$floats = `xform -q -ws -t noseControl_FC`;
+	$middleOfHead[1] = ($middleOfHead[1] + $floats[1]) / 2.0;
+	xform -ws -t $middleOfHead[0] $middleOfHead[1] $middleOfHead[2] $middleOfHeadLocator;
+	setAttr ($middleOfHeadLocator + ".s") 0.001 0.001 0.001;	
+	
+	$floats = `xform -q -ws -t FM_boxControlsBuffer`;
+	xform -ws -t $floats[0] $middleOfHead[1] $floats[2] FM_boxControlsBuffer;
+	parentConstraint -mo $neck "FM_boxControlsBuffer";
+	
+	// Add the locator to the sandbox's constraints
+	$strings = `parentConstraint $middleOfHeadLocator FM_boxControlsPerspCam_buffer`;
+	string $parentConstraint = $strings[0];
+	$strings = `scaleConstraint $middleOfHeadLocator FM_boxControlsPerspCam_buffer`;
+	string $scaleConstraint = $strings[0];
+
+	// Make it so that it's only constrained to the head for now (meaning box controls are visible in scene)
+	string $attrs[] = `parentConstraint -q -weightAliasList $parentConstraint`;
+	setAttr ($parentConstraint + "." + $attrs[0]) 1;
+	setAttr ($parentConstraint + "." + $attrs[1]) 0;
+	string $attrs[] = `scaleConstraint -q -weightAliasList $scaleConstraint`;
+	setAttr ($scaleConstraint + "." + $attrs[0]) 1;
+	setAttr ($scaleConstraint + "." + $attrs[1]) 0;
+	
+	fmRiggingIncreaseProgress;
+	
+	//------------------------------------//
+	//----------setup face map------------//
+	//------------------------------------//
+	
+	float $unitScale = `convertUnit -fromUnit "cm" "1"`;
+	camera -hfa .980 -vfa .735 -fcp .005 -ncp .001 -ff overscan -p 0 0 .002 -o 1 -ow 15;
+	string $faceMapCam = `rename "FM_faceMapCam"`;
+	setAttr ($faceMapCam + ".r") 0 0 0;
+	setAttr ($faceMapCam + ".t") 0 0 0.002;
+	setAttr ($faceMapCam + ".orthographicWidth") (12 * $unitScale);
+	parent $faceMapCam FM_faceMapGroup;
+	transformLimits -tx -5.5 5.5 -ty -5.5 5.5 -etx 1 1 -ety 1 1 $faceMapCam;
+	setAttr -lock true ($faceMapCam + ".tz");
+	setAttr -lock true ($faceMapCam + ".r");
+	setAttr -lock true ($faceMapCam + ".s");
+	setAttr ($faceMapCam + ".v") false;
+	
+	setAttr FM_faceMapGroup.s 0.005 0.005 0.005;
+	parentConstraint $middleOfHeadLocator FM_faceMapGroup;
+	
+	setAttr FM_faceMapGroup.v 1;
+	fmRiggingIncreaseProgress;
+	
+	
+	// Finish the UI stuff:
+	
+	
+	
+	// Connect enableFaceMachine attribute
+	if (attributeExists("enableFaceMachine", "FM_data") != 1)
+		addAttr -at short -defaultValue 1 -minValue 0 -maxValue 1  -ln "enableFaceMachine" -storable true -keyable false FM_data;
+	
+	setAttr -channelBox false FM_data.enableFaceMachine;
+	
+	
+	setAttr FM_data.enableFaceMachine 1;
+	connectAttr -f FM_data.enableFaceMachine faceMachine.visibility;
+	
+	select -cl;
+	
+	
+	
+	anzUI_initialize;
+	fm_interfaceInitialize;
+	fm_menuInitialize;
+	anzUI_sceneOpen;
+	
+	// Let's actually switch to the new UI:
+	global string $gMainPane;
+	switchPanes vertical2 0;
+	if (`scriptedPanel -exists anzovinMainPanel` == 0)
+		scriptedPanel -unParent -type anzovinPanelType -label "Anzovin Panel" anzovinMainPanel;
+	scriptedPanel -e -rp `paneLayout -query -pane1 $gMainPane` anzovinMainPanel;
+	lookThroughModelPanel persp `paneLayout -query -pane2 $gMainPane`;
+	paneLayout -e -paneSize 1 35 100 $gMainPane;
+	
+	progressWindow -endProgress;
+	 
+	// Recreate the Anzovin menu so that if it was teared off it'll go away
+	// For reasons unknown we have to make this a script job that runs on idle otherwise Maya will crash!
+	scriptJob -idleEvent "anzUI_createAnzovinMenu;" -runOnce true ;
+	 
+	//print statement for the user:
+	print "The Face Machine has successfully finished rigging.  See the manual for operating instructions.  Enjoy your new rig!\n";
+	refresh -f;
+}

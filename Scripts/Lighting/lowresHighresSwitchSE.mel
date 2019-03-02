@@ -1,0 +1,205 @@
+global proc lowresHighresSwitchSE()
+{
+	if( (`window -exists lowHighWin`) == true ){deleteUI lowHighWin;}
+	window -widthHeight 313 450 -t "THE99 Texture Manager                  Sanraa Media..." -s 0 -mb true lowHighWin;
+	menu -l " Item List ";
+	menuItem -l "CHARS"  -c getCharsShaderSE forRefChars;
+	//menuItem -l "SETS" -c getSetsShaderSE forRefSets;
+	menuItem -l "PROPS" -c getPropsShaderSE forRefProps;
+	
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 refShadersSE`;
+	formLayout -edit
+	     -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+	
+	string $child8 = `columnLayout -adj true HIGHRES`;
+		text -l "";
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Switch To   HIGH RES" -c switchFromLowresToHighresSE;
+		text -l "";
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Switch To   LOW RES" -c switchFromHighrestoLowresSE;
+		text -l "";
+		button -h 25 -bgc 0.6 0.6 0.6 -l "File Texture Manager" -c FileTextureManager;
+	setParent ..;
+
+	string $proxy = `columnLayout -adj true PROXY`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistProxy;	
+		button -h 25 -bgc 0.4 0.6 0.8 -l "Selected Asset PROXY Mode" -c displaySelectedAssetProxy;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $smooth = `columnLayout -adj true SMOOTH`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistSmooth;	
+		button -h 25 -bgc 0.5 0.6 0.8 -l "Selected Asset SMOOTH Mode" -c displaySelectedAssetSmooth;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $render = `columnLayout -adj true RENDER`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistRender;	
+		button -h 25 -bgc 0.5 0.6 0.8 -l "Selected Asset  RENDER Mode" -c displaySelectedAssetRender;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	tabLayout -edit -tabLabel $child8 "HIGH/LOW RES" -tabLabel $proxy "   PROXY   " -tabLabel $smooth "  SMOOTH  " -tabLabel $render "  RENDER  " $tabs ;
+	
+ showWindow;
+}
+
+global proc getCharsShaderSE()
+{
+	textScrollList -e -ra propslistProxy;
+	textScrollList -e -ra propslistSmooth;
+	textScrollList -e -ra propslistRender;
+	string $refNodes[] = `file -q -l`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "CHARS") || ($buffer[6] == "CHARS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistProxy;
+				textScrollList -e -append $name propslistSmooth;
+				textScrollList -e -append $name propslistRender;
+			}
+		}
+	}
+} 
+
+global proc getSetsShaderSE()
+{
+	textScrollList -e -ra propslistProxy;
+	textScrollList -e -ra propslistSmooth;
+	textScrollList -e -ra propslistRender;
+	string $refNodes[] = `file -q -l`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "SETS") || ($buffer[6] == "SETS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistProxy;
+				textScrollList -e -append $name propslistSmooth;
+				textScrollList -e -append $name propslistRender;
+			}
+
+		}
+	}
+} 
+
+global proc getPropsShaderSE()
+{
+	textScrollList -e -ra propslistProxy;
+	textScrollList -e -ra propslistSmooth;
+	textScrollList -e -ra propslistRender;
+	string $refNodes[] = `file -q -l`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "PROPS") || ($buffer[6] == "PROPS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistProxy;
+				textScrollList -e -append $name propslistSmooth;
+				textScrollList -e -append $name propslistRender;
+			}
+		}
+	}
+} 
+
+global proc displaySelectedAssetProxy()
+{
+	//textScrollList -e -ra propslistSmooth;
+	//textScrollList -e -ra propslistRender;
+	string $proxy[] = `textScrollList -q -si propslistProxy`;
+	setAttr ("*:"+$proxy[0]+":Visibility_Ctrl.Smooth") 0;
+}
+
+global proc displaySelectedAssetSmooth()
+{
+	//textScrollList -e -ra propslistProxy;
+	//textScrollList -e -ra propslistRender;
+	string $smooth[] = `textScrollList -q -si propslistSmooth`;
+	setAttr ("*:"+$smooth[0]+":Visibility_Ctrl.Smooth") 1;
+}
+
+global proc displaySelectedAssetRender()
+{
+	//textScrollList -e -ra propslistProxy;
+	//textScrollList -e -ra propslistSmooth;
+	string $render[] = `textScrollList -q -si propslistRender`;
+	setAttr ("*:"+$render[0]+":Visibility_Ctrl.Smooth") 2;
+}
+
+global proc switchFromHighrestoLowresSE()
+{
+	string $name[] = `ls -tex`;
+	string $tex;
+	for($i=0; $i<size($name); $i++)
+	{
+		if(catch($tex = getAttr ($name[$i]+".fileTextureName")))
+		{
+			//print "Problem with ramp and other file nodes";
+		}
+		else
+		{
+			string $texName = basename($tex, ".map");
+			string $br[];
+			$numTokens = `tokenize $tex "/" $br`;
+			if($br[8] == "HIGHRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+$br[7]+"/"+"LOWRES"+"/"+$texName+".tga";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+			else if($br[7] == "HIGHRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+"LOWRES"+"/"+$texName+".tga";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+		}
+	}	
+}
+
+global proc switchFromLowresToHighresSE()
+{
+	string $name[] = `ls -tex`;
+	string $tex;
+	for($i=0; $i<size($name); $i++)
+	{
+		if(catch($tex = getAttr ($name[$i]+".fileTextureName")))
+		{
+			//print "Problem with ramp and other file nodes";
+		}
+		else
+		{
+			string $texName = basename($tex, ".tga");
+			string $br[];
+			$numTokens = `tokenize $tex "/" $br`;
+			if($br[8] == "LOWRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+$br[7]+"/"+"HIGHRES"+"/"+$texName+".map";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+			else if($br[7] == "LOWRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+"HIGHRES"+"/"+$texName+".map";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+		}
+	}
+}
+

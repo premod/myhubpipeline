@@ -1,0 +1,770 @@
+// --------------------------------------------------------------------------
+// cSmartBlend.mel - MEL Script
+// --------------------------------------------------------------------------
+// Copyright 2006 Comet Digital, LLC All Rights Reserved
+// --------------------------------------------------------------------------
+// --------------------------------------------------------------------------
+//	!! MODIFY AT YOUR OWN RISK !!
+// --------------------------------------------------------------------------
+//
+// DESCRIPTION:
+//	This script holds useful procs for using the cSmartBlend plugin.
+//
+// REQUIRES:
+//	cSmartBlend plugin.
+//
+// USAGE:
+//	cSmartBlend() ;		// Loads plugin and Adds cMuscle Menu to Maya.
+//
+// AUTHORS:
+//	Michael B. Comet - http://www.cometdigital..com/
+//
+// VERSIONS:
+//	1.00 - 02/28/06 - comet - Initial Rev.
+// --------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend() - Main entry.  Assures plugin is loaded.
+ */
+global proc cSmartBlend()
+{
+    cSmartBlend_load() ;		// do load
+    cSmartBlend_makeMenu() ;	// make/remake menu
+}
+
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_load() - Loads the plugin
+ */
+global proc cSmartBlend_load()
+{
+    string $version = `about -v` ;
+    float $vers = (float)(substring($version,1,3)) ;
+
+   // Don't load since now loading plugin auto srcs this script and we don't want a cycle!
+/*    
+    if ($vers >= 6.0)
+        {
+		if (!`pluginInfo -q -loaded "cSmartBlend"`)
+			loadPlugin "cMuscleSystem6" ;
+		}
+//    evalDeferred("source \"cSmartBlend.mel\"; cSmartBlend_makeMenu();") ;	// force another re-read of this script now that the plugin commands are loaded...
+*/
+
+}
+
+
+// --------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------
+//	U.I. and Helper Procs
+// --------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_makeMenu() - Makes or remake the cMuscle menu tree off the main
+ *	window.
+ */
+global proc cSmartBlend_makeMenu()
+{
+    global string $gMainWindow;     // defined elsewhere by Maya
+    
+	// Get rid of existing menu in case it exists already...
+	//
+    if (`menu -q -exists cSmartBlendMenu`)
+		{
+		menu -e -dai cSmartBlendMenu;
+		}
+    else
+		{
+		setParent $gMainWindow;
+		menu -l "cSmartBlend" -p MayaWindow -to 1 -aob 1 cSmartBlendMenu ;
+		}
+
+    setParent -menu cSmartBlendMenu ;
+    
+    menuItem -l ("cSmartBlend UI...") -c ("cSmartBlendUI(); ") -ann ("Brings up a UI to apply a cSmartBlend deformer and setup targets.") ; // -i "cSmartBlend_misc_ui.xpm";
+	menuItem -divider true ;
+    menuItem -l "About..." -c ("cSmartBlend_about();") -ann ("About cSmartBlend") ; // -i "cSmartBlend_misc_about.xpm" ;
+    
+}
+
+// --------------------------------------------------------------------------
+
+
+/*
+ * cSmartBlend_about() - Make about dlg
+ */
+global proc cSmartBlend_about()
+{
+    if (`window -ex cSmartBlendAboutWin`)
+        {
+        showWindow cSmartBlendAboutWin ;
+		return ;
+		}
+        
+        
+    string $ver = "1.00" ;
+        
+    window -w 365 -h 190 -s true -t ("About cSmartBlend v"+$ver) cSmartBlendAboutWin ;
+    formLayout mainForm ;
+
+    text -l ("cSmartBlendSystem - Version "+$ver) -fn "boldLabelFont" -al "left" -w 300  txVer ;
+    
+    separator -style "single" -w 300 -h 5 sep1 ;
+    
+    text -l "    by Michael B. Comet"  -al "left" -w 300 txBy ;
+    text -l "    Copyright 2006 Comet Digital, LLC All Rights Reserved"  -al "left" -w 300 txCopyright ;
+    iconTextButton -l ("http://www.cometdigital.com/") -style "textOnly" -c ("showHelp -a \"http://www.cometdigital.com/\";") -ann ("Click to visit webiste...") -w 220 -h 28 txWeb ;
+    
+    separator -style "in" -w 300 -h 5 sep2  ;
+   
+    button -l "CLOSE" -w 100 -al "center" -c ("deleteUI -wnd cSmartBlendAboutWin;") btnClose ;
+
+
+    formLayout -e
+		-af txVer "top" 5 
+		-an txVer "bottom"
+		-af txVer "left" 5
+		-an txVer "right"
+			
+		-ac sep1 "top" 0 txVer
+		-an sep1 "bottom"
+		-af sep1 "left" 5
+    	-af sep1 "right" 5
+
+		-ac txBy "top" 0 sep1
+		-an txBy "bottom"
+		-ap txBy "left" 0 10
+    	-an txBy "right"
+
+		-ac txCopyright "top" 0 txBy
+		-an txCopyright "bottom"
+		-ap txCopyright "left" 0 10
+    	-an txCopyright "right"
+
+		-ac txWeb "top" 0 txCopyright
+		-an txWeb "bottom"
+		-ap txWeb "left" 0 10
+    	-an txWeb "right"
+
+		-ac sep2 "top" 0 txWeb
+		-an sep2 "bottom"
+		-af sep2 "left" 5
+    	-af sep2 "right" 5
+
+		-ac btnClose "top" 5 sep2
+		-an btnClose "bottom"
+		-ap btnClose "left" 0 52
+    	-af btnClose "right" 5
+
+        mainForm ;
+
+
+    showWindow cSmartBlendAboutWin ;
+}
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlendUI() - Main entry for real user proc
+ */
+global proc cSmartBlendUI()
+{
+    if (`window -ex cSmartBlendUIWin`)
+        {
+        showWindow cSmartBlendUIWin ;
+		return ;
+		}
+        
+        
+    window -w 420 -h 355 -s true -t ("cSmartBlend") cSmartBlendUIWin ;
+    formLayout mainForm ;
+
+	radioButtonGrp -nrb 2 -l "Space:" -la2 "object" "world" -sl 1 -cw3 70 60 60 rbSpace ;
+	floatSliderGrp -l "Threshold:" -min 0.0 -max 10.0 -fieldMinValue 0.0 -fieldMaxValue 100000 -v 0.1 -pre 5 -field true -adj 3 -cw3 70 70 120 fsgThreshold ;
+	popupMenu -p fsgThreshold;
+		menuItem -l "0.001" -c ("floatSliderGrp -e -v 0.001 fsgThreshold") ;
+		menuItem -l "0.01" -c ("floatSliderGrp -e -v 0.01 fsgThreshold") ;
+		menuItem -l "0.1" -c ("floatSliderGrp -e -v 0.1 fsgThreshold") ;
+		menuItem -l "1.0" -c ("floatSliderGrp -e -v 1.0 fsgThreshold") ;
+		menuItem -l "10.0" -c ("floatSliderGrp -e -v 10.0 fsgThreshold") ;
+
+	separator -style "in" -h 3 sep0 ;
+
+	text -l "Master Mesh:" -w 70 txBase ;
+	textField -tx "" tfBase ;
+	button -l "<<<" -w 35 -c ("cSmartBlend_loadSurface(\"tfBase\");") btnBase ;
+
+	text -l "Target Mesh:" -w 70 txTgt ;
+	textField -tx "" tfTgt ;
+	button -l "<<<" -w 35 -c ("cSmartBlend_loadSurface(\"tfTgt\");") btnTgt ;
+	
+	button -l "Create New Smart Blend" -c ("cSmartBlend_createNew(); ") -ann ("Creates a new cSmartBlend deformer on the base mesh and connects in the target.") btnNew ;
+	
+	separator -style "in" -h 3 sep1 ;
+	
+	text -l "cSmartBlend:" -w 70 txNode ;
+	textField -tx "" tfNode ;
+	button -l "<<<" -w 35 -c ("cSmartBlend_loadNode(\"tfNode\");") btnNode ;
+	
+	button -l "Re-calculate Target Data" -c ("cSmartBlend_calcSetup(); ") -ann ("Re-calculates target data for the provided cSmartBlend node in case topology has changed.") btnRecalc ;
+	button -l "Create Base" -c ("cSmartBlend_createBase(); ") -ann ("Creates a base object for the cSmartBlend deformer.") btnMakeBase ;
+	
+	separator -style "none" -h 3 sep2 ;
+
+	text -l "Blend Targets:" -w 70 txBS ;
+	textField -tx "" tfBS ;
+	button -l "<<<" -w 35 -c ("cSmartBlend_loadBS(\"tfBS\");") btnBS ;
+	
+	button -l "Re-Build New Blendshape Targets" -c ("cSmartBlend_createBlendTgts(); ") -ann ("Given the real base geo, and then the cSmartBlend target that is different but has working blendshape targets, create new targets that work with the base.") btnCreateBS ;
+	
+	separator -style "in" -h 3 sep3 ;
+
+	picture -image "cSmartBlendMELlogo.xpm" -w 413 -h 57 imgLogo ;
+
+	formLayout -e
+		-af rbSpace "top" 5
+		-an rbSpace "bottom"
+		-af rbSpace "left" 5
+		-an rbSpace "right"
+		
+		-ac fsgThreshold "top" 5 rbSpace
+		-an fsgThreshold "bottom"
+		-af fsgThreshold "left" 5
+		-af fsgThreshold "right" 5
+		
+		-ac sep0 "top" 5 fsgThreshold
+		-an sep0 "bottom"
+		-af sep0 "left" 0
+		-af sep0 "right" 0
+	
+		-ac txBase "top" 8 sep0
+		-an txBase "bottom"
+		-af txBase "left" 5
+		-an txBase "right"
+		
+		-ac tfBase "top" 5 sep0
+		-an tfBase "bottom"
+		-ac tfBase "left" 5 txBase
+		-ac tfBase "right" 5 btnBase 
+		
+		-ac btnBase "top" 5 sep0
+		-an btnBase "bottom"
+		-an btnBase "left" 
+		-af btnBase "right" 5 
+		
+		-ac txTgt "top" 8 tfBase
+		-an txTgt "bottom"
+		-af txTgt "left" 5
+		-an txTgt "right"
+		
+		-ac tfTgt "top" 5 tfBase
+		-an tfTgt "bottom"
+		-ac tfTgt "left" 5 txTgt
+		-ac tfTgt "right" 5 btnTgt 
+		
+		-ac btnTgt "top" 5 tfBase
+		-an btnTgt "bottom"
+		-an btnTgt "left" 
+		-af btnTgt "right" 5
+		
+		-ac btnNew "top" 5 tfTgt
+		-an btnNew "bottom"
+		-af btnNew "left" 5
+		-ap btnNew "right" 0 66
+		
+		-ac sep1 "top" 5 btnNew
+		-an sep1 "bottom"
+		-af sep1 "left" 0
+		-af sep1 "right" 0
+		
+		-ac txNode "top" 8 sep1
+		-an txNode "bottom"
+		-af txNode "left" 5
+		-an txNode "right"
+		
+		-ac tfNode "top" 5 sep1
+		-an tfNode "bottom"
+		-ac tfNode "left" 5 txNode
+		-ac tfNode "right" 5 btnNode 
+		
+		-ac btnNode "top" 5 sep1
+		-an btnNode "bottom"
+		-an btnNode "left" 
+		-af btnNode "right" 5 
+		
+		-ac btnRecalc "top" 5 tfNode
+		-an btnRecalc "bottom"
+		-af btnRecalc "left" 5
+		-ap btnRecalc "right" 0 66
+
+		-ac btnMakeBase "top" 5 tfNode
+		-an btnMakeBase "bottom"
+		-ap btnMakeBase "left" 0 67
+		-af btnMakeBase "right" 5
+				
+		
+		-ac sep2 "top" 5 btnRecalc
+		-an sep2 "bottom"
+		-af sep2 "left" 0
+		-af sep2 "right" 0
+		
+		
+		-ac txBS "top" 8 sep2
+		-an txBS "bottom"
+		-af txBS "left" 5
+		-an txBS "right"
+
+		-ac tfBS "top" 5 sep2
+		-an tfBS "bottom"
+		-ac tfBS "left" 5 txBS
+		-ac tfBS "right" 5 btnBS 
+		
+		-ac btnBS "top" 5 sep2
+		-an btnBS "bottom"
+		-an btnBS "left" 
+		-af btnBS "right" 5 
+		
+		-ac btnCreateBS "top" 5 tfBS
+		-an btnCreateBS "bottom"
+		-af btnCreateBS "left" 5
+		-ap btnCreateBS "right" 0 66
+		
+		-ac sep3 "top" 5 btnCreateBS
+		-an sep3 "bottom"
+		-af sep3 "left" 0
+		-af sep3 "right" 0  
+		
+		
+		-ac imgLogo "top" 2 sep3 
+		-an imgLogo "bottom" 
+		-af imgLogo "left" 0
+		-an imgLogo "right" 
+		
+		mainForm ;
+	
+    showWindow cSmartBlendUIWin ;
+	
+}
+
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_loadSurface() - Loads the shape node of a surface into the UI
+ */
+global proc cSmartBlend_loadSurface(string $tf)
+{
+	string $objs[] = `ls -sl` ;
+	int $nObjs = size($objs) ;
+	if ($nObjs <= 0)
+		{
+		textField -e -tx "" $tf ;
+		return ;
+		}
+	if (nodeType($objs[0]) == "transform")
+		{
+		string $shapes[] = `listRelatives -shapes -ni $objs[0]` ;
+		$objs[0] = $shapes[0] ;
+		}
+		
+	if ($objs[0] != "" &&
+		(nodeType($objs[0]) == "nurbsSurface" ||
+		nodeType($objs[0]) == "mesh" ||
+		nodeType($objs[0]) == "subdiv" ))
+		{
+		textField -e -tx $objs[0] $tf ;
+		}
+	else
+		textField -e -tx "" $tf ;
+	
+}
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_loadNode() - Loads the node into the text field
+ */
+global proc cSmartBlend_loadNode(string $tf)
+{
+	string $objs[] = `ls -sl` ;
+	int $nObjs = size($objs) ;
+	if ($nObjs <= 0)
+		{
+		textField -e -tx "" $tf ;
+		return ;
+		}
+		
+	if (nodeType($objs[0]) != "cSmartBlend")
+		{
+		string $defs[] = cSmartBlend_getSelectedDeformers("cSmartBlend") ;
+		$objs[0] = $defs[0] ;
+		}
+	
+		
+	if ($objs[0] != "" && nodeType($objs[0]) == "cSmartBlend")
+		textField -e -tx $objs[0] $tf ;
+	else
+		textField -e -tx "" $tf ;
+	
+}
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_loadBS() - Loads multiple targets in
+ */
+global proc cSmartBlend_loadBS(string $tf)
+{
+	string $objs[] = `ls -sl` ;
+	int $nObjs = size($objs) ;
+	if ($nObjs <= 0)
+		{
+		textField -e -tx "" $tf ;
+		return ;
+		}
+			
+	string $objsStr ;
+	int $i ;
+	for ($i=0; $i < $nObjs; ++$i)
+		{
+		$objsStr += ($objs[$i]+" ") ; 
+		}
+
+	textField -e -tx $objsStr $tf ;
+	
+}
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_getSelectedDeformers() - This lets you easily get back a list of
+ *		deformer nodes based on what is selected by looking at their history.
+ *		Most typically used to get cMuscleSystem deformers from the user
+ *			selecting the mesh that is being deformed by something like
+ *			string $mSs[] = cMuscle_getSelectedDeformers("cMuscleSystem") ;
+ */
+global proc string[] cSmartBlend_getSelectedDeformers(string $deformerType)
+{
+	string $defs[] ;		// What we are returning
+	clear $defs ;
+	
+    string $objs[] = `ls -sl`;
+    
+    if (size($objs) <= 0)
+        return $defs ;
+
+	// Look for the given deformer in what is chosen...
+    string $hist[] = `listHistory -pdo true -il 1 $objs`;
+    string $defs[] = `ls -type $deformerType $hist` ;
+    
+    $defs = stringArrayRemoveDuplicates($defs) ;
+	
+	return $defs ;
+}
+
+// --------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------
+//	Worker Procs
+// --------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_createNew() - Set up a new cSmartBlend deformer on the given node.
+ */
+global proc cSmartBlend_createNew()
+{
+	string $base = `textField -q -tx tfBase` ;
+	string $tgt = `textField -q -tx tfTgt` ;
+
+	if ($base == "" || objExists($base) != true)
+		error -sl 0 ("The object \""+$base+"\" does not exist.") ;
+	if ($tgt == "" || objExists($tgt) != true)
+		error -sl 0 ("The object \""+$tgt+"\" does not exist.") ;
+	
+	// Apply the new deformer
+	string $defs[] = `deformer -type "cSmartBlend" $base` ;
+	string $def = $defs[0] ;
+	
+	// Now connect in the target shape, also to the base, then disconnect from base
+	if (nodeType($tgt) == "nurbsSurface")
+		{
+		connectAttr -f ($tgt+".worldSpace") ($def+".targetSurf") ;
+		connectAttr -f ($tgt+".worldSpace") ($def+".targetSurfOrig") ;
+		disconnectAttr ($tgt+".worldSpace") ($def+".targetSurfOrig") ;
+		}
+	else if (nodeType($tgt) == "mesh")
+		{
+		connectAttr -f ($tgt+".worldMesh") ($def+".targetSurf") ;
+		connectAttr -f ($tgt+".worldMesh") ($def+".targetSurfOrig") ;
+		disconnectAttr ($tgt+".worldMesh") ($def+".targetSurfOrig") ;
+		}
+	else if (nodeType($tgt) == "subdiv")
+		{
+		connectAttr -f ($tgt+".worldSubdiv") ($def+".targetSurf") ;
+		connectAttr -f ($tgt+".worldSubdiv") ($def+".targetSurfOrig") ;
+		disconnectAttr ($tgt+".worldSubdiv") ($def+".targetSurfOrig") ;
+		}
+
+	// Now we're all connected...but we need to do the setup calc...
+	textField -e -tx $def tfNode ;
+	cSmartBlend_calcSetup() ;		
+	
+	print ("// Created deformer: "+$def+" //\n") ;
+}
+
+// --------------------------------------------------------------------------
+
+/* 
+ * cSmartBlend_calcSetup() - Calcs target to base data
+ */
+global proc cSmartBlend_calcSetup()
+{
+	string $def = `textField -q -tx tfNode` ;
+	if ($def == "" || objExists($def) != true)
+		error -sl 0 ("The object \""+$def+"\" does not exist.") ;
+	
+	int $nSpace = `radioButtonGrp -q -sl rbSpace` - 1 ;
+	string $spaces[2] = {"object", "world"} ;
+	string $space = $spaces[$nSpace] ;
+
+	float $fThreshold = `floatSliderGrp -q -v fsgThreshold` ;
+
+	
+	// Get base and target that is connected
+	string $bases[] = `deformer -q -geometry $def` ;
+	string $base = $bases[0] ;
+	string $cons[] = `listConnections -s 1 -d 0 -p 1 -scn 1 ($def+".targetSurf")` ;
+	string $parts[] ;
+	tokenize($cons[0], ".", $parts) ;		// Use plug so we get the shape node not transform!	
+	string $tgt = $parts[0] ;
+
+	if ($base == "" || objExists($base) != true)
+		error -sl 0 ("The object \""+$base+"\" does not exist.") ;
+	if ($tgt == "" || objExists($tgt) != true)
+		error -sl 0 ("The object \""+$tgt+"\" does not exist.") ;
+	
+	// Reconnect Base Target if needed
+	//
+	string $cons[] = `listConnections -s 1 -d 0 -p 0 -scn 1 ($def+".targetSurfOrig")` ;
+	if (size($cons) <= 0)
+		{
+		if (nodeType($tgt) == "nurbsSurface")
+			{
+			connectAttr -f ($tgt+".worldSpace") ($def+".targetSurfOrig") ;
+			disconnectAttr ($tgt+".worldSpace") ($def+".targetSurfOrig") ;
+			}
+		else if (nodeType($tgt) == "mesh")
+			{
+			connectAttr -f ($tgt+".worldMesh") ($def+".targetSurfOrig") ;
+			disconnectAttr ($tgt+".worldMesh") ($def+".targetSurfOrig") ;
+			}
+		else if (nodeType($tgt) == "subdiv")
+			{
+			connectAttr -f ($tgt+".worldSubdiv") ($def+".targetSurfOrig") ;
+			disconnectAttr ($tgt+".worldSubdiv") ($def+".targetSurfOrig") ;
+			}
+		}
+	
+	setAttr ($def+".space") $nSpace ;		// Set deformer mode to match what space we are calcing in
+
+	// Now we got all we need...call the plugin to calculate...
+	//	
+	cSmartBlendSetup -b $base -t $tgt -threshold $fThreshold -space $space $def ;
+
+	print ("// Setup "+$def+" from "+$tgt+" to "+$base+" //\n") ;	
+}
+
+// --------------------------------------------------------------------------
+
+/* 
+ * cSmartBlend_createBlendTgts() - Creates new blend targets that work with 
+ *		the given node mesh
+ */
+global proc cSmartBlend_createBlendTgts()
+{
+	string $def = `textField -q -tx tfNode` ;
+	if ($def == "" || objExists($def) != true)
+		error -sl 0 ("The object \""+$def+"\" does not exist.") ;
+
+	string $objsStr = `textField -q -tx tfBS` ;
+	if ($objsStr == "")
+		error -sl 0 ("You must provide one or more targets to recreate.") ;
+	string $bsTgts[] ;
+	tokenize($objsStr, " \t\r\n", $bsTgts ) ;
+	int $nTgts = size($bsTgts) ;
+	if ($nTgts <= 0 )
+		error -sl 0 ("You must provide one or more targets to recreate.") ;
+
+	
+	// Get base and target that is connected
+	string $bases[] = `deformer -q -geometry $def` ;
+	string $base = $bases[0] ;
+	string $cons[] = `listConnections -s 1 -d 0 -p 1 -scn 1 ($def+".targetSurf")` ;
+	string $parts[] ;
+	tokenize($cons[0], ".", $parts) ;		// Use plug so we get the shape node not transform!	
+	string $tgt = $parts[0] ;
+
+	if ($base == "" || objExists($base) != true)
+		error -sl 0 ("The object \""+$base+"\" does not exist.") ;
+	if ($tgt == "" || objExists($tgt) != true)
+		error -sl 0 ("The object \""+$tgt+"\" does not exist.") ;
+
+	// Now we got all we need...what we do is apply a new blendshape onto the cSmartBlend tgt
+	// and apply each BS in turn on it, then each time duplicate the real base and save that as 
+	// the new target.
+	//
+	select -r $bsTgts ;
+	select -add $tgt ;
+
+	string $bss[] = `blendShape`;
+	string $bs = $bss[0] ;
+
+	string $newTgts[] ;
+	clear $newTgts ;
+
+	// Now go thru and gen each new target
+	//
+	int $i;
+	for ($i=0; $i < $nTgts; ++$i)
+		{
+		blendShape -e -w $i 1.0 $bs ;		// Turn on cur one
+		if ($i > 0)
+			blendShape -e -w ($i-1) 0.0 $bs ;		// turn of prev one
+
+		// Now dup the real base mesh which is the real target
+		string $dups[] = `duplicate -rr -rc $base` ;		// Now dup base
+		string $dup = $dups[0] ;
+
+		// Clean up our dup target if it has any children...just in case to be nice.
+		string $childs[] = `listRelatives -children $dup` ;
+		string $shapes[] = `listRelatives -shapes $dup` ;
+		string $child ;
+		for ($child in $childs)
+			{
+			int $bShape = false ;
+			string $shape ;
+			for ($shape in $shapes)
+				{
+				if ($child == $shape)
+					{
+					$bShape = true ;
+					break ;
+					}
+				}
+			if (!$bShape)
+				catch(`delete $child`) ;
+			}
+
+		// Now rename nicely
+		string $parts[] ;
+		tokenize($bsTgts[$i], ":", $parts) ;
+		string $name = $parts[size($parts)-1] ;
+		$name += ("_"+$base) ;
+		string $dup = `rename $dup $name` ;		// Rename the new target
+
+		// Now move to same location as target;
+		float $pos[3] = `xform -q -a -ws -rp $bsTgts[$i]` ;
+		setAttr -l false ($dup+".tx") ;		// Unlock in case orig was locked
+		setAttr -l false ($dup+".ty") ;
+		setAttr -l false ($dup+".tz") ;
+		xform -a -ws -t $pos[0] $pos[1] $pos[2] $dup ;
+
+		$newTgts[$i] = $dup ;
+		}
+
+	// Now delete our temp blendshape node we used
+	delete $bs ;
+
+	select -r $newTgts ;
+	print ("// Re-Built new blendshape targets. //\n") ;
+}	
+
+// --------------------------------------------------------------------------
+
+/*
+ * cSmartBlend_createBase() - Duplicate tgt shape and connect in as a base
+ */
+global proc cSmartBlend_createBase()
+{
+	string $def = `textField -q -tx tfNode` ;
+	if ($def == "" || objExists($def) != true)
+		error -sl 0 ("The object \""+$def+"\" does not exist.") ;
+
+	// Get base and target that is connected
+	string $bases[] = `deformer -q -geometry $def` ;
+	string $base = $bases[0] ;
+	string $cons[] = `listConnections -s 1 -d 0 -p 1 -scn 1 ($def+".targetSurf")` ;
+	string $parts[] ;
+	tokenize($cons[0], ".", $parts) ;		// Use plug so we get the shape node not transform!	
+	string $tgt = $parts[0] ;
+
+	if ($base == "" || objExists($base) != true)
+		error -sl 0 ("The object \""+$base+"\" does not exist.") ;
+	if ($tgt == "" || objExists($tgt) != true)
+		error -sl 0 ("The object \""+$tgt+"\" does not exist.") ;
+
+
+	// Reconnect Base Target if needed
+	//
+	string $cons[] = `listConnections -s 1 -d 0 -p 0 -scn 1 ($def+".targetSurfOrig")` ;
+	if (size($cons) > 0)
+		error -sl 0 ("The node "+$def+" already appears to have a base connected.") ;
+	
+	string $XForms[] = `listRelatives -p $tgt` ;
+	string $tgtXForm = $XForms[0] ;
+
+	string $bases[] = `duplicate -rr -rc $tgtXForm` ;
+	string $baseXForm = `rename $bases[0] ($tgtXForm+"Base")`;
+	string $shapes[] = `listRelatives -shapes -ni $baseXForm` ;
+	string $baseShape = $shapes[0] ;
+
+	// Clean out any other children in base to be nice
+	string $childs[] = `listRelatives -children $baseXForm` ;
+	string $child ;
+	for ($child in $childs)
+		{
+		int $bShape = false ;
+		string $shape ;
+		for ($shape in $shapes)
+			{
+			if ($child == $shape)
+				{
+				$bShape = true ;
+				break ;
+				}
+			}
+		if (!$bShape)
+			catch(`delete $child`) ;
+		}
+
+	// Finally connect in base!
+	if (nodeType($baseShape) == "nurbsSurface")
+		{
+		connectAttr -f ($baseShape+".worldSpace") ($def+".targetSurfOrig") ;
+		}
+	else if (nodeType($baseShape) == "mesh")
+		{
+		connectAttr -f ($baseShape+".worldMesh") ($def+".targetSurfOrig") ;
+		}
+	else if (nodeType($baseShape) == "subdiv")
+		{
+		connectAttr -f ($baseShape+".worldSubdiv") ($def+".targetSurfOrig") ;
+		}
+
+	select -r $baseXForm ;
+	print ("// Created Base Object: "+$baseXForm+" //\n") ;
+}
+
+
+// --------------------------------------------------------------------------
+

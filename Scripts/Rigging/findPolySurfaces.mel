@@ -1,0 +1,13 @@
+global proc findPolySurfaces()
+{
+	string $selList[] = `ls -typ "mesh"`;
+	for($each in $selList)
+	{
+		int $found = startsWith(tolower($each), tolower("polySurface"));
+		if($found == 1)
+		{
+			select -tgl $each;
+		}
+	}
+}
+findPolySurfaces;

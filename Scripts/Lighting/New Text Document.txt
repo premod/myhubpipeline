@@ -1,0 +1,258 @@
+global proc lowresHighresSwitchFS()
+{
+	if( (`window -exists lowHighWinFS`) == true ){deleteUI lowHighWinFS;}
+	window -widthHeight 313 450 -t "TNN Texture Manager                  Sanraa Media..." -s 0 -mb true lowHighWinFS;
+	menu -l " Item List ";
+	menuItem -l "CHARS"  -c getCharsShaderFS forRefChars;
+	//menuItem -l "SETS" -c getSetsShaderFS forRefSets;
+	menuItem -l "PROPS" -c getPropsShaderFS forRefProps;
+	
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 refShadersFS`;
+	formLayout -edit
+	     -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+	
+	string $child5 = `columnLayout -adj true LOWRES`;
+		text -l "";
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Switch High Res" -c "switchFromLowresToHighres()";
+		text -l "";
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Switch To Low Res" -c "switchFromHighrestoLowres()";
+      	setParent ..;
+
+	string $smot = `columnLayout -adj true SMOOTH`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistSmoothFS;	
+		button -h 25 -bgc 0.4 0.6 0.8 -l "Smooth Selected Asset" -c getSmoothFS;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $unSmot = `columnLayout -adj true UNSMOOTH`;
+		textScrollList -ams false  -fn "fixedWidthFont" -h 313 propslistUnSmoothFS;	
+		button -h 25 -bgc 0.5 0.6 0.8 -l "Un Smooth Selected Asset" -c getUnSmoothFS;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	tabLayout -edit -tabLabel $child5 "HIGH-LOW RES" -tabLabel $smot "SMOOTH" -tabLabel $unSmot "UNSMOOTH" $tabs ;
+	
+ showWindow;
+}
+
+global proc getCharsShaderFS()
+{
+	textScrollList -e -ra propslistLowresFS;
+	textScrollList -e -ra propslistHighresFS;
+	textScrollList -e -ra propslistSmoothFS;
+	textScrollList -e -ra propslistUnSmoothFS;
+	string $refNodes[] = `file -q -l`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "CHARACTERS") || ($buffer[6] == "CHARACTERS"))
+		{
+			int $val1 = endsWith($r, ".tga");
+			int $val2 = endsWith($r, ".map");
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_SHA");
+			if(($val == "0") && ($val1 == "0") && ($val2 == "0"))
+			{
+				textScrollList -e -append $name propslistLowresFS;
+				textScrollList -e -append $name propslistHighresFS;
+				textScrollList -e -append $name propslistSmoothFS;
+				textScrollList -e -append $name propslistUnSmoothFS;
+			}
+		}
+	}
+} 
+
+global proc getSetsShaderFS()
+{
+	textScrollList -e -ra propslistLowresFS;
+	textScrollList -e -ra propslistHighresFS;
+	textScrollList -e -ra propslistSmoothFS;
+	textScrollList -e -ra propslistUnSmoothFS;
+	string $refNodes[] = `file -q -l`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "SETS") || ($buffer[6] == "SETS"))
+		{
+			int $val1 = endsWith($r, ".tga");
+			int $val2 = endsWith($r, ".map");
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_SHA");
+			if(($val == "0") && ($val1 == "0") && ($val2 == "0"))
+			{
+				textScrollList -e -append $name propslistLowresFS;
+				textScrollList -e -append $name propslistHighresFS;
+				textScrollList -e -append $name propslistSmoothFS;
+				textScrollList -e -append $name propslistUnSmoothFS;
+			}
+		}
+	}
+} 
+
+global proc getPropsShaderFS()
+{
+	textScrollList -e -ra propslistLowresFS;
+	textScrollList -e -ra propslistHighresFS;
+	textScrollList -e -ra propslistSmoothFS;
+	textScrollList -e -ra propslistUnSmoothFS;
+	string $refNodes[] = `file -q -l`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "PROPS") || ($buffer[6] == "PROPS"))
+		{
+			int $val1 = endsWith($r, ".tga");
+			int $val2 = endsWith($r, ".map");
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_SHA");
+			if(($val == "0") && ($val1 == "0") && ($val2 == "0"))
+			{
+				textScrollList -e -append $name propslistLowresFS;
+				textScrollList -e -append $name propslistHighresFS;
+				textScrollList -e -append $name propslistSmoothFS;
+				textScrollList -e -append $name propslistUnSmoothFS;
+			}
+		}
+	}
+} 
+
+global proc getSmoothFS()
+{
+	string $smootList[] = `textScrollList -q -si propslistSmoothFS`;
+	string $toke[];
+	$numTokens = `tokenize $smootList[0] "_" $toke`;
+	textScrollList -e -da propslistSmoothFS;
+	textScrollList -e -da propslistUnSmoothFS;
+	string $smtNode[] = `ls -typ "polySmoothFace"`;
+	string $buffer[];
+	if(`size($smtNode)` >= 1)
+	{
+		for($node in $smtNode)
+		{
+			$numTokens = `tokenize $node ":" $buffer`;
+			int $val = startsWith($buffer[1],$toke[0]);
+			getSelectedSmooth($toke[0]);
+			break;
+		}
+	}
+	else
+	{
+		getSelectedSmooth($toke[0]);
+	}
+}
+
+global proc getSelectedSmooth(string $name)
+{
+	print $name;
+	string $fileName[] = `file -q -r`;
+	string $baseName = basenameEx($fileName[0]);
+	string $smootList1 = $name;
+	select ($baseName+":"+$smootList1+"*:World");
+	SelectAllPolygonGeometry;
+	string $lst[] = `ls -sl`;
+	string $buffer2[];
+	for($each in $lst)
+	{
+		$numTokens = `tokenize $each ":" $buffer2`;
+		string $combine = ($buffer2[1]+$buffer2[2]);
+		int $val1 = startsWith($combine,$smootList1);
+		if($val1 == "0")
+		{
+			select -d $each;
+		}
+	}
+	
+	string $list[] = `ls -sl`;
+	for($a in $list)
+	{
+		string $smtName[] = `polySmooth $a`;
+		rename $smtName[0] ($smootList1+"_"+$smtName[0]);
+	}
+}
+
+global proc getUnSmoothFS()
+{
+	string $smootList1[] = `textScrollList -q -si propslistUnSmoothFS`;
+	string $buffer[];
+	$numTokens = `tokenize $smootList1[0] "_" $buffer`;
+	textScrollList -e -da propslistSmoothFS;
+	textScrollList -e -da propslistUnSmoothFS;
+	string $smtNode1[] = `ls -typ "polySmoothFace"`;
+	string $buffer1[];
+	print $smootList1;
+	for($node1 in $smtNode1)
+	{
+		int $val11 = startsWith($node1,$buffer[0]);
+		if($val11 == "1")
+		{
+			catch(`setAttr ($node1+".divisions") 0`);
+			delete $node1;
+		}
+	}
+}
+
+global proc switchFromHighrestoLowres()
+{
+	string $name[] = `ls -tex`;
+	string $tex;
+	for($i=0; $i<size($name); $i++)
+	{
+		if(catch($tex = getAttr ($name[$i]+".fileTextureName")))
+		{
+			//print "Problem with ramp and other file nodes";
+		}
+		else
+		{
+			string $texName = basename($tex, ".map");
+			string $br[];
+			$numTokens = `tokenize $tex "/" $br`;
+			if($br[8] == "HIGHRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+$br[7]+"/"+"LOWRES"+"/"+$texName+".tga";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+			else if($br[7] == "HIGHRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+"LOWRES"+"/"+$texName+".tga";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+		}
+	}	
+}
+
+global proc switchFromLowresToHighres()
+{
+	string $name[] = `ls -tex`;
+	string $tex;
+	for($i=0; $i<size($name); $i++)
+	{
+		if(catch($tex = getAttr ($name[$i]+".fileTextureName")))
+		{
+			//print "Problem with ramp and other file nodes";
+		}
+		else
+		{
+			string $texName = basename($tex, ".tga");
+			string $br[];
+			$numTokens = `tokenize $tex "/" $br`;
+			if($br[8] == "LOWRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+$br[7]+"/"+"HIGHRES"+"/"+$texName+".map";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+			else if($br[7] == "LOWRES")
+			{
+				string $newPath = "//"+$br[0]+"/"+$br[1]+"/"+$br[2]+"/"+$br[3]+"/"+$br[4]+"/"+$br[5]+"/"+$br[6]+"/"+"HIGHRES"+"/"+$texName+".map";
+				catch(`setAttr -type "string" ($name[$i]+".fileTextureName") $newPath`);
+			}
+		}
+	}
+}

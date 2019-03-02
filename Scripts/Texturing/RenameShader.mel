@@ -1,0 +1,7 @@
+
+global proc RenameShader()
+{
+string $sel[] = `ls -sl`;
+select -noExpand `listHistory $sel`;
+setQuickFieldMode Rename;
+}

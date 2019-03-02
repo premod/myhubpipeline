@@ -1,0 +1,94 @@
+global proc breakTexConnWindow()
+{
+	if((`window -exists texbreakwin` ) == true) {deleteUI texbreakwin;}
+	window -wh 275 60 -s 0 -t "Break Connections" texbreakwin;
+    	rowColumnLayout -numberOfRows 1;
+	button -bgc 0.1 0.6 0.85 -l "Break Connections" -c "breakTexConnections";
+	button -bgc 0.1 0.6 0.85 -l "Break Selected" -c "breakSelected";
+	button -bgc 0.1 0.6 0.85 -l "Add to Layer" -c "addAllToLayer" ;
+	showWindow;
+}
+
+global proc breakTexConnections()
+{
+    	string $selTex[] = `ls -tex`;
+    	for($each in `ls -mat`)
+    	{
+    		if(`nodeType $each` == "layeredShader")
+       	{
+       		string $LSconns[] = `listConnections -c 1 -s 1 -d 0 $each`;
+              	for($LScon in $LSconns)
+            		{
+	       		string $buffer[];
+            			tokenize ($LScon, ".", $buffer);
+            			if(`gmatch $buffer[1] "inputs*"`)
+                		{
+                			string $theSource = `connectionInfo -sourceFromDestination $LScon`;
+                			disconnectAttr $theSource $LScon;
+                			string $theNode = $buffer[0];
+                			string $theAttr = $buffer[1];
+                			setAttr ($theNode + "." + $theAttr + ".color") -type double3 1 1 1;
+                		}
+            		}
+        	}
+
+		string $conns[] = `listConnections -p 1 -s 1 -d 0 $each`;
+    		for ($conn in $conns)
+       	{
+       		string $buffer02[];
+        		tokenize($conn, ".", $buffer02);
+        		string $nodeName = $buffer02[0];
+        		string $nodeType[] = `nodeType -i $nodeName`;
+        		if($nodeType[0] == "texture2d" || $nodeType[0] == "texture3d")
+            		{
+            			string $theDestination[] = `connectionInfo -destinationFromSource $conn`;
+                     	disconnectAttr $conn $theDestination[0];
+            		}
+        	}
+    	}
+	connections();
+}
+
+global proc connections()
+{
+	string $selMat[] = `ls -mat`;
+	string $selTex[] = `ls -tex`;
+	for($i=0; $i<size($selMat); $i++)
+	{
+		int $isConn = catch(`isConnected ($selTex[$i]+".outColor") ($selMat[$i]+".color")`);
+		if($isConn == 0)
+		{
+			catch(` setAttr ($selMat[$i]+".color") -type double3 1 1 1 `);
+		}
+	}
+	for($each in `ls -mat`)
+	{
+		if(`nodeType $each` == "rampShader")
+       	{
+			removeMultiInstance -break true ($each+".color[0]");
+			removeMultiInstance -break true ($each+".color[2]");
+			setAttr ($each+".color[1].color_Color") -type double3 1 1 1 ;
+		}
+	}
+}
+
+global proc breakSelected()
+{
+	string $select[] = `ls -sl`;
+	for($i=0; $i<size($select); $i++)
+	{
+		string $info = `connectionInfo -sfd ($select[$i]+".color")`; 	
+		disconnectAttr $info ($select[$i]+".color");
+		setAttr ($select[$i]+".color") -type double3 1 1 1;
+	}
+}
+
+global proc addAllToLayer()
+{
+	createRenderLayer -n RGBLight_Layer;
+	string $allList[] = `ls -g`;
+	for( $eachOne in $allList )
+	{
+		editRenderLayerMembers RGBLight_Layer $eachOne;
+	}
+}

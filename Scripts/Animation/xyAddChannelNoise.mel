@@ -1,0 +1,177 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: xyAddChannelNoise v0.1
+''    Author: Imre Tuske
+''    Last Updated: August 13, 2002
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=animation#1854
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+//
+// *** xyAddChannelNoise.mel ***
+//
+//  Version 0.1 [03-aug-2002] -- by Imre Tuske
+//
+//
+//  * THIS IS MAILWARE! *
+//
+//  If you use this software regularly and you like it, let me know by dropping me an
+//  e-mail. This will guarantee that I'll keep on writing another useful pieces of MEL
+//  code which will be shared with you. Thanks!
+//
+//  Bug reports / requests are accepted through my e-mail address.
+//
+//  [ All Contents (C) by Imre Tuske (tusimi@freemail.hu), Hungary ]
+//  [ Developments done at Black Hole Ltd. / Animation Department  ]
+//
+//
+//
+//  Description:
+//
+//  This script allows adding of a noise function to the selected channels in the
+//  main Channel Box.
+//
+//  It works on all the selected channels of all selected objects. The noise function
+//  is applied by creating an expression on the original attribute (<attr>). The
+//  following extra attributes will be created:
+//
+//	<attr>_val		Contains the original value of the channel. Any input
+//				connection (animation, expression, driven key, etc.)
+//				on the original attribute will be preserved and is
+//				connected here.
+//
+//	<attr>_amp		Noise amplitude.
+//
+//	<attr>_frq		Noise frequency.
+//
+//	<attr>_offs		Output value offset. (*)
+//
+//	<attr>_mult		Output value multiplier. (*)
+//
+//  The noise expression is generated with a different seed for each attribute,
+//  so the applied noises will be different even at the same frequency. Attributes
+//  marked with (*) are optional.
+//
+//
+//
+//  Installation/Usage:
+//
+//  Copy the script into your scripts/ directory (no need to explicitly source it);
+//  then use one of the following commands:
+//
+//	xyAddChannelNoise 1		Add noise to selected Channel Box channels.
+//
+//	xyAddChannelNoise 2		Add noise and value offset/multiplier to
+//					selected channels.
+//
+//	xyAddChannelNoise 0		Remove noise from selected channels. Note
+//					that the original channels should be selected
+//					(not the added extra attributes).
+//
+//
+//
+//  History:
+//
+//  [03-aug-2002] 0.1		Initial version.
+//
+//
+
+
+
+
+//
+// *** xyAddChannelNoise.mel ***
+//
+//
+
+global proc xyAddChannelNoise( int $mode ) // 0=remove 1=add amp/freq 2=add amp/freq/offs/mult
+{
+	global string	$gChannelBoxName;
+	string		$ns[], $as[], $n, $a, $al, $na, $cs[], $ac[], $e;
+	string		$o1[]={"mol","sol","hol","ool"}, $o2[]={"sma","ssa","sha","soa"};
+	int		$i;
+	float		$v;
+
+	for($i=0; $i<size($o1); $i++)
+	{
+		$ns=eval("channelBox -q -"+$o1[$i]+" "+$gChannelBoxName);
+		$as=eval("channelBox -q -"+$o2[$i]+" "+$gChannelBoxName);
+
+		for($n in $ns)
+			for($a in $as)
+				if ( objExists($na=$n+"."+$a) )
+				{
+					$cs=`listAttr $na`; $al=$cs[0]; $na=$n+"."+$al;
+
+					switch($mode)
+					{
+						case 1:
+						case 2:
+						$v=(float)getAttr($na);
+
+						catch(`addAttr -ln ($al+"_val") -at double -dv $v  $n`); catch(`setAttr -e -k 1 ($na+"_val")`);
+						catch(`addAttr -ln ($al+"_amp") -at double -dv 0.1 $n`); catch(`setAttr -e -k 1 ($na+"_amp")`);
+						catch(`addAttr -ln ($al+"_frq") -at double -dv 1.0 $n`); catch(`setAttr -e -k 1 ($na+"_frq")`);
+
+						if ($mode==2)
+						{
+							catch(`addAttr -ln ($al+"_offs") -at double -dv 0.0 $n`); catch(`setAttr -e -k 1 ($na+"_offs")`);
+							catch(`addAttr -ln ($al+"_mult") -at double -dv 1.0 $n`); catch(`setAttr -e -k 1 ($na+"_mult")`);
+						}
+
+						if (size($cs=`listConnections -s 1 -d 0 -sh 1 -p 1 -c 1 -scn 1 $na`))
+						{
+							catch(`connectAttr -f $cs[1] ($na+"_val")`);
+							catch(`disconnectAttr $cs[1] $cs[0]`);
+						}
+
+
+						if ($mode==1) $e=($al+"="+$al+"_val+"+$al+"_amp*noise(("+$al+"_frq*frame)+"+(string)rand(1976)+")");
+						else $e=($al+"="+$al+"_offs+"+$al+"_mult*("+$al+"_val+"+$al+"_amp*noise(("+$al+"_frq*frame)+"+(string)rand(1976)+"));");
+
+						expression -o $n -ae 1 -uc all -n ($al+"_noise1") -s ($e+";");
+						break;
+
+
+						case 0: // remove
+
+						$ac=`listConnections -s 1 -d 0 -sh 1 -scn 1 $na`;
+
+						if (objExists($na+"_val"))
+						{
+							if (size($cs=`listConnections -s 1 -d 0 -sh 1 -p 1 -c 1 -scn 1 ($na+"_val")`))
+							{
+								catch(`connectAttr -f $cs[1] $na`);
+								catch(`disconnectAttr $cs[1] $cs[0]`);
+							}
+							else
+							{
+								$v=(float)getAttr($na+"_val");
+							}
+
+							if (size($ac)) catch(`delete($ac[0])`);
+							if (size($cs)==0) setAttr $na $v;
+
+							catch(`deleteAttr -at ($al+"_val") $n`);
+							catch(`deleteAttr -at ($al+"_amp") $n`);
+							catch(`deleteAttr -at ($al+"_frq") $n`);
+
+							if (objExists($na+"_offs"))
+							{
+								catch(`deleteAttr -at ($al+"_offs") $n`);
+								catch(`deleteAttr -at ($al+"_mult") $n`);
+							}
+						}
+						break;
+					}
+				}
+	}
+}
+
+

@@ -1,0 +1,253 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+// global vars to store light info...
+global float $g_lG_savedColorValR[];
+global float $g_lG_savedColorValG[];
+global float $g_lG_savedColorValB[];
+global float $g_lG_savedIntensityVals[];
+
+/*
+ * FUNCTION NAME	lG_colorIntensityWin
+ * DESCRIPTION		Creates UI for the Global Color/Intensity Control 
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+ 
+global proc lG_colorIntensityWin()
+{
+	// store light info
+	lG_storeLightInfo();
+	
+	global string $g_lG_allLights[];
+	
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		$g_lG_allLights[$i] = lG_getShape($g_lG_allLights[$i]);
+	}
+
+	// create UI layout - vars for global sizing
+	int $uiLabelWidth = 150;
+	int $uiInputWidth = 130;
+	int $uiWidth = $uiLabelWidth + $uiInputWidth + 120;
+
+	// delete UI function on close/open
+	if ( `window -exists lG_colorIntensityWin` == true )
+		deleteUI lG_colorIntensityWin;
+	window 
+		-title "[lG] Color & Intensity"
+		-maximizeButton false 
+		-minimizeButton true
+		-sizeable true
+		-resizeToFitChildren false
+		-menuBar true
+		-menuBarVisible true 
+		-wh 473 167
+		lG_colorIntensityWin;
+	
+	// begin actual form content
+	string $lForm = `formLayout -numberOfDivisions 100`;
+	string $lColumn;
+	string $lScroll;
+	$lScroll = `scrollLayout -hst 16 -vst 16 -childResizable true -minChildWidth $uiWidth`;
+		columnLayout -adjustableColumn true -rowSpacing 6;
+			// main editable area (collapsable)
+				columnLayout -adjustableColumn true -rowSpacing 2;
+					rowLayout
+						-numberOfColumns 1
+						-columnWidth 1 $uiLabelWidth;
+						colorSliderGrp
+							-label "Global Color"
+							-rgb 1 1 1 // white
+							-cal 1 "right" 
+							-cc lG_setGblColor
+							gblColorControl;
+					setParent ..;
+					rowLayout
+						-numberOfColumns 1
+						-columnWidth 1 $uiLabelWidth;
+						floatSliderButtonGrp 
+							-label "Global Intensity"
+							-bl "  Go  "
+							-field true
+    							-minValue -1.0
+							-maxValue 1.0
+    							-fieldMinValue -1.0 
+							-fieldMaxValue 1.0
+    							-value 0
+							-pre 2
+							-bc lG_setGblIntensity
+							gblIntensityControl;
+					setParent ..;
+					separator;
+					separator -style none;
+					rowLayout
+						-numberOfColumns 3
+						-columnWidth 1 $uiLabelWidth;
+						text -l "";
+						button
+							-l "reset color"
+							-c "lG_resetLightInfo 1";
+						button
+							-l "reset intensity"
+							-c "lG_resetLightInfo 2";
+					setParent ..;
+				setParent ..;
+			setParent ..;
+		setParent ..;
+	//setParent ..;
+	// buttonz...
+	string $lClose = `button
+		-label "Close"
+		-command "deleteUI lG_colorIntensityWin"`;
+
+	// set form layouts
+	formLayout -edit
+		-attachForm $lScroll "top" 2
+		-attachForm $lScroll "left" 2
+		-attachControl $lScroll "bottom" 2 $lClose
+		-attachForm $lScroll "right" 2
+
+		-attachNone $lClose "top"
+		-attachPosition $lClose "left" 2 0
+		-attachForm $lClose "bottom" 2
+		-attachForm $lClose "right" 2
+
+		$lForm;
+
+	showWindow lG_colorIntensityWin;
+}
+
+/*
+ * FUNCTION NAME	setGblColor
+ * DESCRIPTION		Implements the Global Color Control 
+ * CALLED BY		showGblIntensityWin
+ * INPUT	None
+ * RETURN	None
+ */
+
+global proc lG_setGblColor()
+{
+	global string $g_lG_allLights[];
+
+	float $color[] = `colorSliderGrp -q -rgb gblColorControl`;
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		if(`getAttr -se ($g_lG_allLights[$i] + ".color")`) {
+			setAttr ($g_lG_allLights[$i] + ".color") -type double3 $color[0] $color[1] $color[2];
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	setGblIntensity
+ * DESCRIPTION		Implements the Global Intensity Control 
+ * CALLED BY		showGblIntensityWin
+ * INPUT	None
+ * RETURN	None
+ */
+
+global proc lG_setGblIntensity()
+{
+	global string $g_lG_allLights[];
+	
+	float $newVal = `floatSliderGrp -q -v gblIntensityControl`;
+	float $intenseMathVal = 0;
+	
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		float $initIntensity = `getAttr ($g_lG_allLights[$i] + ".intensity")`;
+		$intenseMathVal = ($initIntensity * $newVal) + $initIntensity;
+		if(`getAttr -se ($g_lG_allLights[$i] + ".intensity")`) {
+			setAttr ($g_lG_allLights[$i] + ".intensity") $intenseMathVal;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_storeLightInfo
+ * DESCRIPTION		Stores information to reset color and intensity
+ * CALLED BY		showGblIntensityWin
+ * INPUT	None
+ * RETURN	None
+ */
+ 
+global proc lG_storeLightInfo()
+{
+	global float $g_lG_savedColorValR[];
+	global float $g_lG_savedColorValG[];
+	global float $g_lG_savedColorValB[];
+	global float $g_lG_savedIntensityVals[];
+	
+	global string $g_lG_allLights[];
+	
+	for ($i=0;$i<size($g_lG_allLights);$i++) {
+		if(`getAttr -se ($g_lG_allLights[$i] + ".intensity")`) {
+			$g_lG_savedIntensityVals[$i] = `getAttr ($g_lG_allLights[$i] + ".intensity")`;
+		}
+		if(`getAttr -se ($g_lG_allLights[$i] + ".color")`) {
+			$g_lG_savedColorValR[$i] = `getAttr ($g_lG_allLights[$i] + ".colorR")`;
+			$g_lG_savedColorValG[$i] = `getAttr ($g_lG_allLights[$i] + ".colorG")`;
+			$g_lG_savedColorValB[$i] = `getAttr ($g_lG_allLights[$i] + ".colorB")`;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_storeLightInfo
+ * DESCRIPTION		Stores information to reset color and intensity
+ * CALLED BY		showGblIntensityWin
+ * INPUT	None
+ * RETURN	None
+ */
+ 
+global proc lG_resetLightInfo(int $method)
+{
+	global float $g_lG_savedColorValR[];
+	global float $g_lG_savedColorValG[];
+	global float $g_lG_savedColorValB[];
+	global float $g_lG_savedIntensityVals[];
+	
+	global string $g_lG_allLights[];
+	
+	switch($method) {
+		case 1:
+			for ($i=0;$i<size($g_lG_allLights);$i++) {
+				if(`getAttr -se ($g_lG_allLights[$i] + ".color")`) {
+					setAttr ($g_lG_allLights[$i] + ".colorR") $g_lG_savedColorValR[$i];
+					setAttr ($g_lG_allLights[$i] + ".colorG") $g_lG_savedColorValG[$i];
+					setAttr ($g_lG_allLights[$i] + ".colorB") $g_lG_savedColorValB[$i];
+				}
+			}
+			
+			break;
+		case 2:
+			for ($i=0;$i<size($g_lG_allLights);$i++) {
+				if(`getAttr -se ($g_lG_allLights[$i] + ".intensity")`) {
+					setAttr ($g_lG_allLights[$i] + ".intensity") $g_lG_savedIntensityVals[$i];
+				}
+			}
+			
+			break;
+		default:
+		
+			break;
+	}
+			
+}

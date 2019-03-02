@@ -1,0 +1,278 @@
+//     AdvancedSkeleton
+//     Version 2.00_beta2
+// 
+// 
+// AdvancedSkeleton is is a collection of Maya tools for doing character setup.
+//   
+// INSTALLATION: 
+// Run the SETUP file (setup.exe) 
+// Choose the Destination Folder.
+// NOTE: destination folder must be your Maya user directory 
+// eg: C:\Documents and Settings\user\My Documents\maya\8.5\
+// Continue installation.
+// Start Maya. 
+// Now you will find a new Shelf called 'advancedSkeleton':  
+// 
+// For detailed instructions go to: www.animationstudios.com.au
+// 
+// Copyright (C)2007 Animation Studios
+// 
+// email: support@animationstudios.com.au
+// Last Modified 21/02/2007
+
+global proc asScriptLocator (){}
+
+global proc string asScriptLocation ()
+{
+string $whatIs=`whatIs asScriptLocator`;
+string $fullPath=`substring $whatIs 25 999`;
+string $buffer[];
+int $numTok=`tokenize $fullPath "/" $buffer`;
+int $numLetters=size($fullPath);
+int $numLettersLastFolder=size($buffer[$numTok-1]);
+string $scriptLocation=`substring $fullPath 1 ($numLetters-$numLettersLastFolder)`;
+return $scriptLocation;
+}
+
+global proc asUtilities ()
+{
+string $asScriptLocation=`asScriptLocation`;
+string $sourceAsProcedures=("source \""+$asScriptLocation+"asProcedures.mel\"");
+string $sourceAsSelectorSelection=("source \""+$asScriptLocation+"asSelectorSelection.mel\"");
+if (!`exists asCharSize`)
+	eval ($sourceAsProcedures);
+if (!`exists aspopulateNameSpaceMenu`)
+	eval ($sourceAsSelectorSelection);	
+
+if ((`window -ex asUtilities`) == 1)
+deleteUI -window asUtilities;
+
+window -t "Utilities" -w 375 -h 400 asUtilities;
+
+formLayout asUtilitiesFormLayout;
+columnLayout asUtilitiesColumnLayout1;
+
+
+optionMenu asUtilitiesOptionMenu;
+asPopulateNameSpaceMenu "asUtilities";
+separator -st "none";
+setParent..;
+scrollLayout -w 50 -h 550 asUtilitiesScrollLayout;
+columnLayout -w 35 -h 50;
+
+frameLayout -w 340 -cll 1 -cl 1 "Rebuild";
+	columnLayout;
+		rowLayout -nc 3 -cw3 72 120 100;
+			separator -st "none";
+			separator -st "none";
+			checkBox -v 1 -l "Rebuild Connections" RebuildCheckBox;
+			setParent..;
+		rowLayout -nc 3 -cw3 72 120 100;
+			separator -st "none";
+			button -c asToggleFitSkeleton -l "Toggle Fit/Advanced" ToggleFitButton;
+			button -c asAdvancedRebuild -l "Rebuild Skeleton" RebuildButton;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "Skinning";
+	columnLayout;
+		rowLayout -nc 2 -cw2 120 100;
+			separator -st "none";
+			button -c "asGoToBuildPose asUtilities" -l "   Go to Build Pose  " GoToBuildPoseButton;
+			setParent..;
+		rowLayout -nc 2 -cw2 120 100;
+			separator -st "none";
+			button -c asSelectDeformJoints -l "Select DeformJoints" SelectDeformJointsButton;
+			setParent..;
+		separator -st "none" -h 10;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			text -l " MotionSystem";
+			button -w 72 -c "asHideMotionSystem 1" -l "     Hide" HideMotionSystemButton;
+			separator -st "none";
+			button -w 72 -c "asHideMotionSystem 0" -l "     Show" showMotionSystemButton;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "Locking";
+	columnLayout;
+		separator -st "none" -h 10;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			text -l "      Joints";
+			button -w 72 -l "     Lock" -c "asLockSkeleton 1" LockSkeletonButton;
+			separator -st "none";
+			button -w 72 -l "    UnLock" -c "asLockSkeleton 0" UnLockSkeletonButton;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "Boxes";
+	columnLayout;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			separator -st "none";
+			button -w 72 -c MakeBoxes -label "     Create" MakeBoxesButton;
+			separator -st "none";
+			button -w 72 -c DeleteBoxes -label "     Delete"  DeleteBoxesButton;
+			setParent..;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			separator -st "none";
+			button -w 72 -c "asHideBoxes 1" -l "     Hide" hideBoxesButton;
+			separator -st "none";
+			button -w 72 -c "asHideBoxes 0" -l "     Show" showBoxesButton;
+			setParent..;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			text -l "      Mirror:";
+			button -w 72 -l "Left To Right" -c "asMirrorBoxes 1" MirrorBoxesL2RButton;
+			separator -st "none";
+			button -w 72 -l "Right To Left" -c "asMirrorBoxes 0" MirrorBoxesR2LButton;
+			setParent..;
+		separator -st "none" -h 10;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			text -l "      Boolean:";
+			button -w 72 -c asCreateBoolean -l "     Create     " createBooleanButton;
+			separator -st "none";
+			button -w 72 -c asDeleteBoolean -l "     Delete     " deleteBooleanButton;
+			setParent..;
+		setParent..;
+	setParent..;
+	
+frameLayout -w 340 -cll 1 -cl 1 "Character Set";
+	columnLayout;
+		textFieldGrp -w 250 -label "Name:" -tx "CharacterNode" "ASCharNodeName";
+		separator -st "none" -h 10;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			separator -st "none";
+			button -l "        Create" -w 100 -c asCreatecharacter CreateCharacterButton;
+			separator -st "none";
+			button -l "        Delete" -w 100 -c asKillcharacter KillCharacterButton;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "ControlCurves";
+	columnLayout;
+		separator -st "none" -h 10;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			text -l "      Mirror:";
+			button -w 72 -l "Left To Right" -c "asMirrorControlCurves 1" MirrorCCL2RButton;
+			separator -st "none";
+			button -w 72 -l "Right To Left" -c "asMirrorControlCurves 0" MirrorCCR2LButton;
+			setParent..;
+		separator -st "none" -h 10;
+		rowLayout -nc 4 -cw4 90 128 72 72;
+			text -l "      scale multiplier:";
+			floatField -v 1 ScaleCCFloatField;
+			button -w 72 -l "      Scale" -c "asScaleControlCurves" ScaleCCButton;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "Partial Joints";
+	columnLayout;
+		rowLayout -nc 4 -cw4 72 72 72 72;
+			separator -st "none";
+			button -w 72 -l "     Create" -c "asCreatePartialJoints" CreatePartialJointsButton;
+			separator -st "none";
+			button -w 72 -l "     Delete" -c "asDeletePartialJoints" DeletePartialJointsButton;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "Limit joints";
+	columnLayout;
+		rowLayout -nc 4 -cw4 10 150 50 150;
+			separator -st "none";
+			button -w 150 -l "Limit knees  at current angle" -c ("asLimitElbowsKnees Leg 1") LimitKneesButton;
+			separator -st "none";
+			button -w 120 -l "Remove knees Limits" -c ("asLimitElbowsKnees Leg 0") UnLimitKneesButton;
+			setParent..;
+		rowLayout -nc 4 -cw4 10 150 50 10;
+			separator -st "none";
+			button -w 150 -l "Limit elbows at current angle" -c ("asLimitElbowsKnees Arm 1") LimitElbowsButton;
+			separator -st "none";
+			button -w 120 -l "Remove elbows Limits" -c ("asLimitElbowsKnees Arm 0") UnLimitElbowsButtons;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "Baking";
+	columnLayout;
+		separator -st "none" -h 10;
+		rowLayout -nc 2 -cw2 120 100;
+			separator -st "none";
+			button -c asBakeAnimation -l "Bake Animation" BakeAnimationButton;
+			setParent..;
+		setParent..;
+	setParent..;
+
+frameLayout -w 340 -cll 1 -cl 1 "Display";
+	columnLayout;
+		rowLayout -nc 2 -cw2 80 100;
+			text " Joint Size :";
+			float $jdsVal1;
+			$jdsVal1 = `jointDisplayScale -q`;
+			string $JSslide=`floatSliderGrp -field 1
+				-min 0.01
+				-max 10.0
+				-pre 2
+				-v $jdsVal1
+				-dc "jointDisplayScale #1"
+				-cc "jointDisplayScale #1"
+				-en 1 
+				JSslider`;
+
+formLayout -e 
+	-af asUtilitiesColumnLayout1 "top" 0
+	-af asUtilitiesScrollLayout "right" 0
+	-af asUtilitiesScrollLayout "left" 0
+	-ac asUtilitiesScrollLayout "top"  0 asUtilitiesColumnLayout1
+	-af asUtilitiesScrollLayout "bottom" 0
+	asUtilitiesFormLayout;
+
+if (`optionMenu -q -v asUtilitiesOptionMenu`=="None")
+	{
+	checkBox -e -en 0 "RebuildCheckBox";
+	button -e -en 0 "ToggleFitButton";
+	button -e -en 0 "RebuildButton";
+	button -e -en 0 "LockSkeletonButton";
+	button -e -en 0 "UnLockSkeletonButton";
+	button -e -en 0 "GoToBuildPoseButton";
+	button -e -en 0 "SelectDeformJointsButton";
+	button -e -en 0 "HideMotionSystemButton";
+	button -e -en 0 "showMotionSystemButton";
+	button -e -en 0 "CreatePartialJointsButton";
+	button -e -en 0 "DeletePartialJointsButton";
+	button -e -en 0 "MakeBoxesButton";
+	button -e -en 0 "DeleteBoxesButton";
+	button -e -en 0 "MirrorBoxesL2RButton";
+	button -e -en 0 "MirrorBoxesR2LButton";
+	button -e -en 0 "createBooleanButton";
+	button -e -en 0 "deleteBooleanButton";
+	button -e -en 0 "hideBoxesButton";
+	button -e -en 0 "showBoxesButton";
+	button -e -en 0 "CreateCharacterButton";
+	button -e -en 0 "KillCharacterButton";
+	button -e -en 0 "MirrorCCL2RButton";
+	button -e -en 0 "MirrorCCR2LButton";
+	floatField -e -en 0 "ScaleCCFloatField";
+	button -e -en 0 "ScaleCCButton";
+	button -e -en 0 "LimitKneesButton";
+	button -e -en 0 "UnLimitKneesButton";
+	button -e -en 0 "LimitElbowsButton";
+	button -e -en 0 "UnLimitElbowsButtons";
+	button -e -en 0 "BakeAnimationButton";
+	}
+
+string $allSet=`optionMenu -q -v asUtilitiesOptionMenu`+"AllSet";
+if (`objExists $allSet`)
+	if (`reference -q -inr $allSet`)
+		{
+		checkBox -e -en 0 "RebuildCheckBox";
+		button -e -en 0 "RebuildButton";
+		button -e -en 0 "LockSkeletonButton";
+		button -e -en 0 "UnLockSkeletonButton";
+		}
+
+showWindow asUtilities;
+}

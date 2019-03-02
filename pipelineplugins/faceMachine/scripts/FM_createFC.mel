@@ -1,0 +1,784 @@
+
+//-------------------------------------------
+//faceControl creator
+//
+//select locators, then execute:
+//INPUTS:	string $locators[] = a list of locators to make FCs from
+//-------------------------------------------
+
+
+global proc createFC(string $locators[])
+{
+	/*matrix $globalOffsetMatrix[4][4];
+	float $f[];
+	
+	string $nodeToDelete = `createNode transform`;
+	setAttr ($nodeToDelete + ".tx") `getAttr FM_controls.tx`;
+	setAttr ($nodeToDelete + ".ty") `getAttr FM_controls.ty`;
+	setAttr ($nodeToDelete + ".tz") `getAttr FM_controls.tz`;
+	setAttr ($nodeToDelete + ".rx") `getAttr FM_controls.rx`;
+	setAttr ($nodeToDelete + ".ry") `getAttr FM_controls.ry`;
+	setAttr ($nodeToDelete + ".rz") `getAttr FM_controls.rz`;
+	$f = `getAttr $nodeToDelete.im`;
+	delete $nodeToDelete;
+	
+	$globalOffsetMatrix[0][0] = $f[0];
+	$globalOffsetMatrix[1][0] = $f[1];
+	$globalOffsetMatrix[2][0] = $f[2];
+	$globalOffsetMatrix[3][0] = $f[3];
+	$globalOffsetMatrix[0][1] = $f[4];
+	$globalOffsetMatrix[1][1] = $f[5];
+	$globalOffsetMatrix[2][1] = $f[6];
+	$globalOffsetMatrix[3][1] = $f[7];
+	$globalOffsetMatrix[0][2] = $f[8];
+	$globalOffsetMatrix[1][2] = $f[9];
+	$globalOffsetMatrix[2][2] = $f[10];
+	$globalOffsetMatrix[3][2] = $f[11];
+	$globalOffsetMatrix[0][3] = $f[12];
+	$globalOffsetMatrix[1][3] = $f[13];
+	$globalOffsetMatrix[2][3] = $f[14];
+	$globalOffsetMatrix[3][3] = $f[15];
+	*/
+	
+	//print $locators;
+	//return;
+	
+	for($locator in $locators)
+	{
+		//variables
+		float $scaleFactor			= 1;
+		string $staticBuffer		= $locator + "_FC_staticBuffer";
+		string $FC_autoBuffer		= $locator + "_FC_autoBuffer";
+		string $FC_extraBuffer		= $locator + "_FC_extraBuffer";
+		string $FC_boxBuffer		= $locator + "_FC_boxBuffer";
+		string $FC					= $locator + "_FC";
+		string $dFC_autoBuffer		= $locator + "_directFC_autoBuffer";
+		string $dFC_boxBuffer		= $locator + "_directFC_boxBuffer";
+		string $dFC					= $locator + "_directFC";
+		string $repositionFC		= $locator + "_FC_reposition";
+		string $clusterFC			= $FC + "_reposition_CL";
+		string $surface				= `getAttr ($locator + ".surface")`;
+		string $skull				= $surface;
+		if ($surface != "L_eyeShape" && $surface != "R_eyeShape")
+			if ($surface == "upperSkull_SP1" || $surface == "upperSkull_SP2")
+				$skull				= startString($surface, (size($surface) - 4));
+			else
+				$skull				= startString($surface, (size($surface) - 3));
+		string $skullBuffer			= ($skull + "_buffer");
+		string $skullControlsBuffer	= ($skull + "_controls");
+
+		
+		//select the template face control + rename it, also determine control scale.
+		if			((getAttr ($locator + ".type")) == 1)	{$scaleFactor = 1.0; select -r template1;}
+		else if		((getAttr ($locator + ".type")) == 2)	{$scaleFactor = .25; select -r template1;}
+		else if		((getAttr ($locator + ".type")) == 3)	{$scaleFactor = .50; select -r template2;}
+		else if		((getAttr ($locator + ".type")) == 4)	{$scaleFactor = .15; select -r template3;}
+		else if		((getAttr ($locator + ".type")) == 5)	{$scaleFactor = .50; select -r template4;}
+		else if		((getAttr ($locator + ".type")) == 6)	{$scaleFactor = .15; select -r template2;}
+		else if		((getAttr ($locator + ".type")) == 7)	{$scaleFactor = .90; select -r template1;}
+		duplicate -rr -n name_FC_template;
+		searchReplaceNames "name" "temp" "hierarchy";
+
+		
+		//create components for the FC
+		string $parentStack[] = {$skullBuffer, $skullControlsBuffer};
+		
+			//staticBuffer & repositionFC
+		$parentStack[size($parentStack)] = `createNode -n $staticBuffer transform`;
+		string $repositionBuffer = `createNode -n ($locator + "_FC_reposition_buffer") transform`;
+		rename "temp_FC_reposition" $repositionFC;
+		parent $repositionBuffer $staticBuffer;
+		parent $repositionFC $repositionBuffer;
+		xform -t 0 0 0 -ro 0 0 0 $repositionFC;
+						
+			//FC_autoBuffer
+		if (getAttr ($locator + ".FC_autoBuffer") == 1)
+		{
+			if (`getAttr ($locator + ".type")` == 5)
+				$parentStack[size($parentStack)] = `createNode -n $FC_autoBuffer transform`;
+			else
+			{
+				$parentStack[size($parentStack)] = `createNode -n $FC_autoBuffer fmTransform`;
+				connectAttr ($skullBuffer + ".worldInverseMatrix[0]") ($FC_autoBuffer + ".parentInvWorldMatrix");
+				connectAttr ($FC_autoBuffer + ".parentMatrix[0]") ($FC_autoBuffer + ".parentMatrixCopy[0]");
+				connectAttr ($surface + ".matrix") ($FC_autoBuffer + ".sphereMatrix");
+				connectAttr ($surface + ".inverseMatrix") ($FC_autoBuffer + ".sphereInvMatrix"); 
+				setAttr ($FC_autoBuffer + ".specialUndo") false;
+			}
+		}
+		
+			//FC_extraBuffer
+		if (getAttr ($locator + ".extraBuffer") == 1)
+		{
+			if (`getAttr ($locator + ".type")` == 5)
+				$parentStack[size($parentStack)] = `createNode -n $FC_extraBuffer transform`;
+			else
+			{
+				$parentStack[size($parentStack)] = `createNode -n $FC_extraBuffer fmTransform`;
+				connectAttr ($skullBuffer + ".worldInverseMatrix[0]") ($FC_extraBuffer + ".parentInvWorldMatrix");
+				connectAttr ($FC_extraBuffer + ".parentMatrix[0]") ($FC_extraBuffer + ".parentMatrixCopy[0]");
+				connectAttr ($surface + ".matrix") ($FC_extraBuffer + ".sphereMatrix");
+				connectAttr ($surface + ".inverseMatrix") ($FC_extraBuffer + ".sphereInvMatrix");
+				setAttr ($FC_extraBuffer + ".specialUndo") false;
+			}
+		}
+		
+			//FC_boxBuffer
+		if (`getAttr ($locator + ".type")` == 5)
+			$parentStack[size($parentStack)] = `createNode -n $FC_boxBuffer transform`;
+		else
+		{
+			$parentStack[size($parentStack)] = `createNode -n $FC_boxBuffer fmTransform`;
+			connectAttr ($skullBuffer + ".worldInverseMatrix[0]") ($FC_boxBuffer + ".parentInvWorldMatrix");
+			connectAttr ($FC_boxBuffer + ".parentMatrix[0]") ($FC_boxBuffer + ".parentMatrixCopy[0]");
+			connectAttr ($surface + ".matrix") ($FC_boxBuffer + ".sphereMatrix");
+			connectAttr ($surface + ".inverseMatrix") ($FC_boxBuffer + ".sphereInvMatrix");
+			setAttr ($FC_boxBuffer + ".specialUndo") true;
+		}
+		
+			//FC
+		if (`getAttr ($locator + ".type")` == 5)
+		{
+			$parentStack[size($parentStack)] = `createNode -n $FC transform`;
+			parent -add -s temp_FCShape $FC;
+			rename "temp_FCShape" ($locator + "_FCShape");
+		}
+		else
+		{
+			$parentStack[size($parentStack)] = `createNode -n $FC fmTransform`;
+			parent -add -s temp_FCShape $FC;
+			rename "temp_FCShape" ($locator + "_FCShape");
+			connectAttr ($skullBuffer + ".worldInverseMatrix[0]") ($FC + ".parentInvWorldMatrix");
+			connectAttr ($FC + ".parentMatrix[0]") ($FC + ".parentMatrixCopy[0]");
+			connectAttr ($surface + ".matrix") ($FC + ".sphereMatrix");
+			connectAttr ($surface + ".inverseMatrix") ($FC + ".sphereInvMatrix");
+			setAttr ($FC + ".specialUndo") true;
+			setAttr ($FC + ".dnc") 1;
+			setAttr -k 0 ($FC + ".rx");
+			setAttr -k 0 ($FC + ".ry");
+			setAttr -k 0 ($FC + ".rz");
+			setAttr -cb 0 ($FC + ".dnc");
+			setAttr -cb 0 ($FC + ".constrain");
+			setAttr -cb 0 ($FC + ".specialUndo");
+		}
+		setAttr -l 1 -k 0 ($FC + ".sx");
+		setAttr -l 1 -k 0 ($FC + ".sy");
+		setAttr -l 1 -k 0 ($FC + ".sz");
+		setAttr -k 0 ($FC + ".v");
+		
+			//dFC components
+		if (getAttr ($locator + ".directFC") != 0)
+		{
+				//dFC_autoBuffer
+			if (getAttr ($locator + ".DFC_autoBuffer") == 1)
+				$parentStack[size($parentStack)] = `createNode -n $dFC_autoBuffer transform`;				
+			
+				//dFC_boxBuffer
+			$parentStack[size($parentStack)] = `createNode -n $dFC_boxBuffer transform`;
+			
+				//dFC
+			$parentStack[size($parentStack)] = `createNode -n $dFC transform`;
+			parent -add -s temp_directFCShape $dFC;
+			rename "temp_directFCShape" ($locator + "_directFCShape");
+			setAttr -l 1 -k 0 ($dFC + ".sx");
+			setAttr -l 1 -k 0 ($dFC + ".sy");
+			setAttr -l 1 -k 0 ($dFC + ".sz");
+			setAttr -k 0 ($dFC + ".v");
+		}
+	
+	
+		//parent FC components
+		for ($i = 1; $i < (`size($parentStack)` - 1); $i++)
+			parent $parentStack[$i + 1] $parentStack[$i];
+
+	
+		//remove the temp shapes
+		delete temp_FC_template;
+		
+		
+		//position buffers appropriately
+			//move the static buffer to the locator position
+		string $tempArray[] = `pointConstraint $locator $staticBuffer`;
+		delete $tempArray[0];
+		if (`getAttr ($locator + ".type")` == 5)
+		{
+			string $tempArray[] = `orientConstraint $locator $staticBuffer`;
+			delete $tempArray[0];
+		}
+		
+		/*
+			//activate all the constraints
+		for ($node in $parentStack)
+			if (nodeType($node) == "fmTransform")
+			{
+				setAttr ($node + ".constrain") 1;
+				setAttr ($node + ".specialUndo") 0;
+			}
+		refresh;*/
+		
+				
+		float $pos[];
+		int $n = 0;
+			//activate all the constraints
+		for ($node in $parentStack) {
+			if (nodeType($node) == "fmTransform")
+			{
+				float $f[] = `getAttr ($node + ".t")`;
+				$pos[$n*3 + 0] = $f[0];
+				$pos[$n*3 + 1] = $f[1];
+				$pos[$n*3 + 2] = $f[2];
+				++$n;
+			}
+		}
+		
+		for ($node in $parentStack) {
+			if (nodeType($node) == "fmTransform")
+				setAttr ($node + ".constrain") 1;
+		}
+		refresh;
+		
+		$n = 0;
+		for ($node in $parentStack) {
+			if (nodeType($node) == "fmTransform")
+			{
+				setAttr ($node + ".t") $pos[$n*3 + 0] $pos[$n*3 + 1] $pos[$n*3 + 2];
+				++$n;
+			}
+		}
+		refresh;
+		
+		
+		//move the staticBuffer into position at the second highest buffer to increase zeroing precision
+//		parent -w $parentStack[3];
+//		string $tempArray[] = `pointConstraint $staticBuffer $parentStack[3]`;
+//		delete $tempArray[0];
+//		parent $parentStack[3] $staticBuffer;
+		
+		
+		//SPECIAL:  to avoid a problem with the offsets moving for the eyeLids incurred by the lid splines not following
+		//the FCs, some special action needs to be taken here.
+			//for the eyeLid FCs, connect the lid pivots & extents to the FCs
+		if ($FC == "R_upperLid_FC")
+			pointConstraint $FC R_upperLid_controlTarget;
+		if ($FC == "R_outerUpperLid_FC")
+			pointConstraint $FC R_outerUpperLid_controlTarget;
+		if ($FC == "R_innerUpperLid_FC")
+			pointConstraint $FC R_innerUpperLid_controlTarget;
+		if ($FC == "R_lowerLid_FC")
+			pointConstraint $FC R_lowerLid_controlTarget;
+		if ($FC == "R_outerLowerLid_FC")
+			pointConstraint $FC R_outerLowerLid_controlTarget;
+		if ($FC == "R_innerLowerLid_FC")
+			pointConstraint $FC R_innerLowerLid_controlTarget;
+		if ($FC == "L_upperLid_FC")
+			pointConstraint $FC L_upperLid_controlTarget;
+		if ($FC == "L_outerUpperLid_FC")
+			pointConstraint $FC L_outerUpperLid_controlTarget;
+		if ($FC == "L_innerUpperLid_FC")
+			pointConstraint $FC L_innerUpperLid_controlTarget;
+		if ($FC == "L_lowerLid_FC")
+			pointConstraint $FC L_lowerLid_controlTarget;
+		if ($FC == "L_outerLowerLid_FC")
+			pointConstraint $FC L_outerLowerLid_controlTarget;
+		if ($FC == "L_innerLowerLid_FC")
+			pointConstraint $FC L_innerLowerLid_controlTarget;
+		
+			//also connect the FCs to the inner/outer/upper/lower extentTargets
+		if ($dFC == "R_innerEye_directFC")
+			pointConstraint $dFC R_pupil_innerExtent_target;
+		if ($dFC == "R_outerEye_directFC")
+			pointConstraint $dFC R_pupil_outerExtent_target;
+		if ($FC == "R_upperEye_FC")
+			pointConstraint $FC R_pupil_upperExtent_target;
+		if ($FC == "R_lowerEye_FC")
+			pointConstraint $FC R_pupil_lowerExtent_target;
+		if ($dFC == "L_innerEye_directFC")
+			pointConstraint $dFC L_pupil_innerExtent_target;
+		if ($dFC == "L_outerEye_directFC")
+			pointConstraint $dFC L_pupil_outerExtent_target;
+		if ($FC == "L_upperEye_FC")
+			pointConstraint $FC L_pupil_upperExtent_target;
+		if ($FC == "L_lowerEye_FC")
+			pointConstraint $FC L_pupil_lowerExtent_target;
+
+		
+		//create reposition switcherArray for FC and directFC (if present)
+		string $repositionSwitcherArray = `createNode -n ($locator + "_repositionSwitcherArray") fmSpaceSwitcherArray`;
+		connectAttr ($repositionFC + ".m") ($repositionSwitcherArray + ".im[0]");
+		float $f[] = `getAttr ($repositionFC + ".inverseMatrix")`;
+		setAttr ($repositionSwitcherArray + ".om[0]") -type "matrix" $f[0] $f[1] $f[2] $f[3] $f[4] $f[5] $f[6] $f[7] $f[8] $f[9] $f[10] $f[11] $f[12] $f[13] $f[14] $f[15];
+		string $splines[];
+		if (`objExists($dFC)`)
+			$splines = {$FC, $dFC};
+		else
+			$splines = {$FC};
+		
+		int $indexCount = 0;
+		for ($spline in $splines)
+		{
+			for ($i = 0; $i < (`getAttr ($spline + ".degree")` + `getAttr ($spline + ".spans")`); $i++)
+			{
+				float $move[] = `getAttr ($spline + ".cp[" + $i + "]")`;
+				setAttr ($repositionSwitcherArray + ".in[" + $indexCount + "].inX") $move[0];
+				setAttr ($repositionSwitcherArray + ".in[" + $indexCount + "].inY") $move[1];
+				setAttr ($repositionSwitcherArray + ".in[" + $indexCount + "].inZ") $move[2];
+				connectAttr ($repositionSwitcherArray + ".out[" + $indexCount + "]") ($spline + ".cp[" + $i + "]");
+				$indexCount++;
+			}
+		}
+
+			//create connections for reposition visibility
+		connectAttr FM_data.reposition ($repositionFC + ".v");
+		connectAttr reposition_reverse.ox ($FC + ".v");
+		
+			//orient the reposition buffer
+		string $tempArray[] = `orientConstraint $FC $repositionBuffer`;
+		delete $tempArray[0];
+		
+			//move the repositionFC to the placementWidget position/rotation (if they weren't created by the eyeStructure script)
+		if (`getAttr ($locator + ".eyeLocator")` == 0)
+		{
+		
+			//scale the control to its type size
+			setAttr ($repositionFC + ".sx") ($scaleFactor * `getAttr FM_data.worldScale` * `getAttr ($locator + "_PW.sx")`);
+			setAttr ($repositionFC + ".sy") ($scaleFactor * `getAttr FM_data.worldScale` * `getAttr ($locator + "_PW.sy")`);
+			setAttr ($repositionFC + ".sz") ($scaleFactor * `getAttr FM_data.worldScale` * `getAttr ($locator + "_PW.sz")`);
+		
+			string $tempArray[] = `parentConstraint ($locator + "_PW") $repositionFC`;
+			delete $tempArray[0];
+		}
+		else	//move the eye FCs to more convenient positions than their default
+		{			
+			
+			// Account for the global scale positioning the eye control in the wrong spot because there is no placement widget
+			xform -sp 0 0 0 $repositionFC;
+			xform -rp 0 0 0 $repositionFC;
+			
+				//scale the control to its type size
+			setAttr ($repositionFC + ".sx") ($scaleFactor * `getAttr FM_data.worldScale`);
+			setAttr ($repositionFC + ".sy") ($scaleFactor * `getAttr FM_data.worldScale`);
+			setAttr ($repositionFC + ".sz") ($scaleFactor * `getAttr FM_data.worldScale`);
+			
+			// Make it have the same relative pivots it did before given its new size
+			float $f[] = `xform -q -ws -sp $repositionFC`;
+			xform -ws -rp $f[0] $f[1] $f[2] $repositionFC;
+			
+			
+			// This is important, since making the current units different from cm will otherwise place the controls in vastly different places.
+			float $unitScale = `convertUnit -fromUnit "cm" "1"`;
+
+			if ($locator == "R_innerEye")
+				xform -t (-.2 * $unitScale * `getAttr FM_data.worldScale`) (.1 * $unitScale * `getAttr FM_data.worldScale`) (.2 * $unitScale * `getAttr FM_data.worldScale`) -ro 0 -15 0 $repositionFC;
+			if ($locator == "L_innerEye")
+				xform -t (.35 * $unitScale * `getAttr FM_data.worldScale`) (.1 * $unitScale * `getAttr FM_data.worldScale`) (.2 * $unitScale * `getAttr FM_data.worldScale`) -ro 0 15 0 $repositionFC;
+			if ($locator == "R_upperLid" || $locator == "L_upperLid")
+				xform -t 0 (.3 * $unitScale * `getAttr FM_data.worldScale`) 0 $repositionFC;
+			if ($locator == "R_lowerLid" || $locator == "L_lowerLid")
+				xform -t 0 (-.2 * $unitScale * `getAttr FM_data.worldScale`) 0 $repositionFC;
+			if ($locator == "R_outerUpperLid" || $locator == "L_outerUpperLid")
+				xform -t 0 (.2 * $unitScale * `getAttr FM_data.worldScale`) 0 $repositionFC;
+			if ($locator == "R_innerUpperLid" || $locator == "L_innerUpperLid")
+				xform -t 0 (.2 * $unitScale * `getAttr FM_data.worldScale`) (.26 * $unitScale * `getAttr FM_data.worldScale`) $repositionFC;
+			if ($locator == "R_outerLowerLid" || $locator == "L_outerLowerLid")
+				xform -t 0 (-.1 * $unitScale * `getAttr FM_data.worldScale`) 0 $repositionFC;
+			if ($locator == "R_innerLowerLid" || $locator == "L_innerLowerLid")
+				xform -t 0 (-.1 * $unitScale * `getAttr FM_data.worldScale`) (.26 * $unitScale * `getAttr FM_data.worldScale`) $repositionFC;
+		}
+		
+		
+		//set point relationships between FC and splines
+			//redefine the parent stack to omit the redundant "skull_controls" node
+		string $matrixStack[];
+		clear $matrixStack;
+		for ($parent in $parentStack)
+			if ($parent != $skullControlsBuffer)
+				$matrixStack[size($matrixStack)] = $parent;
+				
+			//if the locator has a proxy stack, change the matrixStack to reflect this instead of the FC
+		string $temp = `getAttr ($locator + ".proxyStack")`;
+		if ($temp != "")
+		{
+			clear $matrixStack;
+			tokenize $temp " " $matrixStack;
+		}
+		
+			//get pointList from locator.points
+		string $tempPoints = `getAttr ($locator + ".points")`;
+		string $pointList[];
+		tokenize $tempPoints " " $pointList;
+
+			//make a fmSpaceSwitcherArray for the FC
+		string $switcherArray = `createNode -n ($locator + "_FC_switcherArray") fmSpaceSwitcherArray`;
+			
+			//set the offset matrices to the inverse matrixes of the FC's parents from matrixStack in reverse order
+		float $f[];
+		for ($i = 0; $i < size($matrixStack); $i++)
+		{
+			$f = `getAttr ($matrixStack[(size($matrixStack) - 1 - $i)] + ".inverseMatrix")`;
+			setAttr ($switcherArray + ".om[" + (size($matrixStack) - 1 - $i) + "]") -type "matrix" $f[0] $f[1] $f[2] $f[3] $f[4] $f[5] $f[6] $f[7] $f[8] $f[9] $f[10] $f[11] $f[12] $f[13] $f[14] $f[15];
+		}
+		
+			//connect matrixes of the FC's parents from matrixStack
+		for ($i = 0; $i < size($matrixStack); $i++)
+			connectAttr ($matrixStack[$i] + ".m") ($switcherArray + ".im[" + (size($matrixStack) - 1 - $i) + "]");
+			
+			//for each point, test for existing connections and either connect to the switcherArray or a fmPointBlend
+		for ($i = 0; $i < size($pointList); $i++)
+		{
+			//derive curve name, point number, and point position
+			string $tempArray[];
+			tokenize $pointList[$i] "." $tempArray;
+			string $curveName = $tempArray[0];
+			string $CP = `match "[0-9]+" $tempArray[1]`;
+			float $move[] = `getAttr $pointList[$i]`;		
+			
+			setAttr ($switcherArray + ".in[" + $i + "].inX") $move[0];
+			setAttr ($switcherArray + ".in[" + $i + "].inY") $move[1];
+			setAttr ($switcherArray + ".in[" + $i + "].inZ") $move[2];
+			/*
+			matrix $moveMatrix[4][1];
+			matrix $result[4][1];
+			$moveMatrix[0][0] = $move[0];
+			$moveMatrix[1][0] = $move[1];
+			$moveMatrix[2][0] = $move[2];
+			$moveMatrix[3][0] = 1;
+			
+			$result = $globalOffsetMatrix * $moveMatrix;
+			
+			//set the switcherArray's in values to the point's original position
+			setAttr ($switcherArray + ".in[" + $i + "].inX") $result[0][0];//$move[0];
+			setAttr ($switcherArray + ".in[" + $i + "].inY") $result[1][0];//$move[1];
+			setAttr ($switcherArray + ".in[" + $i + "].inZ") $result[2][0];//$move[2];
+			*/
+			
+			//test to see if this point is already connected or not
+			if (`connectionInfo -id $pointList[$i]`)
+			{
+				// It's important to skip conversion nodes here, otherwise the numbers get really messed up
+				string $connection[] = `listConnections -skipConversionNodes true -d 0 $pointList[$i]`;
+				string $strings[] = `listConnections -skipConversionNodes true -p true -d 0 $pointList[$i]`;
+				string $connectionAttribute = $strings[0];
+				if (nodeType($connection[0]) == "fmPointBlend") //connect to an existing fmPointBlend
+				{
+					string $tempArray[] = `listConnections -d 0 ($connection[0] + ".in")`;
+					connectAttr ($switcherArray + ".out[" + $i + "]") ($connection[0] + ".in[" + size($tempArray) + "].point");
+					setAttr ($connection[0] + ".in[" + size($tempArray) + "].weight") 1;
+				}
+				else //create a fmPointBlend between the original input and the new switcher
+				{
+					string $blender = `createNode -n ($curveName + "_cp_" + $CP + "_fmPointBlend") fmPointBlend`;	
+					connectAttr $connectionAttribute ($blender + ".in[0].point");
+					setAttr ($blender + ".in[0].weight") 1;
+					connectAttr ($switcherArray + ".out[" + $i + "]") ($blender + ".in[1].point");
+					setAttr ($blender + ".in[1].weight") 1;
+					connectAttr -f ($blender + ".out") $pointList[$i];
+				}
+			}
+			else //connect the switcher output back to the point
+				connectAttr ($switcherArray + ".out[" + $i + "]") $pointList[$i];
+				
+		}
+		
+		
+		fmRiggingIncreaseProgress;
+		
+		
+		//update display layers
+		string $tempArray[];
+		if (`getAttr ($locator + ".detailLevel")` == 1)	{
+			//editDisplayLayerMembers primaryControls $staticBuffer;
+			
+			connectAttr FM_data.primaryControls ($staticBuffer + ".v");
+			
+			$tempArray = `listRelatives -shapes $FC`;
+			setAttr ($tempArray[0] + ".overrideEnabled") 1;
+			setAttr ($tempArray[0] + ".overrideColor") 4;
+			if (objExists($dFC)) {
+				$tempArray = `listRelatives -shapes $dFC`;
+				setAttr ($tempArray[0] + ".overrideEnabled") 1;
+				setAttr ($tempArray[0] + ".overrideColor") 4;
+			}
+		} else {
+			//editDisplayLayerMembers secondaryControls $staticBuffer;
+			
+			connectAttr FM_data.secondaryControls ($staticBuffer + ".v");
+			
+			$tempArray = `listRelatives -shapes $FC`;
+			setAttr ($tempArray[0] + ".overrideEnabled") 1;
+			setAttr ($tempArray[0] + ".overrideColor") 24;
+			if (objExists($dFC)) {
+				$tempArray = `listRelatives -shapes $dFC`;
+				setAttr ($tempArray[0] + ".overrideEnabled") 1;
+				setAttr ($tempArray[0] + ".overrideColor") 24;
+			}
+		}
+	}
+}
+
+
+
+//-------------------------------------------
+//faceControl connection rigger
+//
+//once FCs are built, execute:
+//-------------------------------------------
+
+global proc connectFCs()
+{
+	//first, rig up the necessary specialized controls + connections
+	
+	//brow crease thingy
+	autoBrowCrease;
+	
+	//upper/jawSkull control targets/constraints/control connections:
+	followSkulls;
+	
+	//special connections necessary for the eyes:
+	connectEyes;
+	
+	//now connect the normal point constraint heirarchy which drives everything:
+	//gather all the FCs by their placement name...
+	select -r "placement_locators|*";
+	
+	//add to an array for storage
+	string $FCs[] = `ls -selection`;
+	
+	for ($current in $FCs)
+	{
+		string $drivers = (`getAttr ($current + ".drivers")`);
+		//check to see if the control has any drivers listed
+		if ($drivers != "")
+		{
+			//if it does have drivers, break them apart into a list and point constrain them with an equal weight of 1
+			string $controlList[];
+			tokenize $drivers " " $controlList;
+
+			if (`getAttr ($current + ".maintainOffset")` == 0)
+				pointConstraint $controlList ($current + "_FC_autoBuffer");
+			else 
+			{
+				pointConstraint -mo $controlList ($current + "_FC_autoBuffer");				
+			}
+		}
+	}
+	
+	// a few special fixes	
+	fixFCs;
+}
+
+global proc fixFCs()
+{
+	//some special requirements of a few autoBuffers with non-1 weights...
+	delete noseControl_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .9 nose_target noseControl_FC_autoBuffer;
+	pointConstraint -mo -w .1 upperMouth_directFC noseControl_FC_autoBuffer;
+	
+	delete R_cheekBone_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .6 R_noseWing_directFC R_cheekBone_FC_autoBuffer;
+	pointConstraint -mo -w .4 R_cheek_FC_autoBuffer R_cheekBone_FC_autoBuffer;
+	delete L_cheekBone_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .6 L_noseWing_directFC L_cheekBone_FC_autoBuffer;
+	pointConstraint -mo -w .4 L_cheek_FC_autoBuffer L_cheekBone_FC_autoBuffer;
+
+	delete R_lowerOrbital_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .5 R_outerEye_directFC R_lowerOrbital_FC_autoBuffer;
+	pointConstraint -mo -w .3 R_upperMouth_directFC R_lowerOrbital_FC_autoBuffer;
+	pointConstraint -mo -w .2 R_mouth_directFC R_lowerOrbital_FC_autoBuffer;
+	delete L_lowerOrbital_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .5 L_outerEye_directFC L_lowerOrbital_FC_autoBuffer;
+	pointConstraint -mo -w .3 L_upperMouth_directFC L_lowerOrbital_FC_autoBuffer;
+	pointConstraint -mo -w .2 L_mouth_directFC L_lowerOrbital_FC_autoBuffer;
+
+	delete R_cheekPocket_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .6 R_jawCorner_FC R_cheekPocket_FC_autoBuffer;
+	pointConstraint -mo -w .4 R_mouth_directFC R_cheekPocket_FC_autoBuffer;
+	delete L_cheekPocket_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .6 L_jawCorner_FC L_cheekPocket_FC_autoBuffer;
+	pointConstraint -mo -w .4 L_mouth_directFC L_cheekPocket_FC_autoBuffer;
+	
+	delete upperForehead_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .4 brow_target upperForehead_FC_autoBuffer;
+	pointConstraint -mo -w .3 R_brow1_directFC upperForehead_FC_autoBuffer;
+	pointConstraint -mo -w .3 L_brow1_directFC upperForehead_FC_autoBuffer;
+	delete R_upperForehead_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .4 R_brow_target R_upperForehead_FC_autoBuffer;
+	pointConstraint -mo -w .3 R_brow2_directFC R_upperForehead_FC_autoBuffer;
+	pointConstraint -mo -w .3 R_brow3_directFC R_upperForehead_FC_autoBuffer;
+	delete L_upperForehead_FC_autoBuffer_pointConstraint1;
+	pointConstraint -mo -w .4 L_brow_target L_upperForehead_FC_autoBuffer;
+	pointConstraint -mo -w .3 L_brow2_directFC L_upperForehead_FC_autoBuffer;
+	pointConstraint -mo -w .3 L_brow3_directFC L_upperForehead_FC_autoBuffer;
+	
+	// Added by Brian
+	// We're using parentConstraints so that we can change the weight value after rigging
+	delete R_noseWing_FC_autoBuffer_pointConstraint1;
+	//parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo -w 1 R_upperMouth_directFC R_noseWing_FC_autoBuffer;
+	//parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo -w 1 nose_target R_noseWing_FC_autoBuffer;
+	//parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo -w 1 noseControl_directFC R_noseWing_FC_autoBuffer;
+	parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo 
+		R_upperMouth_directFC nose_target noseControl_directFC R_noseWing_FC_autoBuffer;
+	
+	addAttr -ln autoSneer -at double  -min 0 -max 1 -dv 1 R_noseWing_FC;
+	setAttr -e -keyable true R_noseWing_FC.autoSneer;
+	connectAttr -f R_noseWing_FC.autoSneer R_noseWing_FC_autoBuffer_parentConstraint1.R_upperMouth_directFCW0;
+
+	
+	delete L_noseWing_FC_autoBuffer_pointConstraint1;
+	//parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo -w 1 L_upperMouth_directFC L_noseWing_FC_autoBuffer;
+	//parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo -w 1 nose_target L_noseWing_FC_autoBuffer;
+	//parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo -w 1 noseControl_directFC L_noseWing_FC_autoBuffer;
+	parentConstraint -skipRotate x -skipRotate y -skipRotate z -mo 
+		L_upperMouth_directFC nose_target noseControl_directFC L_noseWing_FC_autoBuffer;
+	
+	addAttr -ln autoSneer -at double  -min 0 -max 1 -dv 1 L_noseWing_FC;
+	setAttr -e -keyable true L_noseWing_FC.autoSneer;
+	connectAttr -f L_noseWing_FC.autoSneer L_noseWing_FC_autoBuffer_parentConstraint1.L_upperMouth_directFCW0;
+}
+
+
+//additional procedures for building individual control situations
+global proc autoBrowCrease()
+{
+	//create auto-crease thingy
+	//some necessary variables:
+	string $L_DFC_auto = "L_brow1_directFC_autoBuffer";
+	string $R_DFC_auto = "R_brow1_directFC_autoBuffer";
+	string $BC_DFC_auto = "browCrease_directFC_autoBuffer";
+	
+	//create JM_distPercent nodes
+	select "L_brow1_FC" "R_brow1_FC";
+	string $markerList[] = JM_distPercent(1);
+	
+	//create browCrease_MD to calculate the brow crease relative to the world scale
+	string $creaseScale = `shadingNode -au -n "browCrease_MD" multiplyDivide`;
+	connectAttr "FM_data.browCrease" ($creaseScale + ".i1x");
+	connectAttr "FM_data.browCrease" ($creaseScale + ".i1y");
+	connectAttr "FM_data.browCrease" ($creaseScale + ".i1z");
+	setAttr ($creaseScale + ".i2x") (`getAttr FM_data.worldScale` / 2);
+	setAttr ($creaseScale + ".i2y") (`getAttr FM_data.worldScale` / 2);
+	setAttr ($creaseScale + ".i2z") `getAttr FM_data.worldScale`;
+	
+	//create blend nodes which blend between no movement and the browCrease_MD amount
+	string $blend = `shadingNode -n "browCrease_blender" -au blendColors`;
+	setAttr ($blend + ".c1r") 0;
+	setAttr ($blend + ".c1g") 0;
+	setAttr ($blend + ".c1b") 0;
+	
+	// Added by Brian: if the current units aren't centimeters, then not converting will cause
+	// us a great deal of pain and agony!
+	string $currentUnit = `currentUnit -q -linear`;
+	float $conversion = `convertUnit -fromUnit "cm" -toUnit $currentUnit "1"`;
+	if ($conversion != 1.0) {
+		string $unitMult = `shadingNode -au -n "browCrease_unitConvert_MD" multiplyDivide`;
+		setAttr ($unitMult + ".i2x") $conversion;
+		setAttr ($unitMult + ".i2y") $conversion;
+		setAttr ($unitMult + ".i2z") $conversion;
+		connectAttr ($creaseScale + ".ox") ($unitMult + ".i1x");
+		connectAttr ($creaseScale + ".oy") ($unitMult + ".i1y");
+		connectAttr ($creaseScale + ".oz") ($unitMult + ".i1z");
+		connectAttr ($unitMult + ".ox") ($blend + ".c2r");
+		connectAttr ($unitMult + ".oy") ($blend + ".c2g");
+		connectAttr ($unitMult + ".oz") ($blend + ".c2b");
+	} else {
+		connectAttr ($creaseScale + ".ox") ($blend + ".c2r");
+		connectAttr ($creaseScale + ".oy") ($blend + ".c2g");
+		connectAttr ($creaseScale + ".oz") ($blend + ".c2b");
+	}
+	connectAttr ($markerList[0] + ".p") ($blend + ".b");
+	
+	connectAttr ($blend + ".opr") "R_brow1_directFC_autoBuffer.tz";
+	connectAttr ($blend + ".opg") "L_brow1_directFC_autoBuffer.tz";
+	connectAttr ($blend + ".opb") "browCrease_directFC_autoBuffer.tz";
+}
+
+global proc followSkulls()
+{
+	//for the various controls that need to blend halfway between the upper and jaw skulls:
+	
+	//LipFollow targets
+		//a list of necessary controls... note the order
+	string $controls[10] = {"upperMouth", "R_upperMouth", "L_upperMouth",
+							"lowerMouth", "R_lowerMouth", "L_lowerMouth",
+							"R_mouth", "L_mouth", "R_jawCorner", "L_jawCorner"};
+
+	string $current;
+	int $i = 0;
+	for ($current in $controls)
+	{
+		//make 2 locators, name one for the upperSkullTarget, the other for the jawSkullTarget, move them to the location of the control's autoBuffer, parent them appropriately
+
+		spaceLocator;
+		rename ($current + "_FC_upperSkullTarget");
+		pointConstraint -n ($current + "_tempConstraint") ($current + "_FC") ($current + "_FC_upperSkullTarget");
+		delete ($current + "_tempConstraint"); 
+		parent ($current + "_FC_upperSkullTarget") upperSkull_targets;
+		setAttr ($current + "_FC_upperSkullTarget.visibility") 0;
+		
+		spaceLocator;
+		rename ($current + "_FC_jawSkullTarget");
+		pointConstraint -n ($current + "_tempConstraint") ($current + "_FC") ($current + "_FC_jawSkullTarget");
+		delete ($current + "_tempConstraint"); 
+		parent ($current + "_FC_jawSkullTarget") jawSkull_targets;
+		setAttr ($current + "_FC_jawSkullTarget.visibility") 0;		
+		
+		string $tempArray[] = `pointConstraint ($current + "_FC_upperSkullTarget") ($current + "_FC_jawSkullTarget") ($current + "_FC_autoBuffer")`;
+
+		//connect the right weights for upper vs. lower!
+		if ($i < 3)
+		{
+			//if it's an upperMouth control, set the lipFollow control to turn off its lower lip follow function
+			connectAttr -f FM_data.lipFollow ($tempArray[0] + ".tg[1].tw");
+		}
+		else if ($i > 2 && $i < 6)
+		{
+			//if it's a lowerMouth control, set the lipFollow control to turn off its upper lip follow function
+			connectAttr -f FM_data.lipFollow ($tempArray[0] + ".tg[0].tw");
+		}
+
+		$i++;
+	}
+}
+
+global proc connectEyes()
+{
+	//connect the eyes to the eye controls
+		//R_upperLid
+	string $temp[] = `pointConstraint -mo -w 1 R_upperLid_FC_autoBuffer R_upperLid_FC_extraBuffer`;
+	pointConstraint -w 0 R_pupil_upperLid_target R_upperLid_FC_extraBuffer;
+	connectAttr -f follow_reverse.ox ($temp[0] + ".R_upperLid_FC_autoBufferW0");
+	connectAttr -f FM_data.R_lidFollow ($temp[0] + ".R_pupil_upperLid_targetW1");
+	
+	// Not sure if connecting the constraint this way was important, but since I don't think it makes any difference I changed it...
+	//connectAttr -f follow_reverse.ox ($temp[0] + ".tg[0].tw");
+	//connectAttr -f FM_data.R_lidFollow ($temp[0] + ".tg[1].tw");
+	
+		//R_lowerLid
+	string $temp[] = `pointConstraint -mo R_lowerLid_FC_autoBuffer R_lowerLid_FC_extraBuffer`;
+	pointConstraint -w 0 R_pupil_lowerLid_target R_lowerLid_FC_extraBuffer;
+	connectAttr -f follow_reverse.ox ($temp[0] + ".R_lowerLid_FC_autoBufferW0");
+	connectAttr -f FM_data.R_lidFollow ($temp[0] + ".R_pupil_lowerLid_targetW1");
+	
+		//L_upperLid
+	string $temp[] = `pointConstraint -mo -w 1 L_upperLid_FC_autoBuffer L_upperLid_FC_extraBuffer`;
+	pointConstraint -w 0 L_pupil_upperLid_target L_upperLid_FC_extraBuffer;
+	connectAttr -f follow_reverse.oy ($temp[0] + ".L_upperLid_FC_autoBufferW0");
+	connectAttr -f FM_data.L_lidFollow ($temp[0] + ".L_pupil_upperLid_targetW1");
+	
+		//L_lowerLid
+	string $temp[] = `pointConstraint -mo -w 1 L_lowerLid_FC_autoBuffer L_lowerLid_FC_extraBuffer`;
+	pointConstraint -w 0 L_pupil_lowerLid_target L_lowerLid_FC_extraBuffer;
+	connectAttr -f follow_reverse.oy ($temp[0] + ".L_lowerLid_FC_autoBufferW0");
+	connectAttr -f FM_data.L_lidFollow ($temp[0] + ".L_pupil_lowerLid_targetW1");
+}
+
+global proc rigControls()
+{
+	source FM_tools.mel;
+	
+	createFC(`ls "placement_locators|*"`);
+	//return;
+	
+	connectFCs;
+	
+	delete `ls "placement_locators|*"`;
+}

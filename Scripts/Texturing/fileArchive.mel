@@ -1,0 +1,27 @@
+global proc fileArchive()
+{
+	file -f -save;
+	string $filePath = `file -q -loc`;
+	string $fileName1 = basename($filePath,"");
+	string $fileName = `basenameEx($filePath)`;
+	string $baseDir = dirname( $filePath );
+	string $list[] = `listConnections defaultRenderGlobals.resolution`;
+	setAttr ( $list[0]+".width") 50;
+	setAttr ( $list[0]+".height") 50;
+	setAttr "defaultResolution.deviceAspectRatio" 1;
+	renderIntoNewWindow render;
+	setAttr "defaultRenderGlobals.imageFormat" 20;
+	renderWindowSaveImageCallback "renderView" ("Q:/TNN/01_ASSET_LIBRARY/CHARACTERS/"+$fileName+".bmp") "image";
+	string $destWindows = "Q:/TNN/01_ASSET_LIBRARY/CHARACTERS/"+$fileName1;
+	string $srcWindows = `file -q -loc`;
+	sysFile -copy $destWindows $srcWindows; 
+	string $fileSelection[] = `ls -tex`;
+	for($file in $fileSelection)
+	{
+		string $texName = `getAttr ($file + ".fileTextureName")`;
+		string $fileName2 = basename($texName,"");
+		string $destWindows = "Q:/TNN/01_ASSET_LIBRARY/CHARACTERS/"+$fileName2;
+		string $srcWindows = $texName;
+		sysFile -copy $destWindows $srcWindows;
+	}
+}

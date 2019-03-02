@@ -1,0 +1,158 @@
+global proc lowresHighresSwitch()
+{
+	if( (`window -exists lowHighWin`) == true ){deleteUI lowHighWin;}
+	window -widthHeight 313 450 -t "TNN Texture Manager                  Sanraa Media..." -s 0 -mb true lowHighWin;
+	menu -l " Item List ";
+	menuItem -l "CHARS"  -c getCharsShader forRefChars;
+	menuItem -l "SETS" -c getSetsShader forRefSets;
+	menuItem -l "PROPS" -c gerPropsShader forRefProps;
+	
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 refShaders`;
+	formLayout -edit
+	     -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+	
+	string $child5 = `columnLayout -adj true LOWRES`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslistLowres;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Switch To Low/High Res" -c getLowresHighres;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $child6 = `columnLayout -adj true HIGHRES`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslistHighres;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Switch To Low/High Res" -c getLowresHighres;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	tabLayout -edit -tabLabel $child5 "HIGHRES" -tabLabel $child6 "LOWRES" $tabs ;
+	
+ showWindow;
+}
+
+global proc getCharsShader()
+{
+	textScrollList -e -ra propslistLowres;
+	textScrollList -e -ra propslistHighres;
+	string $refNodes[] = `file -q -r`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "CHARS") || ($buffer[6] == "CHARS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistLowres;
+				textScrollList -e -append $name propslistHighres;
+			}
+		}
+	}
+} 
+
+global proc getSetsShader()
+{
+	textScrollList -e -ra propslistLowres;
+	textScrollList -e -ra propslistHighres;
+	string $refNodes[] = `file -q -r`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "SETS") || ($buffer[6] == "SETS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistLowres;
+				textScrollList -e -append $name propslistHighres;
+			}
+
+		}
+	}
+} 
+
+global proc getPropsShader()
+{
+	textScrollList -e -ra propslistDefault;
+	textScrollList -e -ra propslistLowres;
+	textScrollList -e -ra propslistHighres;
+	string $refNodes[] = `file -q -r`;
+	string $buffer[];
+	for($r in $refNodes)
+	{ 
+		$numTokens = `tokenize $r "/" $buffer`;
+		if(($buffer[5] == "PROPS") || ($buffer[6] == "PROPS"))
+		{
+			string $name = basenameEx($r);
+			int $val = endsWith($name, "_RIG");
+			if($val == "1")
+			{
+				textScrollList -e -append $name propslistDefault;
+				textScrollList -e -append $name propslistLowres;
+				textScrollList -e -append $name propslistHighres;
+			}
+		}
+	}
+} 
+
+global proc getLowresHighres()
+{
+	string $chars = `menuItem -q -l forRefChars`;
+	string $sets = `menuItem -q -l forRefSets`;
+	string $props = `menuItem -q -l forRefProps`;
+
+	string $lowresList[] = `textScrollList -q -si propslistLowres`;
+	string $highresList[] = `textScrollList -q -si propslistHighres`;
+	string $shaderType = `tabLayout -q -st refShaders`;
+
+	textScrollList -e -da propslistLowres;
+	textScrollList -e -da propslistHighres;
+	
+	string $shaderType = `tabLayout -q -st refShaders`;
+	
+	string $refNodes[] = `file -q -r`;
+	for($r in $refNodes)
+	{ 
+		string $buffer[];
+		$numTokens = `tokenize $r "/" $buffer`;
+		string $fName = basenameEx($r);
+
+		if(($buffer[6] == "RENDERABLE_SHADERS") && ($shaderType == "HIGHRES"))
+		{
+			string $ns[];
+			$numTokens = `tokenize $highresList[0] "_" $ns`;
+			string $nameSpace = `namespace -ex ($ns[0]+"_SHA")`;
+			file -loadReference ($ns[0]+"_SHA"+"RN") -type "mayaAscii" -options "v=0" ("Q:/THE99/PRODUCTION/REFERENCES/"+$buffer[4]+"/"+$buffer[5]+"/COMMON_SHADERS/"+$ns[0]+"_SHA"+".ma");
+		} 
+		else if(($buffer[6] == "COMMON_SHADERS") && ($shaderType == "LOWRES"))
+		{
+			string $ns[];
+			$numTokens = `tokenize $highresList[0] "_" $ns`;
+			string $nameSpace = `namespace -ex ($ns[0]+"_SHA")`;
+			file -loadReference ($ns[0]+"_SHA"+"RN") -type "mayaAscii" -options "v=0" ("Q:/THE99/PRODUCTION/REFERENCES/"+$buffer[4]+"/"+$buffer[5]+"/RENDERABLE_SHADERS/"+$ns[0]+"_SHA"+".ma");
+		} 
+			
+		if(($lowresList[0] == $fName) && ($shaderType == "LOWRES"))
+		{
+			string $ns[];
+			$numTokens = `tokenize $lowresList[0] "_" $ns`;
+			string $nameSpace = `namespace -ex ($ns[0]+"_SHA")`;
+			if($nameSpace == "1")
+			{
+				file -loadReference ($ns[0]+"_SHA"+"RN") -type "mayaAscii" -options "v=0" ("Q:/THE99/PRODUCTION/REFERENCES/"+$buffer[4]+"/"+$buffer[5]+"/RENDERABLE_SHADERS/"+$ns[0]+"_SHA"+".ma");
+			}
+			else if($nameSpace == "0")
+			{
+				string $path = `file -r -ns ($ns[0]+"_SHA") ("Q:/THE99/PRODUCTION/REFERENCES/"+$buffer[4]+"/"+$buffer[5]+"/RENDERABLE_SHADERS/"+$ns[0]+"_SHA"+".ma")`;
+			}
+		}
+	}
+}
+lowresHighresSwitch;

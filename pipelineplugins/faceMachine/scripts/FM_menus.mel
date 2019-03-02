@@ -1,0 +1,1536 @@
+
+
+global proc fm_menuInitialize()
+{
+	global string $anz_componentEditorScripts[];
+	global string $anz_menuCreationScripts[];
+	
+	int $index;
+	if (`pluginInfo -q -registered faceMachine` == 1)
+		$index = anzUI_obtainAnzovinProductIndex("The Face Machine", 1);
+	else
+		$index = anzUI_obtainAnzovinProductIndex("The Face Machine", 0);
+	
+	$anz_menuCreationScripts[$index] = "fm_createFMMenu";
+	$anz_componentEditorScripts[$index] = "fm_doComponentEditorStuff";
+}
+
+// Deletes box controls, given that the _boxControl or _box object is selected.
+global proc fm_deleteBoxControls()
+{
+	string $selection[] = `ls -sl`;
+	string $strings[];
+	
+	if (size($selection) == 0) {
+		error "Select the box control(s) to delete.";
+		return;
+	}
+	
+	for($object in $selection) {
+		if (!endsWith($object, "_box") && !endsWith($object, "_boxControl")) {
+			error "Select the box control(s) to delete.";
+			return;
+		}
+	}
+	for($object in $selection) {
+		string $boxControl;
+		string $box;
+		
+		if (endsWith($object, "_boxControl")) {
+			$boxControl = $object;
+			$strings = `listRelatives -parent $object`;
+			$box = $strings[0];
+		} else {
+			$box = $object;
+			$strings = `listRelatives -type transform $object`;
+			$boxControl = $strings[0];
+		}
+		
+		$strings = `listConnections -s false -d true $boxControl`;
+		string $affectedBuffers[] = `listConnections -s false -d true $strings`;
+		
+		delete $box;
+		
+		for($buffer in $affectedBuffers) {
+			if (endsWith($buffer, "_boxBuffer")) {
+				if (`nodeType $buffer` == "fmTransform") {
+					setAttr ($buffer + ".constrain") 0;
+					setAttr ($buffer + ".specialUndo") 0;
+					setAttr ($buffer + ".t") 0 0 0;
+					setAttr ($buffer + ".r") 0 0 0;
+					setAttr ($buffer + ".constrain") 1;
+				} else {
+					setAttr ($buffer + ".t") 0 0 0;
+					setAttr ($buffer + ".r") 0 0 0;
+				}
+			}
+		}
+	}
+}
+
+
+global proc fm_createBoxControl()
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	string $label;
+	int $xAxis, $yAxis, $xType, $yType, $extreme;
+	
+	$label = `textFieldGrp -q -text createBoxControlTextGrp`;
+	$xAxis = `checkBoxGrp -q -value1 createBoxControlAxisGrp`;
+	$yAxis = `checkBoxGrp -q -value2 createBoxControlAxisGrp`;
+	$xType = `radioButtonGrp -q -select createBoxControlXValueGrp`;
+	$yType = `radioButtonGrp -q -select createBoxControlYValueGrp`;
+	$extreme = `checkBoxGrp -q -value1 createBoxControlExtremeGrp`;
+	
+	string $sandbox = ($anzovinInterfaceCurrentCharacterNamespace + "FM");
+	string $tab = `getAttr -asString ($sandbox + "_boxControls.boxTab")`;
+	
+	int $xMin, $xMax, $yMin, $yMax;
+	if ($xAxis) {
+		if ($xType == 1) {
+			$xMin = -1;
+			$xMax = 0;
+		} else if ($xType == 2) {
+			$xMin = 0;
+			$xMax = 1;
+		} else {
+			$xMin = -1;
+			$xMax = 1;
+		}
+	} else
+		$xMin = $xMax = 0;
+		
+	if ($yAxis) {
+		if ($yType == 1) {
+			$yMin = -1;
+			$yMax = 0;
+		} else if ($yType == 2) {
+			$yMin = 0;
+			$yMax = 1;
+		} else {
+			$yMin = -1;
+			$yMax = 1;
+		}
+	} else
+		$yMin = $yMax = 0;
+	
+	JM_sandbox($sandbox, $tab, $label, "", $extreme, $xMax, $xMin, $yMax, $yMin);
+	setAttr ($sandbox + "_boxControls.repositionBoxControls") 1;
+	
+}
+
+
+
+global proc fm_createBoxControlWindow()
+{
+	if (`window -exists fmCreateBoxControlWindow`) {
+		showWindow fmCreateBoxControlWindow;
+		return;
+	}
+	
+	window -title "Create Box Control" fmCreateBoxControlWindow;
+	
+	string $form = `formLayout -height 200`;
+		string $column = `columnLayout -rowSpacing 5`;	
+			
+			textFieldGrp
+  				-label "Label"
+  				-text  ""
+  				createBoxControlTextGrp;
+  				
+			checkBoxGrp
+				-label "Axis:"
+				-numberOfCheckBoxes 2 
+				-label1 "X" 
+				-label2 "Y"
+				-onCommand1 "radioButtonGrp -e -enable on createBoxControlXValueGrp"
+				-onCommand2 "radioButtonGrp -e -enable on createBoxControlYValueGrp"
+				-offCommand1 "radioButtonGrp -e -enable off createBoxControlXValueGrp; if (`checkBoxGrp -q -value2 createBoxControlAxisGrp` == false) { checkBoxGrp -e -value2 true createBoxControlAxisGrp; radioButtonGrp -e -enable on createBoxControlYValueGrp; }"
+				-offCommand2 "radioButtonGrp -e -enable off createBoxControlYValueGrp; if (`checkBoxGrp -q -value1 createBoxControlAxisGrp` == false) { checkBoxGrp -e -value1 true createBoxControlAxisGrp; radioButtonGrp -e -enable on createBoxControlXValueGrp; }"
+				-value1 true
+				-value2 true
+				createBoxControlAxisGrp;
+				
+				
+				
+			radioButtonGrp
+				-label "X axis values:"
+				-numberOfRadioButtons 3 
+				-label1 "Negative" 
+				-label2 "Positive"
+				-label3 "Both"
+				-select 3
+				createBoxControlXValueGrp;
+				
+			radioButtonGrp
+				-label "Y axis values:"
+				-numberOfRadioButtons 3 
+				-label1 "Negative" 
+				-label2 "Positive"
+				-label3 "Both"
+				-select 3
+				createBoxControlYValueGrp;
+			
+			checkBoxGrp
+				-label ""
+				-numberOfCheckBoxes 1 
+				-label1 "Extreme" 
+				-value1 true
+				createBoxControlExtremeGrp;
+			
+			setParent ..;
+			
+		string $buttonLayout = `formLayout`;
+		
+			string $button1 = `button -label "Create" -command "fm_createBoxControl; deleteUI fmCreateBoxControlWindow;"`;
+			string $button2 = `button -label "Apply" -command "fm_createBoxControl;"`;
+			string $button3 = `button -label "Close" -command "deleteUI fmCreateBoxControlWindow;"`;
+		
+			setParent ..;
+		
+		formLayout -edit
+			-numberOfDivisions 100
+
+			-attachForm     $button1	"top"    0
+			-attachForm     $button1	"left"	 0
+			-attachForm     $button1	"bottom" 0
+			-attachPosition $button1	"right"  2 33
+
+			-attachForm     $button2        "top"    0
+			-attachPosition $button2        "left"	 2 33
+			-attachForm     $button2        "bottom" 0
+			-attachPosition $button2        "right"  2 67
+
+			-attachForm     $button3         "top"    0
+			-attachPosition $button3         "left"   2 67
+			-attachForm     $button3         "bottom" 0
+			-attachForm     $button3         "right"  0
+			$buttonLayout;
+		
+		
+		
+	formLayout -e 
+		-attachForm $buttonLayout "left" 5
+		-attachForm $buttonLayout "right" 5
+		-attachForm $buttonLayout "bottom" 7
+		 
+		-attachForm $column "left" 0
+		-attachForm $column "right" 0
+		-attachForm $column "top" 0
+		-attachControl $column "bottom" 0 $buttonLayout
+		$form;
+		
+	showWindow;
+	
+}
+
+
+
+
+
+
+// Defines the selected boxControl using the selected controls at the value passed into the function.
+global proc fm_defineBoxControl(string $attr, float $value)
+{
+	string $fcs[] = fm_getAllControls();
+	string $selection[] = `ls -sl`;
+	string $controls[];
+	string $box;
+	
+	if (size($selection) < 2) {
+		error "Select The Face Machine controls to use for the pose, then select the box control.";
+		return;
+	}
+	
+	$box = $selection[size($selection)-1];
+	if (endsWith($box, "_box")) {
+		error "Turn off 'Reposition Box Controls' before defining a new pose.";
+		return;
+	}
+	
+	if (!endsWith($box, "_boxControl")) {
+		error "The last item selected must be a box control.";
+		return;
+	}
+	
+	float $limit[];
+	if ($attr == "tx")
+		$limit = `transformLimits -q -tx $box`;
+	else
+		$limit = `transformLimits -q -ty $box`;
+	if ($value < $limit[0] || $value > $limit[1]) {
+		error "That value is outside the range of the selected box control.";
+		return;
+	}
+	
+	
+	string $cn, $characterNamespace;
+	int $type;
+	$characterNamespace = anzg_getNamespace($selection[0]);
+	for($object in $selection) {
+		if ($object == $box)
+			continue;
+		$cn = anzg_getNamespace($object);
+		if ($cn != $characterNamespace) {
+			error "Only select controls from one character when defining a box pose.";
+			return;
+		}
+		$type = fmp_getFMControlType($object);
+		if ($type != 2) {
+			error "Only select Face Machine controls when defining a box pose.";
+			return;
+		}
+	}
+	
+	if (anzg_getNamespace($box) != $characterNamespace) {
+		error "The character of the box control must be the same as the character of the selected controls.";
+		return;
+	}
+	
+	
+	select -deselect $box;
+	for($object in $selection) {
+		if (endsWith($object, "_directFC")) {
+			select -deselect $object;
+			select -add (`substring $object 1 (size($object)-8)` + "FC");
+		}
+	}
+	$controls = `ls -sl`;
+	
+	print $controls;
+	
+	// Now we select the accompanying FC for any direct_FC selected
+	
+	
+	boxPose($controls, $box, $attr, $value);
+}
+
+
+global proc fm_undefineBoxControl(string $attr, float $value)
+{
+	string $strings[] = `ls -sl`, $boxBuffers[];
+	string $boxControl;
+	string $curves[];
+	
+	if (size($strings) != 1) {
+		error "Select only the box control for which you want to undefine a pose.";
+		return;
+	}
+	
+	$boxControl = $strings[0];
+	$curves = `listConnections -s false -d true -scn true -type animCurveUL ($boxControl + "." + $attr)`;
+	if (size($curves) == 0)
+		error "Found no defined box pose for the selected control.";
+	
+	int $totalKeys = 0, $newTotalKeys = 0;
+	for($curve in $curves)
+		$totalKeys += `keyframe -q -keyframeCount $curve`;
+	
+	// Note: this function does NOT actually return how many keys were deleted!
+	cutKey -clear -f $value -option keys $curves;
+	
+	for($curve in $curves)
+		$newTotalKeys += `keyframe -q -keyframeCount $curve`;
+	
+	if ($totalKeys == $newTotalKeys)
+		warning "No box pose exists at that value.";
+	else
+		print "Box pose deleted.\n";
+}
+
+
+
+
+// Returns true if all the objects in $sl have an fmSkinCluster deformer
+// If all objects have fmSkinClusters, at function exit the $result variable with contain the skinClusters on the selection.
+// Otherwise, $result will contain the first found object that does not have an fmSkinCluster
+// Note: works on shape nodes too!
+global proc int fm_getFMSkinClusters(string $sl[], string $result[])
+{
+	string $strings[], $shapes[];
+	string $skinClusters[] = `ls -type fmSkinCluster`;
+	clear $result;
+	for($obj in $sl) {
+		int $ok = 0;
+		$shapes = `listRelatives -shapes -fullPath $obj`;
+		if (size($shapes) == 0) {
+			// Check to see if the selected object *is* the shape
+			if (size(`ls -shapes $obj`) > 0)
+				$shapes = `ls -long $obj`;
+		}
+		
+		for($shape in $shapes) {
+			for($skinCluster in $skinClusters) {
+				$strings = `deformer -q -geometry $skinCluster`;
+				$strings = `ls -long $strings`;
+				if ($strings[0] == $shape) {
+					$ok = 1;
+					$result[size($result)] = $skinCluster;
+					break;
+				}
+			}
+			if ($ok)
+				break;
+		}
+		if ($ok == 0) {
+			clear $result;
+			$result[0] = $obj;
+			return 0;
+		}
+	}
+	return 1;
+}
+
+global proc fm_paintSkinWeightsOnDeformationObject(string $characterNamespace)
+{
+	string $result[], $sl[] = `ls -objectsOnly -sl`;
+	if (fm_getFMSkinClusters($sl, $result) == 0)
+		error ("No Face Machine skinCluster found on '" + $result[0] + "'.");
+	
+	eval("source \"artAttrSkinCallback.mel\";");
+	eval("source \"artAttrSkinJointMenu.mel\";");
+	eval("source \"artAttrSkinProperties.mel\";");
+	eval("source \"artAttrSkinSetInfluenceAsCurrent.mel\";");
+	eval("source \"artAttrSkinToolScript.mel\";");
+	eval("source \"artAttrSkinValues.mel\";");
+	
+	
+	eval("source \"FM_fmSkinCluster80.mel\";");
+	
+	artAttrFmSkinToolScript 3;
+	
+	//ArtPaintSkinWeightsToolOptions;
+}
+
+global proc fm_paintSkinWeightsOnTongueObject(string $characterNamespace)
+{
+	setAttr ($characterNamespace + "FM_options.showDeformationObjects") 1;
+	select ($characterNamespace + "FM_tongueMesh");
+	ArtPaintSkinWeightsToolOptions;
+}
+
+
+global proc fm_defineObjectAs(string $setTitle)
+{
+	string $selection[] = `ls -sl`;
+	string $strings[];
+	string $set;
+	
+	if ($setTitle == "face meshes") {
+		for($obj in $selection) {
+			$strings = `listRelatives -shapes $obj`;
+			if (size($strings) == 0) {
+				error "Only select polygonal meshes for the face meshes.";
+			}
+			if (`nodeType $strings[0]` != "mesh") {
+				error "The Face Machine currently only supports polygonal meshes.";
+			}
+		}
+		
+	} else {
+		if (size($selection) != 1) {
+			error ("Select only one object to define the " + $setTitle + ".");
+			return;
+		}
+	}
+	
+	tokenize $setTitle " " $strings;
+	$set = "fm";
+	for($word in $strings) {
+		$set += toupper(startString($word, 1));
+		$set += endString($word, size($word)-1);
+	}
+	$set += "Object";
+	
+	print $set;
+	print "\n";
+	
+	if (`objExists $set`)
+		sets -e -clear $set;
+	else
+		sets -name $set -empty;
+	
+	for($obj in $selection)
+		sets -e -addElement $set $obj;
+}
+
+global proc fm_moveToPivot(string $object)
+{
+	string $selection[] = `ls -sl`;
+	
+	if (size($selection) != 1) {
+		error "Select the object that should determine the eye-pivot control's rotation pivot.";
+		return;
+	}
+	
+	float $f[];
+	
+	$f = `xform -q -ws -rp $selection[0]`;
+	xform -ws -t $f[0] $f[1] $f[2] $object;
+}
+
+
+global proc fm_addFMWidget()
+{
+	
+	if (`pluginInfo -q -loaded faceMachine` == 0) {
+		error "The Face Machine plug-in is not loaded.  Make sure that The Face Machine is installed properly, with the plug-in loaded.";
+		return;
+	}
+	
+	if (objExists("faceMachine")) {
+		error "There is already a Face Machine character or widget in this scene.  To have multiple Face Machine setups in one scene, apply The Face Machine to each character in their own scene file, then reference or import those files into one scene.";
+		return;
+	} 
+	
+	string $pluginPath = fromNativePath(`pluginInfo -q -path faceMachine`);
+	string $strings[];
+	int $count = `tokenize $pluginPath "/" $strings`;
+	string $pluginDirectory = startString($pluginPath, size($pluginPath) - size($strings[$count-1]));
+	
+	string $widgetPath = $pluginDirectory + "/faceMachine/widget.ma";
+	
+	
+	
+	if (catch(`file -import -type "mayaAscii" -rdn -rpr "widgetClash" -options "v=0" $widgetPath`) == 1) {
+		$widgetPath = "G:/Software_Development/FaceMachine/mel/faceMachine/widget.ma";
+		file -import -type "mayaAscii" -rdn -rpr "widget" -options "v=0" $widgetPath;
+	}
+	
+	// I don't get why the widget object keeps getting imported wrong, but hopefully this will fix it:
+	if (!`objExists widget`) {
+		string $stuff[] = `listRelatives -type transform -children faceMachine`;
+		for($thing in $stuff) {
+			if (endsWith($thing, "widget")) {
+				rename $thing "widget";
+				break;
+			}
+		}
+	}
+	fm_menuPostCommand;
+}
+
+proc string getObjectFromSet(string $set)
+{
+	string $result = "";
+	if (`objExists $set`) {
+		string $strings[] = `sets -q $set`;
+		if (size($strings) > 0)
+			$result = $strings[0];
+	}
+	return $result;
+}
+
+
+// Since having the Face Machine menu torn off prior to rigging often causes Maya to crash, we're going to do something about that here
+global proc fm_getReadyToRigFaceMachine()
+{
+	string $meshes[];
+	string $lEye = "", $rEye = "";
+	global int $fm_useSmartWeighting;
+	global int $fm_controlEyePosition;
+	global int $fm_controlTeethPosition;
+	global int $fm_controlTonguePosition;
+ 	
+	if (`objExists fmFaceMeshesObject`)
+		$meshes = `sets -q fmFaceMeshesObject`;
+	if (size($meshes) == 0) {
+		error "You must define at least one face mesh before rigging.";
+		return;
+	} 
+ 	
+	$lEye = getObjectFromSet("fmLeftEyeObject");
+	if ($lEye == "") {
+		error "You must define the left eye object before rigging.";
+		return;
+	} 
+	
+	$rEye = getObjectFromSet("fmRightEyeObject");
+	if ($lEye == "") {
+		error "You must define the right eye object before rigging.";
+		return;
+	} 
+	
+	string $result = `confirmDialog -title "Confirm" -message "Are you sure you want to rig the current face?  (This operation is not undoable!)\nNOTE: The Maya window must be in front during rigging"
+ 		-button "Yes" -button "No" -defaultButton "Yes"
+ 		-cancelButton "No" -dismissString "No"`;
+ 	if ($result == "No")
+ 		return;
+ 	
+	$fm_useSmartWeighting = `menuItem -q -checkBox fmMenuUseAdvancedWeighting`;
+	$fm_controlEyePosition = !`menuItem -q -checkBox fmEyePositionControledByFM`;
+	$fm_controlTeethPosition = !`menuItem -q -checkBox fmTeethPositionControledByFM`;
+	$fm_controlTonguePosition = !`menuItem -q -checkBox fmTonguePositionControledByFM`;
+	
+	scriptJob -idleEvent "anzUI_createAnzovinMenu; fm_rigFaceMachine();" -runOnce true ;
+}
+
+
+global proc fm_rigFaceMachine()
+{
+	string $headJoint = "", $lEye = "", $rEye = "", $upperTeeth = "", $lowerTeeth = "", $tongue = "";
+	string $meshes[];
+	global int $fm_useSmartWeighting;
+	global int $fm_controlEyePosition;
+	global int $fm_controlTeethPosition;
+	global int $fm_controlTonguePosition;
+	string $strings[];
+	
+	$meshes = `sets -q fmFaceMeshesObject`;
+	
+	$headJoint = getObjectFromSet("fmHeadJointObject");
+	if ($headJoint == "") {
+		//error "You must define the head joint before rigging.";
+		//return;
+		$headJoint = `createNode -n "FM_headJoint" transform`;
+	} 
+	
+	$lEye = getObjectFromSet("fmLeftEyeObject");
+	$rEye = getObjectFromSet("fmRightEyeObject");
+	
+	$upperTeeth = getObjectFromSet("fmUpperTeethObject");
+	$lowerTeeth = getObjectFromSet("fmLowerTeethObject");
+	$tongue = getObjectFromSet("fmTongueObject");
+	
+	
+	// Here we go!
+	rigFaceMachine($headJoint, $meshes, $lEye, $rEye, $upperTeeth, $lowerTeeth, $tongue,
+					$fm_useSmartWeighting, $fm_controlEyePosition, $fm_controlTeethPosition, $fm_controlTonguePosition);
+}
+
+
+global proc fm_showAboutWindow()
+{
+	if (`window -exists fmAboutWindow`)
+		deleteUI fmAboutWindow;
+	
+	window -title "About The Face Machine" -sizeable false fmAboutWindow;
+	columnLayout -columnAttach "left" 5 -columnAlign "center" -rowSpacing 5;
+	
+	string $versionString = `fmVersionInfo -version`;
+	text -w 250 -font "boldLabelFont" -label "The Face Machine";
+	text -w 250 -label $versionString;
+	text -w 250 -label "Copyright 2007 by Anzovin Studio, Inc.";
+	text -w 250 -label "All rights reserved.";
+	separator -style "none" -w 240;
+	text -w 250 -label "Designed by Jedidiah Mitchell and Raf Anzovin.";
+	text -w 250 -label "Programmed by Jedidiah Mitchell and Brian Kendall.";
+	separator -style "none" -w 240;
+	text -w 250 -label "http://www.thefacemachine.com";
+	text -w 250 -label "http://www.anzovin.com";
+	separator -style "none" -w 240;
+	text -w 250 -label ("(Implementation version " + `fmVersionInfo -implementation` + ")");
+	
+	if (`about -mac` == 1)
+		window -edit -widthHeight 270 310 fmAboutWindow;
+	else
+		window -edit -widthHeight 270 250 fmAboutWindow;
+	showWindow;
+}
+
+
+global proc fm_openManual()
+{
+	string $path = dirname(`pluginInfo -q -path "faceMachine"`);
+	$path += "/faceMachine/manual/manual.html";
+	showHelp -absolute $path;
+}
+
+
+global proc string[] fm_getObjectsToMirror()
+{
+	string $result[] = `ls -sl`;
+	if (size($result) == 0) {
+		select -cl;
+		$result = `ls -type "transform" "*_WC"`;
+		select -add $result;
+		$result = `ls -type "transform" "*_eyePivot"`;
+		select -add $result;
+		$result = `ls -type "transform" "*_PW"`;
+		select -add $result;
+		$result = `ls -sl`;
+		select -cl;
+	}
+	return $result;
+}
+
+
+global proc fm_createFMMenu()
+{
+	global string $anz_installedProducts[];
+	global int $anz_installedProductCount;
+	
+	// If the face machine plug-in isn't loaded, then assume we're Anzovin Rig Nodes
+	if (`pluginInfo -q -registered faceMachine` == 0) {
+		fm_createBasicFMMenu;
+		return;
+	}
+	
+	// Create face machine menu:
+	
+	// If there's more than one product, then we're making a sub menu for The Face Machine:
+	if ($anz_installedProductCount > 1)
+		menuItem -label "The Face Machine" -postMenuCommand "fm_menuPostCommand" -tearOff true -subMenu true fmMainMenu;
+	else
+		menu -e -postMenuCommand "fm_menuPostCommand" anzMainMenu;
+	
+	// Pre-rig menu:
+	menuItem -label "Pre-Rig" -tearOff true -subMenu true fmMenuPreRig;
+		menuItem -label "Add Face Machine Widget" -command "fm_addFMWidget" fmMenuAddFMWidget;
+		menuItem -label "Mirror Widgets" -subMenu true fmMenuMirrorWidgets;
+			menuItem -label "Left to Right"
+				-annotation "Select the widget controls to mirror, or select nothing to mirror all widgets."
+				-command "JM_mirror(\"x\", fm_getObjectsToMirror(), \"L_\", \"R_\", 0);"
+				fmMenuMirrorLeftToRight;
+			menuItem -label "Right to Left"
+				-annotation "Select the widget controls to mirror, or select nothing to mirror all widgets."
+				-command "JM_mirror(\"x\", fm_getObjectsToMirror(), \"R_\", \"L_\", 0);"
+				fmMenuMirrorRightToLeft;
+			setParent -menu ..;
+		menuItem -label "Unmirror Widgets"
+				-annotation "Select widget controls that have been previously mirrored to unmirror them, or have nothing selected to unmirror all widgets."
+				-command "JM_unMirror(fm_getObjectsToMirror(), \"L_\", \"R_\")"
+				fmMenuUnmirrorWidgets;
+		menuItem -label "Relocate Eye Pivot" -annotation "" -subMenu true;
+			menuItem -label "Left Eye Pivot"
+				-annotation "Move the left eye-pivot widget control to the rotation pivot of the selected object."
+				-command "fm_moveToPivot(\"L_eyePivot\");"
+				fmMenuLeftEyePivot;
+			menuItem -label "Right Eye Pivot"
+				-annotation "Move the right eye-pivot widget control to the rotation pivot of the selected object."
+				-command "fm_moveToPivot(\"R_eyePivot\");"
+				fmMenuRightEyePivot;
+			setParent -menu ..;
+		menuItem -divider true;
+		
+		menuItem -label "Show Widget Controls (Level 1)" -checkBox false
+				-annotation "Toggles visibility of the first level widget controls, useful for defining the basic shape of your face."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel1\");"
+				fmMenuShowWidgetControls1;
+		menuItem -label "Show Widget Controls (Level 2)" -checkBox false
+				-annotation "Toggles visibility of the second level widget controls to be positioned on your face in order to define its shape."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel2\");"
+				fmMenuShowWidgetControls2;
+				
+		menuItem -label "Show Mouth Influences" -checkBox false
+				-annotation "Toggles visibility of the influence joints that position the teeth and deform the tongue."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel4\");"
+				fmMenuShowMouthInfluences;
+		
+		menuItem -label "Show Face Control Placement" -checkBox false
+				-annotation "Toggles visibility of face controls as they will be positioned on the face after rigging."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel5\");"
+				fmMenuShowFCs;
+		
+		menuItem -label "Make Influence Curves Selectable" -checkBox false
+				-annotation "Toggles whether or not the influence curves can be selected."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_data.influenceCurveSelectable\");"
+				fmMenuSelectInfluences;
+				
+		menuItem -divider true;
+		
+		menuItem -label "Show Forehead and Nose Skulls" -checkBox false
+				-annotation "Toggles visibility of the two skulls that control the curvature of the shape that the forehead and nose controls will be constrained to respectively."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel3A\");"
+				fmMenuShowUpperSkulls;
+		menuItem -label "Show Cheek Skull" -checkBox false
+				-annotation "Toggles visibility of the skull that controls the curvature of the shape that the check and upper lip controls will be contrained to."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel3B\");"
+				fmMenuShowCheekSkull;
+		menuItem -label "Show Lower Lip Skull" -checkBox false
+				-annotation "Toggles visibility of the skull that controls the curvature of the shape that the jaw face controls will be contrained to."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel3C\");"
+				fmMenuShowJawSkull;
+		menuItem -label "Show Eye Shapes" -checkBox false
+				-annotation "Toggles visibility of the eye-shape surfaces that define the shape of the face's eyes and that the eye controls will be constrained to."
+				-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"Face_Machine_WC.widgetsLevel3D\");"
+				fmMenuShowEyeShapes;
+		menuItem -divider true;
+				
+		
+		menuItem -label "Define Face Objects" -tearOff true -subMenu true fmMenuDefineFaceObjects;
+			menuItem -label "Define Face Meshes"
+					-annotation "Sets all the currently selected meshes as objects The Face Machine will deform."
+					-command "fm_defineObjectAs(\"face meshes\");"
+					fmMenuDefineFaceMesh;
+			menuItem -label "Define Head Joint"
+					-annotation "Indicates the currently selected object is the joint for the neck that pivots and moves the face. (Optional)"
+					-command "fm_defineObjectAs(\"headJoint\");"
+					fmMenuDefineHeadJoint;
+			menuItem -label "Define Left Eye Object"
+					-annotation "Sets the currently selected object as the left eye that The Face Machine will control."
+					-command "fm_defineObjectAs(\"left eye\");"
+					fmMenuDefineLeftEye;
+			menuItem -label "Define Right Eye Object"
+					-annotation "Sets the currently selected object as the right eye that The Face Machine will control."
+					-command "fm_defineObjectAs(\"right eye\");"
+					fmMenuDefineRightEye;
+			menuItem -label "Define Upper Teeth"
+					-annotation "Sets the currently selected object as the upper teeth that The Face Machine will control. (Optional)"
+					-command "fm_defineObjectAs(\"upper teeth\");"
+					fmMenuDefineUpperTeeth;
+			menuItem -label "Define Lower Teeth"
+					-annotation "Sets the currently selected object as the lower teeth that The Face Machine will control. (Optional)"
+					-command "fm_defineObjectAs(\"lower teeth\");"
+					fmMenuDefineLowerTeeth;
+			menuItem -label "Define Tongue"
+					-annotation "Sets the currently selected object as the tongue that The Face Machine will control. (Optional)"
+					-command "fm_defineObjectAs(\"tongue\");"
+					fmMenuDefineTongue;
+			setParent -menu ..;
+		
+		menuItem -label "Eyes Are Part of Existing Rig"  -checkBox false
+				-annotation "When toggled, the eye objects' position will not be controled by The Face Machine.  Use this option if the eyes are already controlled by another rig."
+				fmEyePositionControledByFM;
+		menuItem -label "Teeth Are Part of Existing Rig"  -checkBox false
+				-annotation "When toggled, the teeth objects' position will not be controled by The Face Machine.  Use this option if the teeth are already controlled by another rig."
+				fmTeethPositionControledByFM;
+		menuItem -label "Tongue Is Part of Existing Rig"  -checkBox false
+				-annotation "When toggled, the tongue object's position will not be controled by The Face Machine.  Use this option if the tongue is already controlled by another rig."
+				fmTonguePositionControledByFM;
+		
+		menuItem -label "Use Advanced Automatic Weighting" -checkBox true
+				-annotation "When toggled, The Face Machine will try to automatically weight the upper and lower halves of the eyes and mouth properly while rigging.  Disable this option if automatic weighting produces undesirable results in these areas."
+				fmMenuUseAdvancedWeighting;
+		
+		menuItem -divider true;
+		
+		menuItem -label "Rig The Face Machine!"
+				-command "fm_getReadyToRigFaceMachine"
+				-annotation "Rigs the currently defined face using the widget placement.  Warning: this cannot be undone!"
+				fmMenuRigFaceMachine;
+		
+		
+		setParent -menu ..;
+	
+	menuItem -divider true;
+	menuItem -label "Show Primary Controls" -checkBox false
+			-annotation "Toggle visibility of the primary face controls on the current character."
+			-command "fm_toggleControlVisibility(\"primaryControls\");"
+			fmMenuShowPrimaryControls;
+	menuItem -label "Show Secondary Controls" -checkBox false
+			-annotation "Toggle visibility of the secondary face controls on the current character."
+			-command "fm_toggleControlVisibility(\"secondaryControls\");"
+			fmMenuShowSecondaryControls;
+			
+	menuItem -label "Show IK Eye Control"  -checkBox false
+			-annotation "Toggle visibility of the IK Eye Control for the current character."
+			-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_options.showIK_eye_FC\");"
+			fmMenuShowIKEyeControl;
+			
+	menuItem -label "Reposition Face Controls" -checkBox false
+			-annotation "Toggle repositioning of the face controls for the current character."
+			-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_data.reposition\");"
+			fmMenuRepositionFaceControls;
+			
+	menuItem -divider true;
+	
+	menuItem -label "Show Box Controls in Scene"  -checkBox false
+			-annotation "Toggles visibility of the box controls in the scene so that they can be viewed in the FM_boxControlsPerspCam."
+			-command "fm_toggleBoxControlsVisibility"
+			fmMenuShowBoxControls;
+	//menuItem -label "Create New Box Controls Tab";
+	//menuItem -label "Set Current Box Controls Tab";
+	
+	menuItem -label "Create Box Control"
+					-annotation "Creates a new box control in the current box control tab."
+					-command "fm_createBoxControlWindow;"
+					fmMenuCreateBoxControl;
+					
+	string $boxControlAnnotation = "Select The Face Machine controls to use for the pose, then select the box control.";
+	menuItem -label "Define Box Pose" -subMenu true -tearOff true fmMenuDefineBoxPose;
+		menuItem -label "On axis:" -enable false ;
+		menuItem -label "X axis" -subMenu true;
+			menuItem -label "At value:" -enable false;
+			menuItem -label "-1.5" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"tx\", -1.5);";
+			menuItem -label "-1.0" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"tx\", -1.0);";
+			menuItem -label "1.0" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"tx\", 1.0);";
+			menuItem -label "1.5" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"tx\", 1.5);";
+			setParent -menu ..;
+		menuItem -label "Y axis" -subMenu true;
+			menuItem -label "At value:" -enable false;
+			menuItem -label "-1.5" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"ty\", -1.5);";
+			menuItem -label "-1.0" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"ty\", -1.0);";
+			menuItem -label "1.0" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"ty\", 1.0);";
+			menuItem -label "1.5" -annotation $boxControlAnnotation -command "fm_defineBoxControl(\"ty\", 1.5);";
+			setParent -menu ..;
+		setParent -menu ..;
+		
+	string $boxControlAnnotation = "Select the box control for which you want to undefine a pose.";
+	menuItem -label "Undefine Box Pose" -subMenu true -tearOff true fmMenuUndefineBoxPose;
+		menuItem -label "On axis:" -enable false ;
+		menuItem -label "X axis" -subMenu true;
+			menuItem -label "At value:" -enable false;
+			menuItem -label "-1.5" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"tx\", -1.5);";
+			menuItem -label "-1.0" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"tx\", -1.0);";
+			menuItem -label "1.0" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"tx\", 1.0);";
+			menuItem -label "1.5" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"tx\", 1.5);";
+			setParent -menu ..;
+		menuItem -label "Y axis" -subMenu true;
+			menuItem -label "At value:" -enable false;
+			menuItem -label "-1.5" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"ty\", -1.5);";
+			menuItem -label "-1.0" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"ty\", -1.0);";
+			menuItem -label "1.0" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"ty\", 1.0);";
+			menuItem -label "1.5" -annotation $boxControlAnnotation -command "fm_undefineBoxControl(\"ty\", 1.5);";
+			setParent -menu ..;
+		setParent -menu ..;
+		
+	menuItem -label "Reposition Box Controls" -checkBox false
+					-annotation "Toggle repositioning of box controls for the current character."
+					//-command "setAttr ($anzovinInterfaceCurrentCharacterNamespace + \"FM_boxControls.repositionBoxControls\") `menuItem -q -checkBox fmMenuRepositionBoxControls`;"
+					-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_boxControls.repositionBoxControls\");"
+					fmMenuRepositionBoxControls;
+	menuItem -label "Delete Box Control" -annotation "Select the box control(s) to delete." -command "fm_deleteBoxControls" fmMenuDeleteBoxControl;
+			
+	
+	menuItem -divider true;
+	menuItem -label "Paint Weights for Face Machine..."
+			-annotation "Paint skin weights for The Face Machine on the selected mesh(es)."
+			-command "fm_paintSkinWeightsOnDeformationObject($anzovinInterfaceCurrentCharacterNamespace);"
+			fmMenuPaintWeights;
+	menuItem -label "Paint Weights on Deformation Tongue..."
+			-annotation "Paint skin weights on the deformation tongue of the current character."
+			-command "fm_paintSkinWeightsOnTongueObject($anzovinInterfaceCurrentCharacterNamespace);"
+			fmMenuPaintTongueWeights;
+	menuItem -label "Prune Small Weights for Face Machine..."
+			-annotation "Select The Face Machine skinned surface or vertices."
+			-command "fm_createPruneSmallWeightsWindow";
+	menuItem -label "Mirror Skin Weights for Face Machine..."
+			-annotation "Select a single Face Machine skinned surface or its vertices."
+			-command "fm_createMirrorWeightsWindow";
+	menuItem -divider true;
+			
+	menuItem -label "Show Influence Objects"  -checkBox false
+			-annotation "Toggle visibility of the influence objects for the smooth skin on the deformation object of the current character."
+			-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_options.showInfluenceObjects\");"
+			fmMenuShowInfluenceObjects;
+	menuItem -label "Show Skull Objects"  -checkBox false
+			-annotation "Toggle visibility of the skull objects of the current character."
+			-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_options.showSkullObjects\");"
+			fmMenuShowSkullObjects;
+	menuItem -label "Show Deformation Objects" -checkBox false
+			-annotation "Toggle visibility of the deformation object for the current character."
+			-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_options.showDeformationObjects\");"
+			fmMenuShowDeformationObjects;
+			
+	menuItem -divider true;
+	
+	menuItem -label "Enable The Face Machine"  -checkBox true
+			-annotation "Toggles evaluation of The Face Machine for the current character. (Disabling the Face Machine may improve evaluation performance.)"
+			-command "fm_toggleFaceMachineEvaluation"
+			fmMenuEnableFaceMachine;
+			
+	menuItem -divider true;
+	menuItem -label "Help" -subMenu true fmMenuHelpMenu;
+		menuItem -label "The Face Machine Manual..." -command "fm_openManual;";
+		menuItem -label "About The Face Machine..." -command "fm_showAboutWindow;";
+		setParent -menu ..;
+	
+	
+	if ($anz_installedProductCount > 1)
+		setParent -menu ..;
+}
+
+// Called when the faceMachine menu is displayed.  Used to update various menu items to match settings and attributes present in the scene.
+global proc fm_menuPostCommand()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	int $characterPresent = 0;
+	int $widgetPresent = 0;
+	
+	if (size(anzUI_FindCharacters()) > 0) {
+		if ($anzovinInterfaceCurrentCharacter != "" && objExists($anzovinInterfaceCurrentCharacterNamespace + "faceMachine"))
+			$characterPresent = 1;
+	}
+	
+	if (objExists("Face_Machine_WC"))
+		$widgetPresent = 1;
+	
+	string $fmMenu = "fmMainMenu";
+	if (!`menu -exists $fmMenu`)
+		$fmMenu = "anzMainMenu";
+	
+	string $items[] = `menu -q -itemArray $fmMenu`;
+	int $foundFirstFMMenu = 0;
+	for($item in $items) {
+	
+			
+		if (`menuItem -q -divider $item` == 0) {
+		
+			if ($foundFirstFMMenu == 0) {
+				if (`menuItem -q -label $item` == "Pre-Rig")
+					$foundFirstFMMenu = 1;
+				else
+					continue;
+			}
+			
+			if (`menuItem -q -label $item` == "About Anzovin Rig Nodes...")
+				continue;
+			
+			if (`menuItem -q -label $item` == "Pre-Rig")
+				menuItem -e -enable ($characterPresent == 0) $item;
+			else {
+			// This fixes a UI glitch:
+				if ($item == "fmMenuPaintTongueWeights")
+					menuItem -e -enable 0 $item;
+				else
+					menuItem -e -enable $characterPresent $item;
+			}
+			
+		}
+	}
+	
+	if ($characterPresent == 0) {
+		
+		$items = `menu -q -itemArray fmMenuPreRig`;
+		for($item in $items) {
+			if (`menuItem -q -divider $item` == 0) {
+				if (`menuItem -q -label $item` != "Add Face Machine Widget")
+					menuItem -e -enable $widgetPresent $item;
+			}
+		}
+			
+		if ($widgetPresent) {
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel1"` fmMenuShowWidgetControls1;
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel2"` fmMenuShowWidgetControls2;
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel3A"` fmMenuShowUpperSkulls;
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel3B"` fmMenuShowCheekSkull;
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel3C"` fmMenuShowJawSkull;
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel3D"` fmMenuShowEyeShapes;
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel5"` fmMenuShowFCs;
+			menuItem -e -checkBox `getAttr "Face_Machine_WC.widgetsLevel4"` fmMenuShowMouthInfluences;
+			menuItem -e -checkBox `getAttr "FM_data.influenceCurveSelectable"` fmMenuSelectInfluences;
+		}
+		
+	} else {
+	
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_boxControls.repositionBoxControls")`
+				fmMenuRepositionBoxControls;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.primaryControls")`
+				fmMenuShowPrimaryControls;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.secondaryControls")`
+				fmMenuShowSecondaryControls;
+		
+		menuItem -e -checkBox (fm_boxControlsVisibleForCharacter($anzovinInterfaceCurrentCharacter))
+				fmMenuShowBoxControls;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.enableFaceMachine")`
+				fmMenuEnableFaceMachine;
+				
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.reposition")`
+				fmMenuRepositionFaceControls;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_options.showIK_eye_FC")`
+				fmMenuShowIKEyeControl;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_options.showInfluenceObjects")`
+				fmMenuShowInfluenceObjects;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_options.showDeformationObjects")`
+				fmMenuShowDeformationObjects;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_options.showSkullObjects")`
+				fmMenuShowSkullObjects;
+		
+		menuItem -e -enable (`objExists FM_tongueMesh`) fmMenuPaintTongueWeights;
+	}
+	menuItem -e -enable true fmMenuHelpMenu;
+}
+
+
+
+
+// Following are functions for getting lists of face machine controls.  Right now, we're just hard coding it into these mel files.
+// Later on maybe we'll want to make it dynamic, perhaps as The Face Machine becomes dynamic itself.
+
+global proc string[] fm_getBrowControls()
+{
+	return {"L_brow1_FC", "L_brow1_directFC", "L_brow2_FC", "L_brow2_directFC", "L_brow3_FC", "L_brow3_directFC", "L_brow4_FC", "L_brow4_directFC", "L_lowerForehead_FC", "L_upperForehead_FC", "R_brow1_FC", "R_brow1_directFC", "R_brow2_FC", "R_brow2_directFC", "R_brow3_FC", "R_brow3_directFC", "R_brow4_FC", "R_brow4_directFC", "R_lowerForehead_FC", "R_upperForehead_FC", "browCrease_FC", "browCrease_directFC", "lowerForehead_FC", "upperForehead_FC"};
+}
+
+global proc string[] fm_getRightEyeControls()
+{
+	return {"R_innerEye_FC", "R_innerEye_directFC", "R_innerLowerLid_FC", "R_innerUpperLid_FC", "R_lowerEye_FC", "R_lowerLid_FC", "R_outerEye_FC", "R_outerEye_directFC", "R_outerLowerLid_FC", "R_outerUpperLid_FC", "R_upperEye_FC", "R_upperLid_FC", "R_eye_FC", "R_outerEye_FC"};
+}
+
+global proc string[] fm_getLeftEyeControls()
+{
+	return {"L_eye_FC", "L_innerEye_FC", "L_innerEye_directFC", "L_innerLowerLid_FC", "L_innerUpperLid_FC", "L_lowerEye_FC", "L_lowerLid_FC", "L_outerEye_FC", "L_outerEye_directFC", "L_outerLowerLid_FC", "L_outerUpperLid_FC", "L_upperEye_FC", "L_upperLid_FC"};
+}
+
+global proc string[] fm_getJawControls()
+{
+	return {"jaw_FC", "L_upperMouth_FC", "L_upperMouth_directFC", "R_upperMouth_FC", "R_upperMouth_directFC", "upperMouth_FC", "upperMouth_directFC", "L_mouth_FC", "L_mouth_directFC", "R_mouth_FC", "R_mouth_directFC", "lowerTeeth_FC", "L_lowerMouth_FC", "L_lowerMouth_directFC", "R_lowerMouth_FC", "R_lowerMouth_directFC", "lowerMouth_FC", "lowerMouth_directFC", "R_jawCorner_FC", "R_chin_FC", "chin_FC", "L_chin_FC", "L_jawCorner_FC", "tongue_FC"};
+}
+
+global proc string[] fm_getCheekAndNoseControls()
+{
+	return {"R_cheek_FC", "R_cheekPocket_FC", "R_lowerOrbital_FC", "R_cheekBone_FC", "R_outerOrbital_FC", "R_noseWing_FC", "R_noseWing_directFC", "noseControl_FC", "noseControl_directFC", "L_noseWing_FC", "L_noseWing_directFC", "L_cheekBone_FC", "L_lowerOrbital_FC", "L_outerOrbital_FC", "L_cheekPocket_FC", "L_cheek_FC", "upperTeeth_FC"};
+}
+
+global proc string[] fm_getAllControls()
+{
+	string $controls[];
+	$controls = stringArrayCatenate(fm_getBrowControls(), fm_getRightEyeControls());
+	$controls = stringArrayCatenate($controls, fm_getLeftEyeControls());
+	$controls = stringArrayCatenate($controls, fm_getJawControls());
+	$controls = stringArrayCatenate($controls, fm_getCheekAndNoseControls());
+	return $controls;
+}
+
+
+// To be called once on a scene immediately after rigging The Face Machine.
+global proc fm_setupSceneForFaceMachine()
+{
+	
+	if (!objExists("AnzovinInterfaceNode"))
+		createNode script -n AnzovinInterfaceNode;
+	
+	if (!attributeExists("faceMachinePresent", "AnzovinInterfaceNode"))
+		addAttr -longName "faceMachinePresent" -at "bool" AnzovinInterfaceNode;
+	
+	if (!attributeExists("faceMachineMinImplementation", "AnzovinInterfaceNode"))
+		addAttr -longName "faceMachineMinImplementation" -shortName "fmmi" -at "short" AnzovinInterfaceNode;
+	
+	setAttr AnzovinInterfaceNode.faceMachinePresent true;
+	setAttr AnzovinInterfaceNode.faceMachineMinImplementation `fmVersionInfo -implementation`;
+	
+	if (!`objExists FaceMachineControls`) {
+		string $browControls[] = {"L_brow1_FC", "L_brow1_directFC", "L_brow2_FC", "L_brow2_directFC", "L_brow3_FC", "L_brow3_directFC", "L_brow4_FC", "L_brow4_directFC", "L_lowerForehead_FC", "L_upperForehead_FC", "R_brow1_FC", "R_brow1_directFC", "R_brow2_FC", "R_brow2_directFC", "R_brow3_FC", "R_brow3_directFC", "R_brow4_FC", "R_brow4_directFC", "R_lowerForehead_FC", "R_upperForehead_FC", "browCrease_FC", "browCrease_directFC", "lowerForehead_FC", "upperForehead_FC"};
+		string $rightEyeControls[] = {"R_innerEye_FC", "R_innerEye_directFC", "R_innerLowerLid_FC", "R_innerUpperLid_FC", "R_lowerEye_FC", "R_lowerLid_FC", "R_outerEye_FC", "R_outerEye_directFC", "R_outerLowerLid_FC", "R_outerUpperLid_FC", "R_upperEye_FC", "R_upperLid_FC", "R_eye_FC", "R_outerEye_FC"};
+		string $leftEyeControls[] = {"L_eye_FC", "L_innerEye_FC", "L_innerEye_directFC", "L_innerLowerLid_FC", "L_innerUpperLid_FC", "L_lowerEye_FC", "L_lowerLid_FC", "L_outerEye_FC", "L_outerEye_directFC", "L_outerLowerLid_FC", "L_outerUpperLid_FC", "L_upperEye_FC", "L_upperLid_FC"};
+		string $jawControls[] = {"jaw_FC", "L_upperMouth_FC", "L_upperMouth_directFC", "R_upperMouth_FC", "R_upperMouth_directFC", "upperMouth_FC", "upperMouth_directFC", "L_mouth_FC", "L_mouth_directFC", "R_mouth_FC", "R_mouth_directFC", "lowerTeeth_FC", "L_lowerMouth_FC", "L_lowerMouth_directFC", "R_lowerMouth_FC", "R_lowerMouth_directFC", "lowerMouth_FC", "lowerMouth_directFC", "R_jawCorner_FC", "R_chin_FC", "chin_FC", "L_chin_FC", "L_jawCorner_FC", "tongue_FC"};
+		string $cheekAndNoseControls[] = {"R_cheek_FC", "R_cheekPocket_FC", "R_lowerOrbital_FC", "R_cheekBone_FC", "R_outerOrbital_FC", "R_noseWing_FC", "R_noseWing_directFC", "noseControl_FC", "noseControl_directFC", "L_noseWing_FC", "L_noseWing_directFC", "L_cheekBone_FC", "L_lowerOrbital_FC", "L_outerOrbital_FC", "L_cheekPocket_FC", "L_cheek_FC", "upperTeeth_FC"};
+		string $boxControls[] = {"syncSlider", "leftCornerSlider", "rightCornerSlider", "upperLipSlider", "lowerLipSlider", "leftEyelidSlider", "rightEyelidSlider", "leftEyebrowSlider", "rightEyebrowSlider", "R_sneerSlider", "L_sneerSlider", "mouthSlider", "tongueSlider", "jawSlider"};
+		
+		sets -n browControls $browControls;
+		
+		sets -n rightEyeControls $rightEyeControls;
+		sets -n leftEyeControls $leftEyeControls;
+		sets -n eyeControls rightEyeControls leftEyeControls IK_eye_FC;
+		
+		sets -n jawControls $jawControls;
+		sets -n checkAndNoseControls $cheekAndNoseControls;
+		
+		sets -n faceControls browControls eyeControls jawControls checkAndNoseControls;
+		select -cl;
+		sets -n boxControls;
+		
+		sets -n FaceMachineControls faceControls boxControls;
+	}
+	
+	/*
+	if (!`objExists fmBoxControlCamera`) {
+		
+		string $strings[] = `camera
+				-farClipPlane 5.001
+				-nearClipPlane 4.999
+				-position 0 8.4 5
+				-orthographic true
+				-orthographicWidth 35.2
+				-filmFit "vertical"
+				`;
+		
+		rename $strings[0] fmBoxControlCamera;
+		
+		parent fmBoxControlCamera boxes;
+		setAttr fmBoxControlCamera.renderable false;
+		setAttr fmBoxControlCamera.visibility false;
+		setAttr fmBoxControlCamera.t 0 8.4 5;
+		setAttr fmBoxControlCamera.r 0 0 0;
+		setAttr fmBoxControlCamera.s 1 1 1;
+		setAttr -l true fmBoxControlCamera.tx;
+		setAttr -l true fmBoxControlCamera.ty;
+		setAttr -l true fmBoxControlCamera.tz;
+		setAttr -l true fmBoxControlCamera.rx;
+		setAttr -l true fmBoxControlCamera.ry;
+		setAttr -l true fmBoxControlCamera.rz;
+		setAttr -l true fmBoxControlCamera.sx;
+		setAttr -l true fmBoxControlCamera.sy;
+		setAttr -l true fmBoxControlCamera.sz;
+		setAttr -l true fmBoxControlCameraShape.orthographicWidth;
+	}
+	*/
+	
+	
+	
+	
+	/*
+	string $script = `scriptNode -q -beforeScript anzovinSetupScript`;
+	string $scriptLines[];
+	
+	tokenize $script "\n" $scriptLines;
+	int $faceMachineScriptInstalled = 0;
+	for($line in $scriptLines) {
+		if ($line == "source \"ui_faceMachine.mel\";") {
+			$faceMachineScriptInstalled = 1;
+			break;
+		}
+	}
+	if ($faceMachineScriptInstalled == 0) {
+		string $newScript = "";
+		
+		for($line in $scriptLines) {
+			$newScript += $line;
+			$newScript += "\n";
+			if ($line == "source \"ui_poses.mel\";") {
+				$newScript += "source \"ui_faceMachine.mel\";\n";
+				$newScript += "source \"ui_poses_fm.mel\";\n";
+			} else if ($line == "anzUI_initialize;") {
+				$newScript += "fm_initialize;\n";
+			}
+		}
+		scriptNode -e -beforeScript $newScript anzovinSetupScript;
+	}*/
+}
+
+
+global proc fm_pruneSmallWeightOnVertex(string $object, int $v, string $skinCluster, float $threshold)
+{
+	//print ("object = '" + $object + "', $v = " + $v + ", $skinCluster = '" + $skinCluster + "', $threshold = " + $threshold + "\n");
+	
+	int $count;
+	global string $fm_globalSetWeightsCommand;
+	global float $fm_globalWeightList[];
+	global int $fm_lastInfluenceCount;
+	
+	// NOTE: THIS IS A TEMPORARY CHANGE:
+	$fm_globalWeightList = `getAttr ($skinCluster + ".userWeightList[" + $v + "].userWeights[0:38]")`;
+	//$fm_globalWeightList = `getAttr ($skinCluster + ".userWeightList[" + $v + "].userWeights")`;
+	$count = size($fm_globalWeightList);
+	
+	if ($count != $fm_lastInfluenceCount) {
+		$fm_globalSetWeightsCommand = (".userWeights[0:" + ($count-1) + "]");
+		for($i = 0; $i < $count; ++$i)
+			$fm_globalSetWeightsCommand += (" $fm_globalWeightList[" + $i + "]");
+		$fm_globalSetWeightsCommand += ";";
+		$fm_lastInfluenceCount = $count;
+	}
+	
+	int $changedSomething = 0;
+	float $total = 0;
+	for($i = 0; $i < $count; ++$i) {
+		if ($fm_globalWeightList[$i] < $threshold && $fm_globalWeightList[$i] != 0) {
+			$changedSomething = 1;
+			$fm_globalWeightList[$i] = 0;
+		}
+		$total += $fm_globalWeightList[$i];
+	}
+	if ($total == 0) {
+		print "Total was zero!!!\n";
+		return;
+	}
+	if ($total != 1.0) {
+		$changedSomething = 1;
+		float $inverseTotal = 1.0 / $total;
+		for($i = 0; $i < $count; ++$i)
+			$fm_globalWeightList[$i] *= $inverseTotal;
+	}
+	
+	if ($changedSomething) {
+		eval("setAttr " + $skinCluster + ".userWeightList[" + $v + "]" + $fm_globalSetWeightsCommand);
+		//trace ("**** AFTER setAttr ****, $v = " + $v);
+	}
+}
+
+
+global proc fm_pruneSmallWeights()
+{
+	string $skinClusters[], $strings[];
+	string $sl[] = `ls -sl`;
+	string $slObjects[] = `ls -sl -objectsOnly`;
+	global int $fm_lastInfluenceCount;
+	
+	$fm_lastInfluenceCount = 0;
+	
+	if (size($sl) == 0)
+		error "Select object(s) with a Face Machine skinCluster."; 
+	
+	if (fm_getFMSkinClusters($slObjects, $skinClusters) == 0)
+		error ("No Face Machine skinCluster found on '" + $skinClusters[0] + "'.");
+	
+	// Convert any non-vertex components to vertices
+	$strings = `polyListComponentConversion -tv $sl`;
+	$sl = `ls -flatten $strings`;
+	
+	float $threshold = `floatSliderGrp -q -value fmPruneWeightSlider`;
+	
+	print "Pruning weights...";
+	refresh;
+	
+	string $skinCluster;
+	string $object;
+	int $count, $v;
+	
+	int $i = 0;
+	while($i < size($sl)) {
+		$count = `tokenize $sl[$i] "." $strings`;
+		
+		// Are we dealing with a list of components?
+		if ($count > 1) {
+			
+			$object = $strings[0];
+			
+			clear $strings;
+			$strings[0] = $object;
+			fm_getFMSkinClusters($strings, $skinClusters);
+			$skinCluster = $skinClusters[0];
+			
+			// If so, we want to loop over all the components in $sl for the same object, gathering the vertex indices
+			// We can do this because `ls -sl` always returns the selected objects/components in sorted order
+			while(startsWith($sl[$i], ($object + "."))) {
+				tokenize $sl[$i] "[]" $strings;
+				$v = $strings[1];
+				
+				fm_pruneSmallWeightOnVertex($object, $v, $skinCluster, $threshold);
+				
+				++$i;
+			}
+		} else {
+			// This is an object, not a component
+			// NOTE: this won't really happen anymore because we convert everything to vertices at the start of the function
+			$object = $sl[$i];
+			$ints = `polyEvaluate -v $object`;
+			
+			clear $strings;
+			$strings[0] = $object;
+			fm_getFMSkinClusters($strings, $skinClusters);
+			$skinCluster = $skinClusters[0];
+			
+			for($v = 0; $v < $ints[0]; ++$v)
+				fm_pruneSmallWeightOnVertex($object, $v, $skinCluster, $threshold);
+			
+			++$i;
+		}
+	}
+	
+	print "Done!\n";
+}
+
+
+global proc fm_createPruneSmallWeightsWindow()
+{
+	if (`window -exists fmPruneSmallWeightsWindow`) {
+		showWindow fmPruneSmallWeightsWindow;
+		return;
+	}
+	
+	window -title "Prune Small Weights on Face Machine skinCluster" fmPruneSmallWeightsWindow;
+	
+	string $form = `formLayout -height 100`;
+		string $column = `columnLayout -rowSpacing 5`;	
+			
+			floatSliderGrp -field true -label "Prune below:" -value 0.010 -minValue 0.0 -maxValue 1.0 -pre 4 fmPruneWeightSlider;
+			
+			setParent ..;
+			
+		string $buttonLayout = `formLayout`;
+		
+			string $button1 = `button -label "Prune" -command "fm_pruneSmallWeights; deleteUI fmPruneSmallWeightsWindow;"`;
+			string $button2 = `button -label "Apply" -command "fm_pruneSmallWeights;"`;
+			string $button3 = `button -label "Close" -command "deleteUI fmPruneSmallWeightsWindow;"`;
+		
+			setParent ..;
+		
+		formLayout -edit
+			-numberOfDivisions 100
+
+			-attachForm     $button1	"top"    0
+			-attachForm     $button1	"left"	 0
+			-attachForm     $button1	"bottom" 0
+			-attachPosition $button1	"right"  2 33
+
+			-attachForm     $button2        "top"    0
+			-attachPosition $button2        "left"	 2 33
+			-attachForm     $button2        "bottom" 0
+			-attachPosition $button2        "right"  2 67
+
+			-attachForm     $button3         "top"    0
+			-attachPosition $button3         "left"   2 67
+			-attachForm     $button3         "bottom" 0
+			-attachForm     $button3         "right"  0
+			$buttonLayout;
+		
+	formLayout -e 
+		-attachForm $buttonLayout "left" 5
+		-attachForm $buttonLayout "right" 5
+		-attachForm $buttonLayout "bottom" 7
+		 
+		-attachForm $column "left" 0
+		-attachForm $column "right" 0
+		-attachForm $column "top" 0
+		-attachControl $column "bottom" 0 $buttonLayout
+		$form;
+		
+	showWindow;
+	
+}
+
+
+
+
+global proc fm_mirrorWeights()
+{
+	string $skinClusters[], $strings[];
+	string $sl[] = `ls -flatten -sl`;
+	string $slObjects[] = `ls -sl -objectsOnly`;
+	int $vertexList[];
+	string $head;
+	string $axis;
+	int $radioValue;
+	int $mirrorFrom;
+	
+	if (size($slObjects) != 1)
+		error "Select one object or components of one object with a Face Machine skinCluster."; 
+	
+	if (fm_getFMSkinClusters($slObjects, $skinClusters) == 0)
+		error ("No Face Machine skinCluster found on '" + $skinClusters[0] + "'.");
+	
+	if (`nodeType $slObjects[0]` == "mesh") {
+		$vertexList[size($sl)-1] = 0;
+		
+		for($i = 0; $i < size($sl); ++$i) {
+			tokenize $sl[$i] "[]" $strings;
+			$vertexList[$i] = $strings[1];
+		}
+		
+		$strings = `listRelatives -parent $slObjects[0]`;
+		$head = $strings[0];
+	} else {
+		clear $vertexList;
+		$head = $slObjects[0];
+	}
+	
+	$radioValue = `radioButtonGrp -q -select fmMirrorAxisGrp`;
+	if ($radioValue == 1)
+		$axis = "z";
+	else if ($radioValue == 2)
+		$axis = "x";
+	else
+		$axis = "y";
+	
+	if (`checkBoxGrp -q -value1 fmMirrorDirectionCheckBoxGrp` == 1)
+		$mirrorFrom = 1;
+	else
+		$mirrorFrom = -1;
+	
+	fmMirrorWeights($head, $skinClusters[0], $axis, 0, $mirrorFrom, 0.0001, $vertexList);
+	
+	print "fmMirrorWeights: Done!\n";
+}
+
+
+
+global proc fm_createMirrorWeightsWindow()
+{
+	if (`window -exists fmMirrorWeightsWindow`) {
+		showWindow fmMirrorWeightsWindow;
+		return;
+	}
+	
+	window -title "Mirror Weights on Face Machine skinCluster" fmMirrorWeightsWindow;
+	
+	setUITemplate -pushTemplate DefaultTemplate;
+	
+	string $form = `formLayout -height 100`;
+		string $column = `columnLayout -adjustableColumn 1 -rowSpacing 3`;	
+			
+			radioButtonGrp -numberOfRadioButtons 3 -label "Mirror across:" -labelArray3 "XY" "YZ" "XZ" -select 2
+						-cc1 "checkBoxGrp -e -label1 \"Positive to negative (+Z to -Z)\" fmMirrorDirectionCheckBoxGrp"
+						-cc2 "checkBoxGrp -e -label1 \"Positive to negative (+X to -X)\" fmMirrorDirectionCheckBoxGrp"
+						-cc3 "checkBoxGrp -e -label1 \"Positive to negative (+Y to -Y)\" fmMirrorDirectionCheckBoxGrp"
+						fmMirrorAxisGrp;
+						
+			checkBoxGrp -numberOfCheckBoxes 1 -label "Direction:" -label1 "Positive to negative (+X to -X)" fmMirrorDirectionCheckBoxGrp;
+			setParent ..;
+			
+		string $buttonLayout = `formLayout`;
+		
+			string $button1 = `button -label "Mirror" -command "fm_mirrorWeights; deleteUI fmMirrorWeightsWindow;"`;
+			string $button2 = `button -label "Apply" -command "fm_mirrorWeights;"`;
+			string $button3 = `button -label "Close" -command "deleteUI fmMirrorWeightsWindow;"`;
+		
+			setParent ..;
+		
+		formLayout -edit
+			-numberOfDivisions 100
+
+			-attachForm     $button1	"top"    0
+			-attachForm     $button1	"left"	 0
+			-attachForm     $button1	"bottom" 0
+			-attachPosition $button1	"right"  2 33
+
+			-attachForm     $button2        "top"    0
+			-attachPosition $button2        "left"	 2 33
+			-attachForm     $button2        "bottom" 0
+			-attachPosition $button2        "right"  2 67
+
+			-attachForm     $button3         "top"    0
+			-attachPosition $button3         "left"   2 67
+			-attachForm     $button3         "bottom" 0
+			-attachForm     $button3         "right"  0
+			$buttonLayout;
+		
+	formLayout -e 
+		-attachForm $buttonLayout "left" 5
+		-attachForm $buttonLayout "right" 5
+		-attachForm $buttonLayout "bottom" 7
+		 
+		-attachForm $column "left" 0
+		-attachForm $column "right" 0
+		-attachForm $column "top" 5
+		-attachControl $column "bottom" 0 $buttonLayout
+		$form;
+		
+	setUITemplate -popTemplate;
+		
+	showWindow;
+	
+}
+
+
+// This is The Face Machine implementation of a component editor command.  Every Anzovin product should implement a command
+// with the same arguments for modifying its own version of the component editor.
+global proc string[] fm_doComponentEditorStuff(string $editor, int $thingToDo, int $arg, string $arg2)
+{
+	string $result[] = {};
+	
+	switch($thingToDo) {
+		
+		case 0: // Create the component editor:
+			
+			$result[0] = `fmSpreadsheet fmComponentEditor`;
+			$result[1] = "FM Skin Weights";
+			break;
+			
+		case 1: // Set autoUpdate
+			fmSpreadsheet -e -autoUpdate $arg $editor;
+			break;
+		
+		case 2: // Set hide zero columns
+			fmSpreadsheet -e -hideZero $arg $editor;
+			break;
+		
+		case 3: // Set precision
+			fmSpreadsheet -e -precision $arg $editor;
+			break;
+		
+		case 4: // Reload components
+			fmSpreadsheet -e -loadComponents $editor;
+			break;
+		
+		case 5: // Set show selected
+			fmSpreadsheet -e -showSelected $arg $editor;
+			break;
+		
+		case 6: // Set value
+			fmSpreadsheet -e -changeValue $arg2 $editor;
+			break;
+	}
+	
+	return $result;
+}

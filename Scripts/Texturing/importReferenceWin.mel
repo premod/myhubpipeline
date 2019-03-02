@@ -1,0 +1,38 @@
+global proc importReferenceWin()
+{
+	if ((`window -ex refWin`)== true) deleteUI refWin;
+	window -t "Import Reference..." -wh 410 240 refWin;
+	columnLayout -adj true;
+	text -l "";
+	button -l "Import Reference" -c "impRef";
+	button -l "Remove Prefix" -c "removeNsPrefix";
+	showWindow;
+}
+
+global proc impRef () 
+{
+	string $refObjs[]=`file -q -l`;
+	$i = 1;
+	while($i < `size($refObjs)`) 
+	{
+		catch(`file -importReference $refObjs[$i]`);
+		$i++;
+	}
+}
+
+global proc removeNsPrefix()
+{
+	string $trans[] = `ls -transforms`;
+	for($each in $trans)
+	{
+		string $mat = `match ":" $each`;
+		int $size = size($mat);
+		if($size == "1")
+		{
+			string $buffer[];
+			$numTokens = `tokenize $each ":" $buffer`;
+			catch(`rename $each $buffer[1]`);
+		}
+	}
+}
+importReferenceWin;

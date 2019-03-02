@@ -1,0 +1,218 @@
+global string $episetsName;
+global string $epicharsName;
+global string $epipropsName;
+global string $epifindEpisode;
+
+global proc epiElements()
+{
+	if( (`window -exists addEpiElements`) == true ){deleteUI addEpiElements;}
+	window -widthHeight 300 430 -t "Episodic Elements" -mb true -s 0 addEpiElements;
+
+	menu -l "Item List";
+	menuItem -l "Sets"   -c epiFindSets forEpiSets;
+	menuItem -l "Chars" -c epiFindChars forEpiChars;
+	menuItem -l "Props" -c epiFindProps forEpiProps;
+	menuItem -divider true;
+	menuItem -l "Search" -c assetSearch;	
+
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 epiTab`;
+	formLayout -edit
+	    -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+
+     	string $child1 = `columnLayout -bgc 0 0 0 -adj true`;
+		
+		textScrollList  -fn "fixedWidthFont" -h 300 propslist1;
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c getSelectedpropHere;
+		button  -h 25 -l "Refresh List";
+       setParent ..;
+
+     	string $child2 = `columnLayout -bgc 0 0 0 -adj true`;
+		textScrollList  -fn "fixedWidthFont" -h 300 propslist2;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c getSelectedpropHere;
+		button  -h 25 -l "Refresh List";
+      setParent ..;
+
+	string $child3 = `columnLayout -bgc 0 0 0 -adj true`;
+		textScrollList  -fn "fixedWidthFont" -h 300 propslist3;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c getSelectedpropHere;
+		button  -h 25 -l "Refresh List";
+      setParent ..;
+
+	string $child4 = `columnLayout -bgc 0 0 0 -adj true`;
+		textScrollList  -fn "fixedWidthFont" -h 300 propslist4;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c getSelectedpropHere;
+		button  -h 25 -l "Refresh List";
+      setParent ..;
+
+
+     	tabLayout -edit -tabLabel $child1 "Episode1" -tabLabel $child2 "Episode2"
+	-tabLabel $child3 "Episode3" -tabLabel $child4 "Episode4" $tabs ;
+	
+	
+ showWindow;
+}
+
+
+global proc epiFindSets()
+{
+	int $tabIndex = `tabLayout -q -sti epiTab`;
+	string $fullIndex = "_0"+$tabIndex;
+	print $tabIndex;
+	string $text = "propslist" + $tabIndex;
+	textScrollList -e -ra $text;
+	string $inputDirectory="//mayaserver/T99/04_PRODUCTION/REFERENCES/EPISODE"+$fullIndex+"/SETS/";
+	print $inputDirectory;
+	string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+	int $propsize=`size($files)`;
+	for ($getPropnames in $files)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames $text;
+	}
+}
+
+global proc epiFindChars()
+{
+	int $tabIndex = `tabLayout -q -sti epiTab`;
+	string $fullIndex = "_0"+$tabIndex;
+	string $text = "propslist" + $tabIndex;
+	textScrollList -e -ra $text;
+	string $inputDirectory="//mayaserver/T99/04_PRODUCTION/REFERENCES/EPISODE"+$fullIndex+"/CHARACTERS/";
+	print $inputDirectory;
+	string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+	int $propsize=`size($files)`;
+	for ($getPropnames in $files)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames $text ;
+	}
+}
+
+global proc epiFindProps()
+{
+	int $tabIndex = `tabLayout -q -sti epiTab`;
+	string $fullIndex = "_0"+$tabIndex;
+	string $text = "propslist" + $tabIndex;
+	textScrollList -e -ra $text;
+	string $inputDirectory="//mayaserver/T99/04_PRODUCTION/REFERENCES/EPISODE"+$fullIndex+"/PROPS/";
+	print $inputDirectory;
+	string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+	int $propsize=`size($files)`;
+	for ($getPropnames in $files)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames $text ;
+	}
+}
+
+global proc getSelectedpropHere()
+{
+	
+	string $episetsName = `menuItem -q -l forEpiSets`;
+	string $epicharsName = `menuItem -q -l forEpiChars`;
+	string $epipropsName = `menuItem -q -l forEpiProps`;
+	
+	int $tabIndex1 = `tabLayout -q -sti epiTab`;
+	string $fullIndex1 = "_0"+$tabIndex1;
+	string $text1 = "propslist" + $tabIndex1;
+
+	if( $episetsName == "Sets" )
+	{
+		string $propname[]=`textScrollList -q -si $text1`;
+		for ($getPropname in $propname);
+		{
+			string $buffer[];
+	 		$numTokens = `tokenize $getPropname "_" $buffer`;
+			string $nsFileName="Q:/TNN Scripts/Scripts/epiNameSpace/Sets.txt";
+			$fileId=`fopen $nsFileName "r"`;
+			string $nextLine = `fgetline $fileId`;
+			while ( size( $nextLine ) > 0 ) 
+			{	 
+				string $buffer[];
+		 		$numTokens = `tokenize $nextLine "\n" $buffer`;
+				if(($buffer[0]==($getPropname+"")) || ($buffer[0]==($getPropname+" "))) 
+				{
+					print "\n ENTERED";
+					$nextLine = `fgetline $fileId`;
+					string $propFind="//mayaserver/T99/04_PRODUCTION/REFERENCES/EPISODE"+$fullIndex1+"/SETS/"+$getPropname;
+					file -rdi 1 -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					file -r  -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					print $propFind;
+				}
+				$nextLine = `fgetline $fileId`;
+				$nextLine = `fgetline $fileId`;
+			}	
+			fclose $fileId; 
+		}
+	}
+	
+
+	if( $epicharsName == "Chars" )
+	{
+		string $propname[]=`textScrollList -q -si $text1`;
+		for ($getPropname in $propname);
+		{
+			string $buffer[];
+	 		$numTokens = `tokenize $getPropname "_" $buffer`;
+			string $nsFileName="Q:/TNN Scripts/Scripts/epiNameSpace/Chars.txt";
+			$fileId=`fopen $nsFileName "r"`;
+			string $nextLine = `fgetline $fileId`;
+			while ( size( $nextLine ) > 0 ) 
+			{	 
+				string $buffer[];
+		 		$numTokens = `tokenize $nextLine "\n" $buffer`;
+				if(($buffer[0]==($getPropname+"")) || ($buffer[0]==($getPropname+" "))) 
+				{
+					print "\n ENTERED";
+					$nextLine = `fgetline $fileId`;
+					string $propFind="//mayaserver/T99/04_PRODUCTION/REFERENCES/EPISODE"+$fullIndex1+"/CHARACTERS/"+$getPropname;
+					file -rdi 1 -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					file -r  -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					print $propFind;
+				}
+				$nextLine = `fgetline $fileId`;
+				$nextLine = `fgetline $fileId`;
+			}	
+			fclose $fileId; 
+		}
+	}
+	if( $epipropsName == "Props" )
+	{
+		string $propname[]=`textScrollList -q -si $text1`;
+		for ($getPropname in $propname);
+		{
+			string $buffer[];
+	 		$numTokens = `tokenize $getPropname "_" $buffer`;
+			string $nsFileName="Q:/TNN Scripts/Scripts/epiNameSpace/Props.txt";
+			$fileId=`fopen $nsFileName "r"`;
+			string $nextLine = `fgetline $fileId`;
+			while ( size( $nextLine ) > 0 ) 
+			{	 
+				string $buffer[];
+		 		$numTokens = `tokenize $nextLine "\n" $buffer`;
+				if(($buffer[0]==($getPropname+"")) || ($buffer[0]==($getPropname+" "))) 
+				{
+					print "\n ENTERED";
+					$nextLine = `fgetline $fileId`;
+					string $propFind="//mayaserver/T99/04_PRODUCTION/REFERENCES/EPISODE"+$fullIndex1+"/PROPS/"+$getPropname;
+					file -rdi 1 -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					file -r  -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					print $propFind;
+				}
+				$nextLine = `fgetline $fileId`;
+				$nextLine = `fgetline $fileId`;
+			}	
+			fclose $fileId; 
+		}
+	}
+
+}
+
+epiElements;
+
+

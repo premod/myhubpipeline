@@ -1,0 +1,1 @@
+global proc rf(){if((`pluginInfo -q -l "RealflowMesher"`)&&(`pluginInfo -q -l "RealflowParticler"`)== 1){RealflowMesher();}else{warning "please load the RealFlow plugins>>>>>>>>>>>>>>>>>>>>>>>";}}

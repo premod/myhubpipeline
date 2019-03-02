@@ -1,0 +1,133 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+global proc string[] lG_getLightSets()
+{
+	string $lG_sets[];
+	
+	int $j=0;
+	string $sets[] = `ls -sets`;
+	for($i=0;$i<size($sets);$i++) {
+		if(`objExists ($sets[$i] + ".lightGirlSet")`) {
+			$lG_sets[$j] = $sets[$i];
+			$j++;
+		}
+	}
+	
+	return $lG_sets;
+}
+
+global proc lG_resetSetsMenu(string $menu)
+{
+	string $menus[] =`menu -q -ia $menu`;
+	
+	for($m in $menus) {
+		deleteUI -mi $m;
+	}
+}
+
+global proc lG_populateSetsMenu(string $cmd, string $menu, string $function)
+{	
+	// first delete existing menuItems...
+	lG_resetSetsMenu($menu);
+	
+	string $g_lG_allLightsets[] = lG_getLightSets();
+	
+	if(`size $g_lG_allLightsets`) {
+		for($s in $g_lG_allLightsets) {
+			string $cmdString = $cmd + " " + $s + " " + $function;
+			string $menuItem = `menuItem -label $s -command $cmdString -parent $menu` ;
+		}
+	} else {
+		menuItem -label "..." -parent $menu;
+	}
+	setParent  -m ..;
+}
+
+// currently creates a new set using lights loaded in interface
+global proc lG_createLightSet()
+{
+	global string $g_lG_allLights[];
+	
+	if(!size($g_lG_allLights)) {
+		warning("lightGirl has no currently loaded lights.  Load lights to create Light Sets.");
+		return;
+	}	
+
+	int $ok=1;
+	
+	string $set = lG_dialogPrompt("Create Light Set", "Light Set Name", "");
+	$set = substituteAllString($set, " ", "_");
+	
+	if($set != "") {
+		string $sets[] = lG_getLightSets();
+		for($s in $sets) {
+			if(`gmatch $set $s`) {
+				warning("Light Set '" + $set + "' already exists. Please choose another name.");
+				$ok=0;
+				break;
+			} else {
+				$ok =1;
+			}
+		}
+		
+		if($ok) {
+			string $setNode = `sets -name $set $g_lG_allLights`;
+			addAttr -ln "lightGirlSet" -at bool $set;
+			setAttr -e -keyable true ($set + ".lightGirlSet");
+			setAttr ($set + ".lightGirlSet") 1;
+			
+		}
+	}
+}
+
+//global proc lG_addLightSet(string $set, string $function) // function not used for add...
+//{
+//	lG_lightGirlLoadLights(10, "lightGirlCmd", $set);
+//}
+
+global proc lG_removeLightSet(string $set, string $function) // function not used for remove...
+{	
+	if(`objExists($set)`) {
+		int $del = lG_confirmPrompt("Confirm Delete", "Are you sure you want to remove light set '" + $set + "'?");
+		if($del) {
+			delete $set;
+		}
+	}
+}
+
+global proc lG_removeAllLightSets()
+{
+	string $sets[] = lG_getLightSets();
+	int $del = lG_confirmPrompt("Confirm Delete", "Are you sure you want to remove all light sets?");
+	if($del) {
+		for($s in $sets) {
+			if(`objExists($s)`) {
+				delete $s;
+			}
+		}
+	}
+}
+
+global proc lG_loadLightSet(string $set, string $function)
+{
+	lG_lightGirlLoadLights(10, $function, $set, "", 0);
+}

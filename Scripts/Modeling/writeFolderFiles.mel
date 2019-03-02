@@ -1,0 +1,19 @@
+global proc int desFile( string $dirPath, string $fileType )
+{
+	string $files[] = `getFileList -folder ($dirPath+"/")`;
+	$files = `sort $files`;
+	$exampleFileName = $dirPath+"/"+"List.csv";
+	$fileId=`fopen $exampleFileName "w"`;
+	for($each in $files)
+	{
+		string $names = `basenameEx($each)`;
+		fwrite $fileId ($names+"\n");
+	}
+	fclose $fileId;	
+	return 1;
+}
+
+global proc writeFolderFiles()
+{
+	fileBrowser( "desFile", "Text", "", 4 ); 
+}

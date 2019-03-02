@@ -1,0 +1,99 @@
+
+global proc usersetup()
+{
+    	global string $gMainWindow;
+	setParent $gMainWindow;
+	menu -label "Studio56 Lighting" -parent $gMainWindow -tearOff on;
+	menuItem -label "Auto Save" -c "NPautoSaveOptions";
+	menuItem -label "Optimize and Save" -c "fileOptimisation";
+	menuItem -divider true;
+	menuItem -label "File TextureManager" -c "FileTextureManager";
+	menuItem -label "Material Attribute Transfer" -c "KBI_Materials_Attributes_Transfert";
+	menuItem -label "IBN Lighting" -c "IBN_lighting";
+	menuItem -label "Light Girl" -c "lightGirl";
+	menuItem -label "Delete EmptyLayers" -c "deleteEmptyLayers";
+	menuItem -label "RGB Break Connections" -c "breakTexConnWindow";
+	//menuItem -label "Light Pack Box" -c "changeLightAtt";
+	menuItem -label "Make_Shader_Blackhole" -c "Make_Shader_Blackhole";
+	//menuItem -label "Render Launch(Software)" -c "myRenderSettings";
+	menuItem -label "MentalRay Light Settings" -c "mentalRayrenderLayers";
+	menuItem -label "Replace Reference" -c "replaceReferences";
+	menuItem -divider true;
+	menuItem -label "Remove Setup" -c "removeSetup";
+	menuItem -label "Comments" -c "comments";
+	menuItem -divider true;
+	menuItem -label "RGB Lights Matt" -subMenu true;
+	menuItem -label "Noora Normal" -c "RGBLightsForNooraNormal";
+	menuItem -label "Noora Military" -c "RGBLightsForNooraMilitary";
+}
+
+usersetup;
+
+headsUpDisplay 
+               -section          8
+               -block            0
+               -ao               true
+               -blockSize        "small"
+               -label            "Frame:" 
+		   -labelFontSize    "small"
+               -c                "currentTime -q"
+               -atr
+                HUDtime;
+
+headsUpDisplay 
+               -section          6
+               -block            0
+               -ao               true
+               -blockSize        "small"
+		   -dfs		      "large" 
+               -label            "User Name :"
+               -labelFontSize    "small"
+               -c                "DOPrint;"
+		   -atr
+               HUDname;
+
+
+headsUpDisplay 
+               -section          9
+               -block            4
+               -ao               true
+               -blockSize        "small"
+		   -label            "Date :"
+               -labelFontSize    "small"
+               -c                "DOdate"
+		   -atr
+               HUDdate;
+
+global proc string DOPrint()
+{
+	string $name =` getenv "USERNAME"`;
+ 	return $name;
+}
+
+global proc string DOdate()
+{
+	string $date = eval("system(\"date /t\")");
+ 	return $date;
+}
+
+welcomeWindow();
+createDateFolder();	
+
+//optionVar -sv "workingUnitTime" "pal" 
+//-sv workingUnitTimeDefault pal;
+optionVar -sv workingUnitTimeDefault pal;
+	currentUnit -t pal;
+
+playbackOptions -ps 1;
+
+optionVar -iv "isIncrementalSaveEnabled" 1;
+optionVar -iv incrementalSaveMaxBackups 10;
+
+
+
+
+
+
+
+
+

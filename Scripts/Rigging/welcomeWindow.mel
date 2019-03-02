@@ -1,0 +1,21 @@
+global proc welcomeWindow()
+{
+	if ((`window -ex welcomeWin`)== true) deleteUI welcomeWin;
+	window -t "Studio56 Welcomes U" -wh 410 240 -s 0  welcomeWin;
+	menuBarLayout ;
+		paneLayout;
+	string $getName = `getenv USERNAME`;
+	columnLayout -adj 1;
+	text -l "Hi";
+	text -l $getName -fn "boldLabelFont";
+	image  -image   "E:/Scripts/Animation/STUDIO56.jpg" -w 400 -h 140;
+	text -l "Welcome's U.";
+	showWindow;
+
+}
+welcomeWindow;
+NPautoSaveOptions();
+
+
+
+

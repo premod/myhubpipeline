@@ -1,0 +1,61 @@
+
+global proc usersetup()
+{
+    	global string $gMainWindow;
+	setParent $gMainWindow;
+	menu -label "Studio56 Animation" -parent $gMainWindow -tearOff on;
+	menuItem -label "Auto Save" -c "NPautoSaveOptions";
+	menuItem -label "Optimize and Save" -echoCommand true -c "fileOptimisation";
+	//menuItem -label "Create Camera" -c "createCamera;";
+	menuItem -divider true;
+	//menuItem -label "DeleteIfNotReferenced" -c "deleteNotReferenced";
+	menuItem -label "IKFK Match Tool" -c "IKFKMatchStudio56";
+	menuItem -label "Anim Import/Export" -c "dkAnim";
+	//menuItem -label "Rivet Constraint" -c "rivet";
+	menuItem -label "Pose Library" -c "poseMan";
+	menuItem -label "Marker" -c "drawMarker_GUI";
+	menuItem -label "Animation Ghost" -c "bhGhost";
+	//menuItem -label "Selector:Biped" -c "asSelectorbiped";
+	//menuItem -label "Render Launch(Software)" -c "myRenderSettings";
+	menuItem -divider true;
+	//menuItem -label "Anim Library" -c "animLibrary";
+	//menuItem -label "Animatics" -c "openAnimatics";
+	//menuItem -label "Story Boards" -c openStoryBoard;
+	//menuItem -divider true;
+	menuItem -label "Comments" -c "comments;";
+	menuItem -label "Add HUD" -c "Animation_custom_HUD_V01";
+	menuItem -label "Final Playblast" -c "finalPlayblast";
+	
+
+	
+}
+usersetup;
+
+
+welcomeWindow();
+
+//optionVar -sv "workingUnitTime" "pal" 
+//-sv workingUnitTimeDefault pal;
+optionVar -sv workingUnitTimeDefault pal;
+	currentUnit -t pal;
+
+playbackOptions -ps 1;
+
+optionVar -iv "isIncrementalSaveEnabled" 1;
+optionVar -iv incrementalSaveMaxBackups 10;
+
+//MGautoLoad_start
+source "MGTools/invoke/MGtools_AutoLoadCodes.mel";
+AutoLoadMGtools;
+buildMGtoolsMenu;
+//MGautoLoad_end
+
+
+
+
+
+
+
+
+
+

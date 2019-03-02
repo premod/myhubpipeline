@@ -1,0 +1,14 @@
+global proc refreshTextureNodes()
+{
+	string $matNodes[] = `ls -mat`;
+   	for($each1 in $matNodes)
+	{
+		updateFileNodeSwatch($each1);
+	}
+
+	/*string $fileNodes[] = `ls -type file`;
+   	for($each in $fileNodes)
+	{
+		updateFileNodeSwatch($each);
+	}*/
+}

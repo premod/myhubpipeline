@@ -1,0 +1,6 @@
+global proc openURLforAssetSignOff()
+{
+	string $userName = `getenv "USERNAME"`;
+	system("load" + ("http://sanserver/checklist/usersignoff.aspx?"+"uid="+$userName));
+}
+

@@ -1,0 +1,1022 @@
+
+/*
+
+What happens when:
+
+startup:
+create anzovinPanelType
+create anzovin menu
+
+scene load:
+set initial current character
+create panel
+populate anzovin menu with characters
+
+scene close:
+unpopulate anzovin menu
+delete panel
+
+panel creation:
+setup panel UI
+
+*/
+
+
+global proc anzUI_initialize()
+{
+	global string $anz_poseTypeScripts[];
+	global string $anz_poseSaveScripts[];
+	global string $anz_characterChangeScripts[];
+	global string $anz_menuCreationScripts[];
+	global string $anz_sceneOpenScripts[];
+	global string $anz_sceneCloseScripts[];
+	global string $anz_createPanelUIScripts[];
+	global string $anz_deletePanelUIScripts[];
+	global string $anz_installedProducts[];
+	global string $anz_componentEditorScripts[];
+	global string $anz_lastUsedOtherDirectory;
+	global int $anz_installedProductCount;
+	global int $anz_anyFullProductInstalled;
+	
+	
+	$anz_installedProductCount = 0;
+	$anz_anyFullProductInstalled = 0;
+	$anz_lastUsedOtherDirectory = "";
+	
+	clear $anz_poseTypeScripts;
+	clear $anz_poseSaveScripts;
+	clear $anz_menuCreationScripts;
+	clear $anz_createPanelUIScripts;
+	clear $anz_deletePanelUIScripts;
+	clear $anz_installedProducts;
+	clear $anz_characterChangeScripts;
+	clear $anz_sceneOpenScripts;
+	clear $anz_sceneCloseScripts;
+	clear $anz_componentEditorScripts;
+}
+
+// This function does one of two things:
+// If the product $name has not been registered yet, it gets the next consecutive unused index, and registers it in the
+//     $anz_installedProducts global variable using that index, and then returns the index
+// If the product $name is registered, it returns the index its been registered with
+global proc int anzUI_obtainAnzovinProductIndex(string $name, int $isFullProduct)
+{
+	global int $anz_installedProductCount;
+	global int $anz_anyFullProductInstalled;
+	global string $anz_installedProducts[];
+	int $result = -1;
+	
+	for($i = 0; $i < $anz_installedProductCount; ++$i) {
+		if ($anz_installedProducts[$i] == $name) {
+			$result = $i;
+			break;
+		}
+	}
+	if ($result == -1) {
+		$result = $anz_installedProductCount;
+		$anz_installedProductCount += 1;
+		$anz_installedProducts[$result] = $name;
+	}
+	if ($isFullProduct)
+		$anz_anyFullProductInstalled = 1;
+	return $result;
+}
+
+
+// Function for thoroughly deleting a panel.  For some reason, sometimes you just have to do it 5 times.
+proc deletePanel(string $name)
+{
+  	string $oldParent = `setParent -q`;
+	for($count = 0; $count < 15 && `panel -exists $name`; ++$count) {
+		deleteUI $name;
+	}
+	if (`panel -exists $oldParent`)
+		setParent $oldParent;
+}
+
+global proc anzUI_aboutAnzovinRigNodes()
+{
+	if (`window -exists anzUIAboutWindow`)
+		deleteUI anzUIAboutWindow;
+	
+	int $width;//
+	if (`about -mac` == 1)
+		$width = 320;
+	else
+		$width = 270;
+		
+	window -title "About Anzovin Rig Nodes" -sizeable false anzUIAboutWindow;
+	columnLayout -columnAttach "left" 5 -columnAlign "center" -rowSpacing 0;
+	
+	string $versionString = `arnVersionInfo -arnVersion`;
+	separator -style "none" -w 240 -h 4;
+	text -w $width -font "boldLabelFont" -label "Anzovin Rig Nodes";
+	text -w $width -label $versionString;
+	separator -style "none" -w 240 -h 16;
+	
+	text -w $width -label "Copyright 2008 by Anzovin Studio, Inc.";
+	text -w $width -label "All rights reserved.";
+	//separator -style "none" -w 240;
+	text -w $width -label "Programmed by Brian Kendall.";
+	separator -style "none" -w 240 -h 8;
+	text -w $width -label "http://www.anzovin.com/products/arn1maya.html";
+	text -w $width -label "http://www.anzovin.com";
+	separator -style "none" -w 240 -h 16;
+	
+	text -w $width -font "boldLabelFont" -label "Products implemented:";
+	separator -style "none" -w 240 -h 8;
+	
+	string $products[] = `arnVersionInfo -products`;
+	string $versionInfo[] = `arnVersionInfo -version`;
+	int $implementationVersion[] = `arnVersionInfo -implementation`;
+	
+	for($i = 0; $i < size($products); ++$i) {
+		text -w $width -label ($products[$i] + ", " + $versionInfo[$i]);
+		text -w $width -label ("(implementation version " + $implementationVersion[$i] + ")");
+		if ($i < (size($products)-1))
+			separator -style "none" -w 240 -h 8;
+	}
+	
+	if (`about -mac` == 1)
+		window -edit -widthHeight ($width+20) (280 + size($products)*58) anzUIAboutWindow;
+	else
+		window -edit -widthHeight ($width+20) (206 + size($products)*40) anzUIAboutWindow;
+	showWindow;
+}
+
+global proc anzUI_createAnzovinMenu()
+{
+	
+	global string $gMainWindow;
+	global string $anz_menuCreationScripts[];
+	global string $anz_installedProducts[];
+	global int $anz_installedProductCount;
+	global int $anz_anyFullProductInstalled;
+	
+	if (`menu -exists anzMainMenu`)
+		deleteUI anzMainMenu;
+	
+	if ($anz_installedProductCount == 1 && $anz_anyFullProductInstalled == 1)
+		menu -label $anz_installedProducts[0] -tearOff true -parent $gMainWindow anzMainMenu;
+	else
+		menu -label "Anzovin" -tearOff true -parent $gMainWindow anzMainMenu;
+	
+	menuItem -label "Current Character" -tearOff true -subMenu true anzCurrentCharacterMenu;
+		//menuItem -label "No characters present" -enable false -italicized true;
+		setParent -menu ..;
+	
+	menuItem -label "Anzovin Panel" -enable false
+		-annotation "Tears off the Anzovin Panel"
+		-command "tearOffPanel \"Anzovin Panel\" \"anzovinPanelType\" true;"
+		anzAnzovinPanel;
+	
+	if ($anz_anyFullProductInstalled == 1) {
+		string $mayaVersion = `about -version`;
+		string $buffer[];
+		tokenize $mayaVersion ". " $buffer;
+		int $majorVersion = $buffer[0];
+		
+		if ($majorVersion < 8) {
+			menuItem -label "Anzovin Component Editor"
+				-enable 0
+				-annotation "Displays the Anzovin Component Editor (not available in Maya 7)"
+				-command "print \"You're not supposed to be able to pick this menu item!\\n\";"
+				anzAnzovinComponentEditor;
+			$enable = 0;
+		} else {
+			menuItem -label "Anzovin Component Editor"
+				-enable 1
+				-annotation "Displays the Anzovin Component Editor"
+				-command "anzUI_showComponentEditor"
+				anzAnzovinComponentEditor;
+		}
+		menuItem -divider true;
+	}
+	
+	for($command in $anz_menuCreationScripts)
+		eval($command);
+	
+	if (`pluginInfo -q -loaded "anzovinRigNodes"`) {
+		menuItem -divider true;
+		
+		menuItem -label "About Anzovin Rig Nodes..."
+				-enable 1
+				-annotation "Displays information about Anzovin Rig Nodes"
+				-command "anzUI_aboutAnzovinRigNodes"
+				anzAboutAnzovinRigNodes;
+		
+	}
+	
+	
+	anzUI_populateCharacterMenu;
+}
+
+
+global proc anzUI_setupAtLaunch()
+{
+	// Create the anzovin panel type:
+	if (`scriptedPanel -exists anzovinMainPanel` == 0) {
+		if (!`scriptedPanelType -exists anzovinPanelType`) {
+			scriptedPanelType 
+				-ccb anzUI_CreateCallback
+ 				-icb anzUI_InitCallback
+				-acb anzUI_AddCallback
+				-rcb anzUI_RemoveCallback
+				-dcb anzUI_DeleteCallback
+				-scb anzUI_SaveStateCallback
+				-unique true
+				anzovinPanelType;
+		} else {
+			scriptedPanelType -e
+				-ccb anzUI_CreateCallback
+ 				-icb anzUI_InitCallback
+				-acb anzUI_AddCallback
+				-rcb anzUI_RemoveCallback
+				-dcb anzUI_DeleteCallback
+				-scb anzUI_SaveStateCallback
+				anzovinPanelType;
+		}
+		
+		//scriptedPanel -e -rp modelPanel4 fmMainPanel;
+		
+		//setNamedPanelLayout "Persp/Outliner";
+		//scriptedPanel -e -rp outlinerPanel1 fmMainPanel;
+		
+		// To do: remove this bit of code:
+		//setNamedPanelLayout "anzovinTestLayout"; updateToolbox();
+	}
+	
+	//scriptJob -parent fmMainPanel -replacePrevious -e "SelectionChanged" "selectionChangeCallback";
+	
+	
+	
+	// Create the Anzovin main menu:
+	anzUI_createAnzovinMenu();
+	
+	
+}
+
+/*
+To do (3/20/07): 
+- continue figuring out what has to happen at startup / scene load / panel initialization.  make sure everything makes sense then test it!
+- then make scripts for creating box controls
+
+*/
+
+
+global proc anzUI_clearCharacterMenu()
+{
+	menuItem -e -enable false anzAnzovinPanel;
+	
+	string $items[] = `menu -q -itemArray anzCurrentCharacterMenu`;
+	for($item in $items)
+		deleteUI $item;
+	
+	setParent -menu anzCurrentCharacterMenu;
+		menuItem -label "No characters present" -enable false -italicized true;
+}
+
+
+global proc anzUI_populateCharacterMenu()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	
+	string $characters[] = `anzUI_FindCharacters`;
+	if (size($characters) == 0) {
+		$anzovinInterfaceCurrentCharacter = $anzovinInterfaceCurrentCharacterNamespace = "";
+		
+		anzUI_clearCharacterMenu;
+	} else {
+		$anzovinInterfaceCurrentCharacter = $characters[0];
+		$anzovinInterfaceCurrentCharacterNamespace = getCharacterNamespace($anzovinInterfaceCurrentCharacter);
+		menuItem -e -enable true anzAnzovinPanel;
+		
+		string $items[] = `menu -q -itemArray anzCurrentCharacterMenu`;
+		for($item in $items)
+			deleteUI $item;
+			
+		setParent -menu anzCurrentCharacterMenu;
+			string $collection = `radioMenuItemCollection`;
+			for($i = 0; $i < size($characters); ++$i)
+				menuItem -label $characters[$i] -collection $collection -radioButton ($i == 0)
+							-command ("anz_characterListChange(\"" + $characters[$i] + "\");");
+	}
+	
+}
+
+global proc anzUI_sceneOpen()
+{
+	global string $anz_sceneOpenScripts[];
+	
+	// Update the menu:
+	
+	anzUI_createAnzovinMenu;
+	anzUI_populateCharacterMenu();
+	
+	// Create the anzovin panel:
+	string $existingPanels[] = `getPanel -scriptType anzovinPanelType`;
+	
+	if (size($existingPanels) > 0) {
+		if (`scriptedPanel -q -control $existingPanels[0]` != "") {
+			if (`formLayout -exists anzUI_characterFormLayout` != 1 || size(`formLayout -q -childArray anzUI_characterFormLayout`) < 2)
+				anzUI_createAnzovinPanelUI($existingPanels[0]);
+		}
+	} else
+		 scriptedPanel -unParent -type anzovinPanelType -label "Anzovin Panel" anzovinMainPanel;
+	
+	/*
+	if (size($existingPanels) == 0)
+		scriptedPanel -unParent -type anzovinPanelType -label "Anzovin Panel" anzovinMainPanel;
+	else {
+		while(size($existingPanels) > 0) {
+			deleteUI $existingPanels[0];
+			$existingPanels = `getPanel -scriptType anzovinPanelType`;
+		}
+	}
+	*/
+	for($command in $anz_sceneOpenScripts)
+		eval($command);
+}
+
+
+
+global proc anzUI_sceneClose()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	global string $anz_sceneCloseScripts[];
+	
+	string $characters[] = `anzUI_FindCharacters`;
+	
+	if (size($characters) > 1) {
+		
+		scriptJob -runOnce true -idleEvent "anzUI_changeCharacterIfNecessary";
+		
+	} else {
+		ap_poseSceneClose();
+		
+		$anzovinInterfaceCurrentCharacter = "";
+		$anzovinInterfaceCurrentCharacterNamespace = "";
+		anzUI_clearCharacterMenu();
+		menuItem -label "No characters present" -enable false -italicized true -parent anzCurrentCharacterMenu;
+		
+		// Close any teared off Anzovin Panels
+		string $windows[] = `lsUI -windows`;
+		for($window in $windows) {
+			if (`window -q -title $window` == "Anzovin Panel")
+				deleteUI $window;
+		}
+		
+		string $panelsToKill[] = `getPanel -scriptType anzovinPanelType`;
+		for($panelDatsGonnaBKilled in $panelsToKill)
+			deletePanel($panelDatsGonnaBKilled);
+			
+		for($command in $anz_sceneCloseScripts)
+			eval($command);
+		
+		// Reset the menu, closing any teared-off menus
+		anzUI_createAnzovinMenu;
+		anzUI_clearCharacterMenu;
+	}
+}
+
+global proc anzUI_changeCharacterIfNecessary()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	string $characters[] = `anzUI_FindCharacters`;
+	
+	if (size($characters) == 0)
+		return;
+	
+	for($char in $characters) {
+		if ($anzovinInterfaceCurrentCharacter == $char)
+			return;
+	}
+	
+	// Didn't find character, so we need to change it:
+	anz_characterListChange($characters[0]);
+	
+	anzUI_populateCharacterMenu();
+	
+	string $existingPanels[] = `getPanel -scriptType anzovinPanelType`;
+	for($panel in $existingPanels)
+		anzUI_createAnzovinPanelUI($panel);
+}
+
+ 
+global proc anzUI_CreateCallback(string $panelName)
+{ 
+//  
+//  Description:  
+//      Create any editors unparented here and do 
+//      any other initialization required.  
+//
+//      In this example we will only declare a global array to
+//		maintain some state information.
+//
+	
+} 
+
+
+global proc anzUI_InitCallback(string $panelName)
+{ 
+//  
+//  Description:  
+//      Re-initialize the panel on file -new or file -open.
+//
+//      In this example we will only re-init the global array.
+//
+	
+	
+} 
+
+global proc anzUI_addUIAttribute(string $character, string $attribute, string $type)
+{
+	string $interfaceNode = (getCharacterNamespace($character) + "AnzovinInterfaceNode");
+	
+	if (`objExists $interfaceNode`) {
+		if (!attributeExists($attribute, $interfaceNode))
+			addAttr -longName $attribute -attributeType $type $interfaceNode;
+	}
+}
+
+global proc string anzUI_getUIStringAttribute(string $character, string $attribute, string $default)
+{
+	string $interfaceNode = (getCharacterNamespace($character) + "AnzovinInterfaceNode");
+	string $result = $default;
+	
+	if (`objExists $interfaceNode`) {
+		if (attributeExists($attribute, $interfaceNode))
+			$result = `getAttr ($interfaceNode + "." + $attribute)`;
+	}
+	return $result;
+}
+
+global proc anzUI_setUIStringAttribute(string $character, string $attribute, string $value)
+{
+	string $interfaceNode = (getCharacterNamespace($character) + "AnzovinInterfaceNode");
+	
+	if (`objExists $interfaceNode`) {
+		if (attributeExists($attribute, $interfaceNode))
+			setAttr ($interfaceNode + "." + $attribute) -type "string" $value;
+	}
+}
+
+global proc int anzUI_getUIIntAttribute(string $character, string $attribute, int $default)
+{
+	string $interfaceNode = (getCharacterNamespace($character) + "AnzovinInterfaceNode");
+	int $result = $default;
+	
+	if (`objExists $interfaceNode`) {
+		if (attributeExists($attribute, $interfaceNode))
+			$result = `getAttr ($interfaceNode + "." + $attribute)`;
+	}
+	return $result;
+}
+
+global proc anzUI_setUIIntAttribute(string $character, string $attribute, int $value)
+{
+	string $interfaceNode = (getCharacterNamespace($character) + "AnzovinInterfaceNode");
+	
+	if (`objExists $interfaceNode`) {
+		if (attributeExists($attribute, $interfaceNode))
+			setAttr ($interfaceNode + "." + $attribute) $value;
+	}
+}
+
+ 
+// Searches the scene for unknown/script nodes, and finds the ones that are AnzovinInterfaceNode.
+// The namespace of these nodes corresponds to the name of the character.
+global proc string[] anzUI_FindCharacters()
+{
+	
+	string $result[], $strings[], $buffer[];
+	int $count = 0, $itemCount, $unknownCount = 0;
+	
+	$strings = `ls -type unknown -type script`;
+	for($object in $strings) {
+		
+		if (endsWith($object, "AnzovinInterfaceNode")) {
+			$itemCount = `tokenize $object ":" $buffer`;
+			if ($itemCount == 1) {
+				++$unknownCount;
+				if ($unknownCount == 1)
+					$result[$count] = "Unnamed";
+				else
+					$result[$count] = ("Unnamed" + $unknownCount);
+			} else
+				$result[$count] = $buffer[0];
+			++$count;
+		}
+		
+	}
+	return $result;
+}
+
+
+
+global proc anz_characterListChange(string $newCharacter)
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	global string $anz_characterChangeScripts[];
+	int $anzovinPanelExists = `paneLayout -exists anzUI_PaneLayout`;
+	
+	if ($newCharacter == "")
+		return;
+	
+	if ($anzovinPanelExists) {
+		tabLayout -edit -visible 0 ($anzovinInterfaceCurrentCharacter + "_tabLayout");
+		tabLayout -edit -visible 1 ($newCharacter + "_tabLayout");
+	}
+	
+	$anzovinInterfaceCurrentCharacter = $newCharacter;
+	$anzovinInterfaceCurrentCharacterNamespace = getCharacterNamespace($anzovinInterfaceCurrentCharacter);
+	
+	int $sortPoses = anzUI_getUIIntAttribute($anzovinInterfaceCurrentCharacter, "sortPoses", 1);
+	int $applyMakesKeyframes = anzUI_getUIIntAttribute($anzovinInterfaceCurrentCharacter, "applyMakesKeyframes", 1);
+	int $resolvePoseAmbiguities = anzUI_getUIIntAttribute($anzovinInterfaceCurrentCharacter, "resolvePoseAmbiguities", 0);
+	
+	if ($anzovinPanelExists) {
+		menuItem -e -checkBox $sortPoses ap_sortPosesByCharacterMenu;
+		menuItem -e -checkBox $resolvePoseAmbiguities ap_resolvePoseAmbiguitiesMenu;
+		menuItem -e -radioButton $applyMakesKeyframes ap_clickPoseSetsKeyframesMenu;
+		menuItem -e -radioButton (!$applyMakesKeyframes) ap_clickPoseNoKeyframesMenu;
+		
+		// Update popup menu
+		string $optionMenuItems[] = `optionMenu -q -itemListShort anzUI_characterOptionMenu`;
+		for($i = 0; $i < size($optionMenuItems); ++$i) {
+			if (`menuItem -q -label $optionMenuItems[$i]` == $newCharacter) {
+				optionMenu -e -select ($i+1) anzUI_characterOptionMenu;
+				break;
+			}
+		}
+	}
+	
+	// Update character menu
+	string $items[] = `menu -q -itemArray anzCurrentCharacterMenu`;
+	for($item in $items)
+		menuItem -e -checkBox (`menuItem -q -label $item` == $newCharacter) $item;
+	
+	
+	// Do any product dependent changes here:
+	for($script in $anz_characterChangeScripts)
+		eval($script);
+	
+	
+	/*
+	int $lastHeight;
+	
+	formLayout -e -vis 0 ($anzovinInterfaceCurrentCharacter + "_outlinerFormLayout");
+	formLayout -e -vis 1 ($newCharacter + "_outlinerFormLayout");
+	
+	if (`about -mac` == 1) {
+		if (`layout -exists ($anzovinInterfaceCurrentCharacter + "_scrollLayout")`)
+			frameLayout -e -collapse 1 -vis 0 ($anzovinInterfaceCurrentCharacter + "_frameLayout");
+		if (`layout -exists ($newCharacter + "_scrollLayout")`)
+			frameLayout -e -collapse 0 -vis 1 ($newCharacter + "_frameLayout");
+	} else {
+		if (`layout -exists ($anzovinInterfaceCurrentCharacter + "_scrollLayout")`)
+			scrollLayout -e -vis 0 ($anzovinInterfaceCurrentCharacter + "_scrollLayout");
+		if (`layout -exists ($newCharacter + "_scrollLayout")`)
+			scrollLayout -e -vis 1 ($newCharacter + "_scrollLayout");
+	}
+	
+	*/
+	
+}
+
+global proc string getCharacterNamespace(string $character)
+{
+	string $characterNamespace;
+	if (startsWith($character, "Unnamed") == 1)
+		$characterNamespace = "";
+	else
+		$characterNamespace = ($character + ":");
+	return $characterNamespace;
+}
+
+
+global proc anzUI_deleteContentsOfAnzovinPanel()
+{
+	string $children[] = `layout -q -childArray anzUI_PaneLayout`;
+	for($child in $children)
+		deleteUI $child;
+}
+
+
+global proc anzUI_createAnzovinPanelUI(string $panelName)
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	global string $anz_createPanelUIScripts[];
+	global string $anz_poseCurrentDirectory;
+	string $child1, $child2, $child3, $child4;
+ 
+  	
+  	$anzovinInterfaceCurrentCharacterNamespace = "";
+  	
+  	if (`paneLayout -exists anzUI_PaneLayout` == 1) {
+  		anzUI_deleteContentsOfAnzovinPanel;
+  		setParent anzUI_PaneLayout;
+  	} else
+		paneLayout -configuration "horizontal2" anzUI_PaneLayout;
+	
+	string $characters[] = `anzUI_FindCharacters`;
+	
+	string $mainTopForm = `formLayout anzUI_characterFormLayout`;
+		string $topButton = `optionMenu -label "Character" -changeCommand "anz_characterListChange #1" anzUI_characterOptionMenu`;
+			
+			for($character in $characters)
+				menuItem -label $character;
+			if (size($characters) > 0) {
+				optionMenu -e -select 1 $topButton;
+				$anzovinInterfaceCurrentCharacter = `optionMenu -q -value $topButton`;
+				$anzovinInterfaceCurrentCharacterNamespace = getCharacterNamespace($anzovinInterfaceCurrentCharacter);
+			} else {
+				$anzovinInterfaceCurrentCharacter = "";
+				$anzovinInterfaceCurrentCharacterNamespace = "";
+			}
+	formLayout -edit
+ 				-attachForm     $topButton	"top"    0
+ 				-attachForm     $topButton	"left"   0
+ 				$mainTopForm;
+		
+		
+		// Add tab layouts for each character:
+		for($character in $characters) {
+			string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 -visible 0 ($character + "_tabLayout")`;
+  				setParent ..;
+  				
+			
+			formLayout -edit
+ 						-attachControl	$tabs		"top" 0 $topButton
+ 						-attachForm     $tabs		"left"    0
+ 						-attachForm     $tabs		"right"    0
+ 						-attachForm     $tabs		"bottom"   0
+ 						$mainTopForm;
+		}
+		if (size($characters) > 0)
+			tabLayout -edit -visible 1 ($anzovinInterfaceCurrentCharacter + "_tabLayout");
+		
+	setParent ..;
+	
+	
+	// Add tabs for other Anzovin products here:
+	for($script in $anz_createPanelUIScripts)
+		eval($script);
+	
+	
+	//separator -style "none" -h 2;
+	//frameLayout -label "Pose Library" -marginWidth 0 -collapsable true;
+	paneLayout -configuration "vertical2";
+  		//separator -style "none" -h 10;
+  		$child1 = `formLayout anzUI_poseFileBrowserFormLayout`;
+ 			$layout = ap_createPoseFileBrowserInterface();
+ 			setParent ..;
+ 			
+ 		$child2 = `formLayout`;
+ 			$layout = ap_createPoseShelfInterface();
+ 			
+ 			formLayout -edit
+ 				-attachForm     $layout     "top"    -3
+ 				-attachForm     $layout     "left"   -3
+ 				-attachForm     $layout     "right"    -3
+ 				-attachForm     $layout     "bottom"   -3
+ 				$child2;
+ 			setParent ..;
+ 			
+ 			// By this point, $anz_poseCurrentDirectory should be initialized.
+ 			ap_CreatePoseShelfButtons($anz_poseCurrentDirectory);
+ 			/*
+  		radioButtonGrp -nrb 3
+  			-l "Little Options"
+  			-la3 "Option 4" "Option 5" "Option 6"
+  			-select 0
+  			rbg2;
+  		separator -style "none" -h 10;*/
+	
+	// Initialize important character-based options or whatever:
+	anz_characterListChange($anzovinInterfaceCurrentCharacter);
+} 
+
+
+
+global proc anzUI_AddCallback(string $panelName)
+{
+//
+//  Description:  Create UI and parent any editors.
+//
+	
+	anzUI_createAnzovinPanelUI($panelName);
+}
+
+
+global proc anzUI_RemoveCallback(string $panelName)
+{ 
+//
+//  Description:
+//		Unparent any editors and save state if required.
+//
+	/*global float $gSampleState[];
+ 	//  Scope the control names to this panel.
+ 	//
+ 	string $control = `scriptedPanel -q -control $panelName`;
+ 	setParent $control;
+
+ 	$gSampleState[0] = `floatSliderGrp -q -v fsg1`;
+ 	$gSampleState[1] = `floatSliderGrp -q -v fsg2`;
+ 	$gSampleState[2] = `floatSliderGrp -q -v fsg3`;
+ 	$gSampleState[3] = `radioButtonGrp -q -sl rbg`;
+ 	$gSampleState[4] = `radioButtonGrp -q -sl rbg2`;*/
+  	
+} 
+
+global proc anzUI_DeleteCallback(string $panelName) { 
+//
+//  Description:
+//		Delete any editors and do any other cleanup required.
+
+	global string $anz_libraryUI;
+	global string $anz_deletePanelUIScripts[];
+	
+	
+  	
+	$anz_libraryUI = "";
+	
+	for($command in $anz_deletePanelUIScripts)
+		eval($command);
+} 
+
+global proc string anzUI_SaveStateCallback(string $panelName) { 
+//
+//  Description:
+//		Return a string that will restore the current state
+//		when it is executed.
+	/*print "anzUI_SaveStateCallback\n";
+  	global float $gSampleState[];
+ 	$indent = "\n\t\t\t";
+
+ 	return (
+ 			$indent+"$gSampleState[0]="+$gSampleState[0]+";" +
+ 			$indent+"$gSampleState[1]="+$gSampleState[1]+";" +
+ 			$indent+"$gSampleState[2]="+$gSampleState[2]+";" +
+ 			$indent+"$gSampleState[3]="+$gSampleState[3]+";" +
+ 			$indent+"$gSampleState[4]="+$gSampleState[4]+";" + 
+ 			$indent+"anzUI_SetPanelState $panelName;\n"
+ 	) ;*/
+ 	return "";
+} 
+
+global proc anzUI_SetPanelState( string $whichPanel ) {
+//
+//  Description:
+//		This is a convenience proc to set the panel state from the
+//		global array
+
+  	/*global float $gSampleState[];
+
+ 	//  Scope the control names to this panel.
+ 	//
+ 	string $control = `scriptedPanel -q -control $whichPanel`;
+ 	if ("" != $control) {
+ 		setParent $control;
+ 	
+ 		floatSliderGrp -e -v $gSampleState[0] fsg1;
+ 		floatSliderGrp -e -v $gSampleState[1] fsg2;
+ 		floatSliderGrp -e -v $gSampleState[2] fsg3;
+ 		if (0 != $gSampleState[3]) {
+ 			radioButtonGrp -e -sl $gSampleState[3] rbg;
+ 		};
+ 		if (0 != $gSampleState[4]) {
+ 			radioButtonGrp -e -sl $gSampleState[4] rbg2;
+ 		} 
+ 	} */
+} 
+
+
+global proc anzUI_setupSceneForAnzovinProducts()
+{
+	if (!`objExists "anzovinInitializeScript"`)
+		scriptNode -st 2 -beforeScript "anzUI_sceneOpen;" -n anzovinSetupScript;
+	
+	if (!`objExists "anzovinDeleteScript"`)
+		scriptNode -st 2 -afterScript "anzUI_sceneClose;" -n anzovinDeleteScript;
+}
+
+// returns all the Anzovin-created component editors.  Does so by looking at the children layouts of the component editor window tab group
+global proc string[] anzUI_getAllComponentEditors()
+{
+	string $anzComponentEditors[];
+	string $allTabs[] = `tabLayout -q -ca anzUIComponentEditorTabLayout`;
+	for($tab in $allTabs) {
+		string $strings[] = `layout -q -ca $tab`;
+		$anzComponentEditors[size($anzComponentEditors)] = $strings[0];
+	}
+	return $anzComponentEditors;
+}
+
+
+global proc anzUI_componentEditorOptionsMenuCommand(string $menu)
+{
+	global string $anz_componentEditorScripts[];
+	
+	if (!`menuItem -exists $menu`)
+		return;
+	
+	string $anzComponentEditors[] = anzUI_getAllComponentEditors();
+	
+	if ($menu == "anzUIAutoUpdateMenu") {
+		int $isChecked = `menuItem -q -checkBox $menu`;
+		if (`menuItem -exists CEMIAutoUpdate`) // Update normal component editor
+			menuItem -e -checkBox $isChecked CEMIAutoUpdate;
+		for($i = 0; $i < size($anzComponentEditors); ++$i)
+			eval($anz_componentEditorScripts[$i] + "(\"" + $anzComponentEditors[$i] + "\", 1, " + $isChecked + ", \"\");");
+		optionVar -iv CEAutoUpdate $isChecked;
+	}
+	if ($menu == "anzUIHideZeroColumns") {
+		int $isChecked = `menuItem -q -checkBox $menu`;
+		if (`menuItem -exists CEMIShowAllCols`) // Update normal component editor
+			menuItem -e -checkBox $isChecked CEMIShowAllCols;
+		for($i = 0; $i < size($anzComponentEditors); ++$i)
+			eval($anz_componentEditorScripts[$i] + "(\"" + $anzComponentEditors[$i] + "\", 2, " + $isChecked + ", \"\");");
+		optionVar -iv CEShowAllCols $isChecked;
+	}
+}
+
+global proc anzUI_componentEditorLayoutMenuCommand(string $menu)
+{
+	global string $anz_componentEditorScripts[];
+	
+	if (!`menuItem -exists $menu`)
+		return;
+	
+	string $anzComponentEditors[] = anzUI_getAllComponentEditors();
+	
+	int $currentEditor = `tabLayout -q -selectTabIndex anzUIComponentEditorTabLayout` - 1;
+	
+	if ($menu == "anzUILoadComponents")
+		eval($anz_componentEditorScripts[$currentEditor] + "(\"" + $anzComponentEditors[$currentEditor] + "\", 4, 0, \"\");");
+	
+	if ($menu == "anzUIShowSelectedColumns")
+		eval($anz_componentEditorScripts[$currentEditor] + "(\"" + $anzComponentEditors[$currentEditor] + "\", 5, 1, \"\");");
+	
+	if ($menu == "anzUIShowAllColumns")
+		eval($anz_componentEditorScripts[$currentEditor] + "(\"" + $anzComponentEditors[$currentEditor] + "\", 5, 0, \"\");");
+	
+	
+}
+
+global proc anzUI_componentEditorChangePrecision()
+{
+	global string $anz_componentEditorScripts[];
+	
+	int $oldPrecision = `optionVar -query CEPrecision`;
+	int $newPrecision = precisionPrompt ("anzUIComponentEditor", $oldPrecision, 15);
+	
+	if ($newPrecision > 0) {
+		
+		string $anzComponentEditors[] = anzUI_getAllComponentEditors();
+		
+		for($i = 0; $i < size($anzComponentEditors); ++$i)
+			eval($anz_componentEditorScripts[$i] + "(\"" + $anzComponentEditors[$i] + "\", 3, " + $newPrecision + ", \"\");");
+		
+		optionVar -iv CEPrecision $newPrecision;
+	}
+}
+
+global proc anzUI_updateComponentEditorOptionsMenu()
+{
+	int $autoUpdate = `optionVar -q CEAutoUpdate`;
+	int $hideZeroCols = `optionVar -q CEShowAllCols`;
+	
+	menuItem -e -checkBox $autoUpdate anzUIAutoUpdateMenu;
+	menuItem -e -checkBox $hideZeroCols anzUIHideZeroColumns;
+}
+
+global proc anzUI_newValueEntered(string $textField)
+{
+	global string $anz_componentEditorScripts[];
+	string $orgValue = `textField -q -text $textField`;
+	string $anzComponentEditors[] = anzUI_getAllComponentEditors();
+	int $currentEditor = `tabLayout -q -selectTabIndex anzUIComponentEditorTabLayout` - 1;
+	
+	string $value = `encodeString $orgValue`;
+	
+	eval($anz_componentEditorScripts[$currentEditor] + "(\"" + $anzComponentEditors[$currentEditor] + "\", 6, 0, \"" + $value + "\");");
+	
+	// Force it so that everytime you press enter it runs this command!
+	//textFieldGrp -e -it " " anzUINewValueTextField;
+	//textFieldGrp -e -text $orgValue anzUINewValueTextField;
+	
+}
+
+
+global proc anzUI_showComponentEditor()
+{
+	global string $anz_componentEditorScripts[];
+	
+	if (`window -exists anzUIComponentEditor`) {
+		showWindow anzUIComponentEditor;
+		return;
+	}
+	
+	string $window = `window -menuBar true -title "Anzovin Component Editor" -widthHeight 400 300 anzUIComponentEditor`;
+	
+	int $precision = 3;
+	int $hideZeroCols = 1;
+	int $autoUpdate = 1;
+	
+	if (`optionVar -exists CEAutoUpdate`)
+		$autoUpdate = `optionVar -q CEAutoUpdate`;
+	if (`optionVar -exists CEShowAllCols`)
+		$hideZeroCols = `optionVar -q CEShowAllCols`;
+	if (`optionVar -exists CEPrecision`)
+		$precision = `optionVar -query CEPrecision`;
+	
+	menu -label "Options" -tearOff true -postMenuCommand "anzUI_updateComponentEditorOptionsMenu";
+		menuItem -label "Auto Update" -checkBox $autoUpdate
+				-annotation "Reload window when selection changes"
+				-command "anzUI_componentEditorOptionsMenuCommand(\"anzUIAutoUpdateMenu\")"
+				anzUIAutoUpdateMenu;
+		menuItem -label "Hide Zero Columns" -checkBox $hideZeroCols
+				-annotation "Hide columns that contain only zero values"
+				-command "anzUI_componentEditorOptionsMenuCommand(\"anzUIHideZeroColumns\")"
+				anzUIHideZeroColumns;
+		menuItem -label "Change Precision..."
+				-annotation "Set number of decimal places displayed"
+				-command "anzUI_componentEditorChangePrecision"
+				anzUIChangePrecision;
+	menu -label "Layout" -tearOff true;
+		menuItem -label "Load Selected Components"
+				-annotation "Refresh window based on the current selection"
+				-command "anzUI_componentEditorLayoutMenuCommand(\"anzUILoadComponents\")"
+				anzUILoadComponents;
+		menuItem -label "Show Selected Columns"
+				-annotation "Show only the selected columns"
+				-command "anzUI_componentEditorLayoutMenuCommand(\"anzUIShowSelectedColumns\")"
+				anzUIShowSelectedColumns;
+		menuItem -label "Show All Columns"
+				-annotation "Shows all columns"
+				-command "anzUI_componentEditorLayoutMenuCommand(\"anzUIShowAllColumns\")"
+				anzUIShowAllColumns;
+	
+	
+	string $form = `formLayout`;
+	
+	//string $textField = `textFieldGrp -label "New value:" -text "" -changeCommand "anzUI_newValueEntered(\"anzUINewValueTextField\")" anzUINewValueTextField`;
+	
+	string $editLayout = `rowColumnLayout -numberOfColumns 2 -columnAttach 1 "right" 10 -columnWidth 1 100 -columnWidth 2 250`;
+		text -label "New value:";
+		
+		string $mayaVersion = `about -version`;
+		string $buffer[];
+		tokenize $mayaVersion " " $buffer;
+		float $version = $buffer[0];
+		if ($version >= 8.5)
+			textField -alwaysInvokeEnterCommandOnReturn true -enterCommand "anzUI_newValueEntered(\"anzUINewValueTextField\")" anzUINewValueTextField;
+		else
+			textField -enterCommand "anzUI_newValueEntered(\"anzUINewValueTextField\")" anzUINewValueTextField;
+		setParent ..;
+	
+	/* Left off on: make the fmSpreadsheet flag for changing values of the spreadsheet, then implement it here!!!! */
+	
+	
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 anzUIComponentEditorTabLayout`;
+	formLayout -edit
+		
+		-attachForm $editLayout "top"    0
+ 		-attachForm $editLayout "left"   0
+ 		-attachForm $editLayout "right"   0
+ 		
+		-attachControl $tabs "top"    0 $editLayout
+ 		-attachForm $tabs "left"   0
+ 		-attachForm $tabs "bottom" 0
+ 		-attachForm $tabs "right"  0
+ 		$form;
+ 	
+ 	// It's very important that the component editors get made in the same order as their respective scripts:
+ 	for($editorCommand in $anz_componentEditorScripts) {
+ 		
+ 		string $child = `paneLayout`;
+ 			string $strings[] = eval($editorCommand + "(\"\", 0, 0, \"\");");
+ 			string $editor = $strings[0];
+ 			string $tabName = $strings[1];
+ 			setParent ..;
+ 		
+ 		// Set the various properties of the component editor
+ 		eval($editorCommand + "(\"" + $editor + "\", 1, " + $autoUpdate + ", \"\");");
+ 		eval($editorCommand + "(\"" + $editor + "\", 2, " + $hideZeroCols + ", \"\");");
+ 		eval($editorCommand + "(\"" + $editor + "\", 3, " + $precision + ", \"\");");
+ 		
+		tabLayout -edit -tabLabel $child $tabName $tabs;
+ 	}
+	
+	//paneLayout;
+	//string $spreadsheet = `fmSpreadsheet -autoUpdate 1`;
+	showWindow $window;
+	
+	//print $spreadsheet;
+	//print "\n";
+}

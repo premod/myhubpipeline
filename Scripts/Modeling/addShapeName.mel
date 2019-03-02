@@ -1,0 +1,10 @@
+global proc addShapeName()
+{
+	string $trans[] = `ls -s -typ "mesh"`;
+	for($each in $trans)
+	{
+		string $buffer[];
+		$numTokens = `tokenize $each "|" $buffer`;
+		catch(`rename $each ($buffer[0]+"Shape")`);
+	}
+}

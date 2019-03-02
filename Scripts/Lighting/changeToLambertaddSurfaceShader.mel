@@ -1,0 +1,23 @@
+global proc changeToLambertaddSurfaceShader(){
+string $allMaterials[] = `ls -mat`;
+for($each in $allMaterials){ 
+if(($each == "lambert1") || ($each == "particleCloud1")){
+continue;
+}
+string $shaderNode = $each;
+string $replaceType = "lambert";
+string $replaceWith = `createNode $replaceType`;
+catch(`replaceNode $shaderNode $replaceWith`);
+showEditor $replaceWith;
+catch(`delete $shaderNode`);
+rename $replaceWith $shaderNode;
+}
+string $surfShader = `createNode "surfaceShader" -n custSurfaceShader`;
+string $allLamberts[] = `ls -mat`;
+for($all in $allLamberts){
+if(($all == "lambert1") || ($all == "particleCloud1")) {
+continue;
+}
+connectAttr -f ($surfShader+".outColor")  ($all+".color");}	
+}
+

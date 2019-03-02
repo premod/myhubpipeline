@@ -1,0 +1,10 @@
+global proc changeMeshNormalMode()
+{
+	string $ns[] = `file -q -r`;
+	for($each in $ns)
+	{
+		string $name = basenameEx($each);
+		catch(`setAttr ($name+":Visibility_Ctrl.MeshSelection") 0`);
+		catch(`setAttr ($name+":PlaceMent_CTRL.Mesh_Selection") 0`);
+	}
+}

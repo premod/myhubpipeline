@@ -1,0 +1,423 @@
+global proc elements()
+{
+	if( (`window -exists addElements`) == true ){deleteUI addElements;}
+	window -widthHeight 400 432 -t "THE 99 Elements                      Sanraa Media..." -mb true addElements;
+
+	menu -l " Item List ";
+	menuItem -l " Sets  "  -c SEcommonFindSets forComSets;
+	menuItem -l " Chars " -c SEcommonFindChars forComChars;
+	menuItem -l " Props " -c SEcommonFindProps forComProps;
+	menuItem -divider true;
+	menuItem -l " Sounds " -c SEcommonFindSounds forSounds;	
+
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 epiTab`;
+	formLayout -edit
+	     -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+
+     	string $child = `columnLayout -bgc 0 0 0 -adj true COMMON`;
+		textScrollList -ams true -fn "fixedWidthFont" -h 313 propslist;
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c selectedpropCommon;
+		button  -h 25 -l "Refresh List";
+       setParent ..;
+
+     	string $child1 = `columnLayout -bgc 0 0 0 -adj true EPISODE_07`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslist1;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c selectedpropEpisodic7;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $child2 = `columnLayout -bgc 0 0 0 -adj true EPISODE_08`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslist2;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c selectedpropEpisodic8;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $child3 = `columnLayout -bgc 0 0 0 -adj true EPISODE_09`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslist3;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c selectedpropEpisodic9;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $child4 = `columnLayout -bgc 0 0 0 -adj true EPISODE_10`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslist4;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c selectedpropEpisodic10;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $child5 = `columnLayout -bgc 0 0 0 -adj true EPISODE_11`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslist5;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c selectedpropEpisodic11;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	tabLayout -edit -tabLabel $child " COMMON " -tabLabel $child1 " EPISODE 07 " -tabLabel $child2 " EPISODE 08 " -tabLabel $child3 " EPISODE 09 " -tabLabel $child4 " EPISODE 10 " -tabLabel $child5 " EPISODE 11 " $tabs ;
+	
+ showWindow;
+}
+
+global proc SEcommonFindSets()
+{
+	
+	textScrollList -e -ra propslist;
+	string $setsDirectory= "Q:/THE99/PRODUCTION/REFERENCES/COMMON/SETS/";
+	string $files[] = `getFileList -folder $setsDirectory -filespec "*.ma"`;
+	string $listOfFiles[] = `sort $files`;
+	int $propsize=`size($listOfFiles)`;
+	for ($getPropnames in $listOfFiles)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames propslist;
+	}
+
+	textScrollList -e -ra propslist1;
+	string $epispdes[] = {"EPISODE_07"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/SETS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer1[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{			
+			$numTokens = `tokenize $getPropnames1 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist1;
+		}
+	}
+	textScrollList -e -ra propslist2;
+	string $epispdes[] = {"EPISODE_08"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/SETS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer2[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames2 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames2 "." $buffer2`;
+			textScrollList -e -append $buffer2[0] propslist2;
+		}
+	}
+	textScrollList -e -ra propslist3;
+	string $epispdes[] = {"EPISODE_09"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/SETS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer3[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames3 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames3 "." $buffer3`;
+			textScrollList -e -append $buffer3[0] propslist3 ;
+		}
+	}
+	textScrollList -e -ra propslist4;
+	string $epispdes[] = {"EPISODE_10"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/SETS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer4[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames4 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames4 "." $buffer4`;
+			textScrollList -e -append $buffer4[0] propslist4 ;
+		}
+	}
+	textScrollList -e -ra propslist5;
+	string $epispdes[] = {"EPISODE_11"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/SETS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer5[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames5 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames5 "." $buffer5`;
+			textScrollList -e -append $buffer5[0] propslist5 ;
+		}
+	}
+
+}
+
+global proc SEcommonFindChars()
+{
+	textScrollList -e -ra propslist;
+	string $charsDirectory="Q:/THE99/PRODUCTION/REFERENCES/COMMON/CHARS/";
+	string $files[] = `getFileList -folder $charsDirectory -filespec "*.ma"`;
+	string $listOfFiles[] = `sort $files`;
+	string $buffer[];
+	int $propsize=`size($listOfFiles)`;
+	for ($getPropnames in $listOfFiles)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		$numTokens = `tokenize $getPropnames "." $buffer`;
+		textScrollList -e -append $buffer[0] propslist ;
+	}
+
+	textScrollList -e -ra propslist1;
+	string $epispdes[] = {"EPISODE_07"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/CHARS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer1[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames1 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist1 ;
+		}
+	}
+
+	textScrollList -e -ra propslist2;
+	string $epispdes[] = {"EPISODE_08"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/CHARS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer2[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames2 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames2 "." $buffer2`;
+			textScrollList -e -append $buffer2[0] propslist2 ;
+		}
+	}
+	textScrollList -e -ra propslist3;
+	string $epispdes[] = {"EPISODE_09"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/CHARS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer3[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames3 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames3 "." $buffer3`;
+			textScrollList -e -append $buffer3[0] propslist3 ;
+		}
+	}
+	textScrollList -e -ra propslist4;
+	string $epispdes[] = {"EPISODE_10"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/CHARS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer4[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames4 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames4 "." $buffer4`;
+			textScrollList -e -append $buffer4[0] propslist4 ;
+		}
+	}
+	textScrollList -e -ra propslist5;
+	string $epispdes[] = {"EPISODE_11"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/CHARS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer5[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames5 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames5 "." $buffer5`;
+			textScrollList -e -append $buffer5[0] propslist5 ;
+		}
+	}
+
+}
+
+global proc SEcommonFindProps()
+{
+	textScrollList -e -ra propslist;
+	string $propsDirectory="Q:/THE99/PRODUCTION/REFERENCES/COMMON/PROPS/";
+	string $files[] = `getFileList -folder $propsDirectory -filespec "*.ma"`;
+	string $listOfFiles[] = `sort $files`;
+	string $buffer[];
+	int $propsize=`size($listOfFiles)`;
+	for ($getPropnames in $listOfFiles)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		$numTokens = `tokenize $getPropnames "." $buffer`;
+		textScrollList -e -append $buffer[0] propslist ;
+	}
+
+	textScrollList -e -ra propslist1;
+	string $epispdes[] = {"EPISODE_07"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/PROPS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer1[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames1 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist1 ;
+		}
+	}
+
+	textScrollList -e -ra propslist2;
+	string $epispdes[] = {"EPISODE_08"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/PROPS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer2[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames2 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames2 "." $buffer2`;
+			textScrollList -e -append $buffer2[0] propslist2 ;
+		}
+	}
+	textScrollList -e -ra propslist3;
+	string $epispdes[] = {"EPISODE_09"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/PROPS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer3[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames3 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames3 "." $buffer3`;
+			textScrollList -e -append $buffer3[0] propslist3 ;
+		}
+	}
+	textScrollList -e -ra propslist4;
+	string $epispdes[] = {"EPISODE_10"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/PROPS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer4[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames4 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames4 "." $buffer4`;
+			textScrollList -e -append $buffer4[0] propslist4 ;
+		}
+	}
+	textScrollList -e -ra propslist5;
+	string $epispdes[] = {"EPISODE_11"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/PROPS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		string $buffer5[];
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames5 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames5 "." $buffer5`;
+			textScrollList -e -append $buffer5[0] propslist5 ;
+		}
+	}
+}
+
+global proc SEcommonFindSounds()
+{
+	textScrollList -e -ra propslist;
+	textScrollList -e -ra propslist1;
+	textScrollList -e -ra propslist2;
+	textScrollList -e -ra propslist3;
+	textScrollList -e -ra propslist4;
+	textScrollList -e -ra propslist5;
+
+	string $epiSounds = `tabLayout -q -st epiTab`;
+	string $charsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/"+$epiSounds+"/AUDIO_VIDEO/AUDIO/";
+	string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.wav"`;
+	string $listOfFiles1[] = `sort $files1`;
+	string $buffer1[];
+	int $propsize1=`size($listOfFiles1)`;
+	if($epiSounds == "EPISODE_07")
+	{
+		textScrollList -e -ra propslist1;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames1 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist1 ;
+		}
+	}
+	else if($epiSounds == "EPISODE_08")
+	{
+		textScrollList -e -ra propslist2;
+		for ($getPropnames2 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames2 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist2 ;
+		}
+	}
+	else if($epiSounds == "EPISODE_09")
+	{
+		textScrollList -e -ra propslist3;
+		for ($getPropnames3 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames3 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist3 ;
+		}
+	}
+	else if($epiSounds == "EPISODE_10")
+	{
+		textScrollList -e -ra propslist4;
+		for ($getPropnames4 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames4 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist4 ;
+		}
+	}
+	else if($epiSounds == "EPISODE_11")
+	{
+		textScrollList -e -ra propslist5;
+		for ($getPropnames5 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			$numTokens = `tokenize $getPropnames5 "." $buffer1`;
+			textScrollList -e -append $buffer1[0] propslist5 ;
+		}
+	}
+}
+

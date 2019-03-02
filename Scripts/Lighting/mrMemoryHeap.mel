@@ -1,0 +1,9 @@
+global proc mrMemoryHeap(){
+setAttr "mentalrayGlobals.jobLimitPhysicalMemory" 5000;
+setAttr "mentalrayGlobals.renderThreads" 0;
+setAttr "mentalrayGlobals.memoryAuto" 0;
+setAttr "mentalrayGlobals.memoryZone" 100;
+setAttr "mentalrayGlobals.exportAssignedOnly" 0;
+setAttr "mentalrayGlobals.exportVisibleOnly" 0;
+setAttr "mentalrayGlobals.exportObjectsOnDemand" 1;
+}

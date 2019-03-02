@@ -1,0 +1,306 @@
+global proc dst()
+
+{
+
+global string $window;
+
+string $window = `window -wh 625 400 -resizeToFitChildren 1 -title "Double Side Texture Creator" -w 625 -h 500`;
+
+    columnLayout -adjustableColumn true colLay;
+
+separator -style "in" -w 625 -h 25;
+
+        optionMenu -label " Select a Shader Type to create a Shader" optMenu;
+		menuItem -label "None";
+            menuItem -label "Lambert";
+            menuItem -label "Blinn";
+            menuItem -label "Phong";
+		menuItem -label "Phong E";
+		menuItem -label "Anisotropic";
+
+separator -style "in" -w 625 -h 25;
+
+columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 640 -adjustableColumn true;
+
+button
+-label "Create Shader"
+-command "shaders($window)";
+
+separator -style "in" -w 625 -h 25;
+
+button
+-label "HyperShade"
+-command "HypershadeWindow";
+
+button
+-label "Attribute Editor"
+-command "ToggleAttributeEditor";
+
+separator -style "in" -w 625 -h 25;
+
+string $FTM_HelpForm = `formLayout`;
+
+//About Double_Side_Texture
+            setParent $FTM_HelpForm;
+                string $FTM_AboutFrame = `frameLayout -l "About Double Side Texture" -la top -fn boldLabelFont -cll 1 -bv true -bs "in" -li 5`;
+                string $FTM_AboutForm = `formLayout`;
+                    string $FTM_AboutTextLeft = `text -l "Script Name :\nUpdated :\nAuthor :\nContact :\n\n\nHelp :\n\n\n\n\n\n\n\n\n\n\n\n\n\n  Suggestions are Welcome :-)\n\n\n All  Rights  Reserved." -al left`;
+                    string $FTM_AboutTextRight = `text -l "Double Side Texture.mel\nSeptember, 2008\nKalpesh Revawala\nkalpesh@tasaa.com\n\n\n1. This Script will Create a Double side Texture.\n2. You can choose a Shader Type from the Dropdown menu. Then Hit the Create Button.\n    It opens a window and creates the selected Shader in the Hypershade.\n3. You can latter change the Shader Type from the Attribute editor.\n4. Map First Texture to ColourA and Map Second Texture to ColourB.\n5. Apply and Render to check the Textures.\n    You can Flip the textures if you want the textures to be other way round.\n6. Once you are done you can close the window. \n7. Any subsequent changes will have to be done by selecting the shader from the Hypershade. \n8. You can Flip the textures by going to the shader Attribute Editor.\n    In the Extra Attributes of the selected Shader you will find 'Flip'.\n    Just click/unclick to flip the assigned textures. \n9. You can create as many Double side texures as you want." -al left`;
+
+                formLayout -e
+                    -af $FTM_AboutTextLeft left 10
+                    -af $FTM_AboutTextLeft top 5
+                    -an $FTM_AboutTextLeft right
+                    -af $FTM_AboutTextLeft bottom 5
+                    -ac $FTM_AboutTextRight left 10 $FTM_AboutTextLeft
+                    -af $FTM_AboutTextRight top 5
+                    -an $FTM_AboutTextRight right
+                    -an $FTM_AboutTextRight bottom
+
+                    $FTM_AboutForm;
+
+showWindow $window;
+
+}
+
+global proc shaders(string $win)
+
+{
+
+global string $sl;
+
+string $opm = ($win + "|colLay|optMenu");
+$s = `optionMenu -q -value $opm`;
+
+if($s == "Lambert")
+		{string $sl = ms() ;}
+if($s == "Blinn")
+		{string $sl = bs() ;}
+if($s == "Phong")
+		{string $sl = ps() ;}
+if($s == "Phong E")
+		{string $sl = pes() ;}
+if($s == "Anisotropic")
+		{string $sl = as() ;}
+
+}
+
+
+
+global proc ms()
+
+{
+
+global string $utlyNamems;
+global string $objNamems;
+global int $A = 1;
+global int $B = 0;
+
+window -resizeToFitChildren 1 -title "Lambert dst";
+
+string $objNamems = `shadingNode -asShader lambert -n lambert_dst`;
+    columnLayout;
+    //attrColorSliderGrp -at ($objNamems+".color");
+
+string $utlyNamems = `shadingNode -asUtility condition`;
+
+connectAttr ($utlyNamems+".outColor") ($objNamems+".color");
+
+string $sampName = `shadingNode -asUtility samplerInfo`;
+
+connectAttr ($sampName+".flippedNormal") ($utlyNamems+".firstTerm");
+
+columnLayout;
+    attrColorSliderGrp -at ($utlyNamems+".colorIfTrue") -l ColorA;
+columnLayout;
+    attrColorSliderGrp -at ($utlyNamems+".colorIfFalse") -l ColorB;
+
+separator -style "none"  -h 5;
+
+columnLayout -adjustableColumn true;
+
+    checkBox -label "Flip Color" -onc  "setAttr ($objNamems+\".Flip\") $A"
+            			     -ofc "setAttr ($objNamems+\".Flip\") $B"
+-align "left";
+
+
+addAttr -ln "Flip"  -at bool ($objNamems+"");
+setAttr -e-keyable true ($objNamems+".Flip");
+connectAttr -f ($objNamems+".Flip") ($utlyNamems+".operation");
+
+showWindow;
+
+}
+
+global proc bs()
+{
+
+global string $utlyNamebs;
+global string $objNamebs;
+global int $A = 1;
+global int $B = 0;
+
+window -resizeToFitChildren 1 -title "Blinn dst";
+
+string $objNamebs = `shadingNode -asShader blinn -n blinn_dst`;
+    columnLayout;
+    //attrColorSliderGrp -at ($objNamebs+".color");
+
+string $utlyNamebs = `shadingNode -asUtility condition`;
+
+connectAttr ($utlyNamebs+".outColor") ($objNamebs+".color");
+
+string $sampName = `shadingNode -asUtility samplerInfo`;
+
+connectAttr ($sampName+".flippedNormal") ($utlyNamebs+".firstTerm");
+
+columnLayout;
+    attrColorSliderGrp -at ($utlyNamebs+".colorIfTrue") -l ColorA;
+columnLayout;
+    attrColorSliderGrp -at ($utlyNamebs+".colorIfFalse") -l ColorB;
+
+separator -style "none"  -h 5;
+
+columnLayout -adjustableColumn true;
+
+    checkBox -label "Flip Color" -onc  "setAttr ($objNamebs+\".Flip\") $A"
+            			     -ofc "setAttr ($objNamebs+\".Flip\") $B"
+-align "left";
+
+addAttr -ln "Flip"  -at bool ($objNamebs+"");
+setAttr -e-keyable true ($objNamebs+".Flip");
+connectAttr -f ($objNamebs+".Flip") ($utlyNamebs+".operation");
+
+showWindow;
+
+}
+
+
+global proc ps()
+{
+global string $utlyNameps;
+global string $objNameps;
+global int $A = 1;
+global int $B = 0;
+
+window -resizeToFitChildren 1 -title "Phong dst";
+
+string $objNameps = `shadingNode -asShader phong -n phong_dst`;
+    columnLayout;
+    //attrColorSliderGrp -at ($objNameps+".color");
+
+string $utlyNameps = `shadingNode -asUtility condition`;
+
+connectAttr ($utlyNameps+".outColor") ($objNameps+".color");
+
+string $sampName = `shadingNode -asUtility samplerInfo`;
+
+connectAttr ($sampName+".flippedNormal") ($utlyNameps+".firstTerm");
+
+columnLayout;
+    attrColorSliderGrp -at ($utlyNameps+".colorIfTrue") -l ColorA;
+columnLayout;
+    attrColorSliderGrp -at ($utlyNameps+".colorIfFalse") -l ColorB;
+
+separator -style "none"  -h 5;
+
+columnLayout -adjustableColumn true;
+
+    checkBox -label "Flip Color" -onc  "setAttr ($objNameps+\".Flip\") $A"
+            			     -ofc "setAttr ($objNameps+\".Flip\") $B"
+-align "left";
+
+addAttr -ln "Flip"  -at bool ($objNameps+"");
+setAttr -e-keyable true ($objNameps+".Flip");
+connectAttr -f ($objNameps+".Flip") ($utlyNameps+".operation");
+
+showWindow;
+
+}
+
+
+global proc pes()
+{
+global string $utlyNamepes;
+global string $objNamepes;
+global int $A = 1;
+global int $B = 0;
+
+window -resizeToFitChildren 1 -title "PhongE dst";
+
+string $objNamepes = `shadingNode -asShader phongE -n phongE_dst`;
+    columnLayout;
+    //attrColorSliderGrp -at ($objNamepes+".color");
+
+string $utlyNamepes = `shadingNode -asUtility condition`;
+
+connectAttr ($utlyNamepes+".outColor") ($objNamepes+".color");
+
+string $sampName = `shadingNode -asUtility samplerInfo`;
+
+connectAttr ($sampName+".flippedNormal") ($utlyNamepes+".firstTerm");
+
+columnLayout;
+    attrColorSliderGrp -at ($utlyNamepes+".colorIfTrue") -l ColorA;
+columnLayout;
+    attrColorSliderGrp -at ($utlyNamepes+".colorIfFalse") -l ColorB;
+
+separator -style "none"  -h 5;
+
+columnLayout -adjustableColumn true;
+
+    checkBox -label "Flip Color" -onc  "setAttr ($objNamepes+\".Flip\") $A"
+            			     -ofc "setAttr ($objNamepes+\".Flip\") $B"
+-align "left";
+
+addAttr -ln "Flip"  -at bool ($objNamepes+"");
+setAttr -e-keyable true ($objNamepes+".Flip");
+connectAttr -f ($objNamepes+".Flip") ($utlyNamepes+".operation");
+
+showWindow;
+
+}
+
+
+global proc as()
+{
+global string $utlyNameas;
+global string $objNameas;
+global int $A = 1;
+global int $B = 0;
+
+window -resizeToFitChildren 1 -title "Anisotropic dst";
+
+string $objNameas = `shadingNode -asShader anisotropic -n anisotropic_dst`;
+    columnLayout;
+    //attrColorSliderGrp -at ($objNameas+".color");
+
+string $utlyNameas = `shadingNode -asUtility condition`;
+
+connectAttr ($utlyNameas+".outColor") ($objNameas+".color");
+
+string $sampName = `shadingNode -asUtility samplerInfo`;
+
+connectAttr ($sampName+".flippedNormal") ($utlyNameas+".firstTerm");
+
+columnLayout;
+    attrColorSliderGrp -at ($utlyNameas+".colorIfTrue") -l ColorA;
+columnLayout;
+    attrColorSliderGrp -at ($utlyNameas+".colorIfFalse") -l ColorB;
+
+separator -style "none"  -h 5;
+
+columnLayout -adjustableColumn true;
+
+    checkBox -label "Flip Color" -onc  "setAttr ($objNameas+\".Flip\") $A"
+            			     -ofc "setAttr ($objNameas+\".Flip\") $B"
+-align "left";
+
+addAttr -ln "Flip"  -at bool ($objNameas+"");
+setAttr -e-keyable true ($objNameas+".Flip");
+connectAttr -f ($objNameas+".Flip") ($utlyNameas+".operation");
+
+showWindow;
+
+}
+

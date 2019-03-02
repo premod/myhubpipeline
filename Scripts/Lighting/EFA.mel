@@ -1,0 +1,15 @@
+
+global proc EFA()
+
+{
+string $selected[]=`ls -sl`;
+select $selected;
+addAttr -longName "miEllipticalBilinear" -at bool -defaultValue 1 $selected; 
+select $selected;
+addAttr -longName "miEllipticalEccMax" -at "float" -defaultValue 4.0 -minValue 0.001 -maxValue 40.0 $selected;
+select $selected;
+addAttr -longName "miEllipticalDiscR" -at "float" -defaultValue 0.3 -minValue 0.001 -maxValue 1.0 $selected; 
+select $selected;
+addAttr -longName "miEllipticalCircleR" -at "float" -defaultValue 0.8 -minValue 0.001 -maxValue 1.0 $selected;
+select $selected;
+}

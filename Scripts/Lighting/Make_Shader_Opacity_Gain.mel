@@ -1,0 +1,11 @@
+//This is an internal script developed for production.
+
+
+global proc Make_Shader_Opacity_Gain()
+{
+string $sel[] = `ls -sl`;
+hyperShade -smn;
+string $selShad[] = `ls -sl` ;
+setAttr ($selShad[0] + ".matteOpacityMode") 2;
+select $sel;
+}

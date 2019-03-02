@@ -1,0 +1,224 @@
+global string $setsName;
+global string $charsName;
+global string $propsName;
+
+global proc commonElements()
+{
+    	if( (`window -exists addprpwin`) == true ){deleteUI addprpwin;}
+	window -title "Common Elements" -mb true -s 0 -width 300 -height 465 addprpwin;
+	menu -l "Item List";
+	menuItem -l "Sets"   -c findSets forSets;
+	menuItem -l "Chars" -c findChars forChars;
+	menuItem -l "Props" -c findProps forProps;
+	menuItem -divider true;
+	menuItem -l "Search" -c assetSearch;
+	columnLayout -bgc 1 0 0 -adj true;
+	popupMenu; menuItem -l "Preview" -c "iconPreview";
+	text -fn "fixedWidthFont" -bgc 0.8 1 1 -l "Preview";
+	iconTextButton -w 40 -h 55 -bgc 0.9 0.9 0.9 imagePreview;
+	textScrollList -ams true -fn "fixedWidthFont" -h 300 propslist;
+	button -h 25 -bgc 0.7 0.7 0.7 -l "&Add Asset To Scene" -c getSelectedprop;
+	button -h 25 -bgc 0.8 0.8 0.8 -l "&Refresh List";
+	showWindow;
+}
+
+global proc findSets()
+{
+	textScrollList -e -ra propslist;
+	
+	string $inputDirectory="//mayaserver/T99/04_PRODUCTION/REFERENCES/COMMON/SETS/";
+	string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+	int $propsize=`size($files)`;
+	for ($getPropnames in $files)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames propslist;
+	}
+}
+
+global proc findChars()
+{
+	textScrollList -e -ra propslist;
+	string $inputDirectory="//mayaserver/T99/04_PRODUCTION/REFERENCES/COMMON/CHARACTERS/";
+	string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+	int $propsize=`size($files)`;
+	for ($getPropnames in $files)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames propslist;
+	}
+}
+
+global proc findProps()
+{
+	textScrollList -e -ra propslist;
+	string $inputDirectory="//mayaserver/T99/04_PRODUCTION/REFERENCES/COMMON/PROPS/";
+	string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+	int $propsize=`size($files)`;
+	for ($getPropnames in $files)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames propslist;
+	}
+}
+
+global proc assetSearch()
+{
+	if( ( `window -exists searchWin` ) == true ) {deleteUI searchWin;}
+	window -t "Searching..." -wh 160 120 -s 0 searchWin;
+	rowColumnLayout;
+	text -l "";
+	text -label "Asset Name";
+	string $name = `textField assetSearch`;
+	text -l "";
+	button -bgc 0.5 0.5 0.5 -l "&Search" -c searching;
+	showWindow;
+}
+
+global proc searching()
+{
+	string $getText = `textField -q -tx assetSearch`;
+	string $addStarHere = $getText + "*";
+	textScrollList -e -ra propslist;
+	string $assetArray[] = {"SETS","CHARACTERS","PROPS"};
+	for($j=0; $j<3; $j++)
+	{
+		string $inputDirectory="//mayaserver/T99/04_PRODUCTION/REFERENCES/COMMON/"+$assetArray[$j]+"/";
+		string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+		int $propsize=`size($files)`;
+		for ( $k=0; $k<$propsize; $k++ )
+		{
+			string $getAll = `match $addStarHere $files[$k]`;
+			int $s = `size($getAll)`;
+			if($s > 1 )
+			{
+				textScrollList -e -append $files[$k] propslist;
+			}
+		}
+	}
+}
+
+global proc getSelectedprop()
+{
+	string $setsName = `menuItem -q -l forSets`;
+	string $charsName = `menuItem -q -l forChars`;
+	string $propsName = `menuItem -q -l forProps`;
+	if( $setsName == "Sets" )
+	{	
+		string $getPropname;
+		string $propname[] =`textScrollList -q -si propslist`;
+		for($getPropname in $propname)
+		{
+			string $buffer[];
+	 		$numTokens = `tokenize $getPropname "_" $buffer`;
+			string $nsFileName="Q:/TNN Scripts/Scripts/NameSpace/Sets.txt";
+			$fileId=`fopen $nsFileName "r"`;
+			string $nextLine = `fgetline $fileId`;
+			while ( size( $nextLine ) > 0 ) 
+			{	 
+				string $buffer[];
+		 		$numTokens = `tokenize $nextLine "\n" $buffer`;
+				if(($buffer[0]==($getPropname+"")) || ($buffer[0]==($getPropname+" "))) 
+				{
+					print "\n ENTERED";
+					$nextLine = `fgetline $fileId`;
+					string $propFind="//mayaserver/T99/04_PRODUCTION/REFERENCES/COMMON/SETS/"+$getPropname;
+					file -rdi 1 -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					file -r  -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					print $propFind;
+				}
+				$nextLine = `fgetline $fileId`;
+				$nextLine = `fgetline $fileId`;
+			}	
+			fclose $fileId; 
+		}
+	}
+	if( $charsName == "Chars" )
+	{	
+		string $getPropname;
+		string $propname[] =`textScrollList -q -si propslist`;
+		for($getPropname in $propname)
+		{
+			string $buffer[];
+	 		$numTokens = `tokenize $getPropname "_" $buffer`;
+			string $nsFileName="Q:/TNN Scripts/Scripts/NameSpace/Chars.txt";
+			$fileId=`fopen $nsFileName "r"`;
+			string $nextLine = `fgetline $fileId`;
+			while ( size( $nextLine ) > 0 ) 
+			{	 
+				string $buffer[];
+		 		$numTokens = `tokenize $nextLine "\n" $buffer`;
+				if(($buffer[0]==($getPropname+"")) || ($buffer[0]==($getPropname+" "))) 
+				{
+					print "\n ENTERED";
+					$nextLine = `fgetline $fileId`;
+					string $propFind="//mayaserver/T99/04_PRODUCTION/REFERENCES/COMMON/CHARACTERS/"+$getPropname;
+					file -rdi 1 -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					file -r  -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					print $propFind;
+				}
+				$nextLine = `fgetline $fileId`;
+				$nextLine = `fgetline $fileId`;
+			}	
+			fclose $fileId; 
+		}
+	}
+
+	if( $propsName == "Props" )
+	{
+		string $getPropname;
+		string $propname[]=`textScrollList -q -si propslist`;
+		for ($getPropname in $propname);
+		{
+			string $buffer[];
+	 		$numTokens = `tokenize $getPropname "_" $buffer`;
+			string $nsFileName="Q:/TNN Scripts/Scripts/NameSpace/Props.txt";
+			$fileId=`fopen $nsFileName "r"`;
+			string $nextLine = `fgetline $fileId`;
+			while ( size( $nextLine ) > 0 ) 
+			{	 
+				string $buffer[];
+		 		$numTokens = `tokenize $nextLine "\n" $buffer`;
+				if(($buffer[0]==($getPropname+"")) || ($buffer[0]==($getPropname+" "))) 
+				{
+					print "\n ENTERED";
+					$nextLine = `fgetline $fileId`;
+					string $propFind="//mayaserver/T99/04_PRODUCTION/REFERENCES/COMMON/PROPS/"+$getPropname;
+					file -rdi 1 -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					file -r  -ns $nextLine -rfn ($nextLine + "RN") $propFind;
+					print $propFind;
+				}
+				$nextLine = `fgetline $fileId`;
+				$nextLine = `fgetline $fileId`;
+			}	
+			fclose $fileId; 
+		}
+	}
+}
+	
+commonElements;
+
+global proc iconPreview()
+{
+	int $m,$n;
+	string $inputDirectory="D:/ProjName/Production/Asset_Lib/Rigging/Common/Icons/";
+	string $files[] = `getFileList -folder $inputDirectory -filespec "*.xpm"`;
+	string $allFileNames[] = `textScrollList -q -si propslist`;
+	string $buffer[];
+	string $buffer1[];
+	for( $m=0; $m<size($files); $m++ )
+	{
+		string $buffer[];
+		$numTokens = `tokenize $files[$m] "." $buffer`;
+		
+		string $buffer1[];
+		$numTokens1 = `tokenize $allFileNames[0] "." $buffer1`;
+			
+		if( $buffer[0] == $buffer1[0] )
+		{
+			string $fullname = $buffer[0]+".xpm";
+			iconTextButton -e -style "iconAndTextVertical" -image1 ("D:/ProjName/Production/Asset_Lib/Rigging/Common/Icons/"+$fullname+"") imagePreview;
+		}
+	}
+}
+

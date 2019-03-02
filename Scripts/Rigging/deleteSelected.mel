@@ -1,0 +1,6 @@
+global proc deleteSelected()
+{	
+	string $sel[] = `ls -sl`;
+	lockNode -lock off $sel;
+	delete;
+}

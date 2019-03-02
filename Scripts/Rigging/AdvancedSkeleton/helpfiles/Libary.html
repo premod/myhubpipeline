@@ -1,0 +1,942 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE>AdvancedSkeleton</TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.1  (Win32)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGED" CONTENT="20101021;19281900">
+</HEAD>
+<BODY LANG="en-AU" BGCOLOR="#ffffff" DIR="LTR"><A NAME="Introduction"></A>
+<TABLE WIDTH=802 BORDER=0 CELLPADDING=0 CELLSPACING=0 STYLE="page-break-before: always">
+	<COL WIDTH=800>
+	<COL WIDTH=2>
+	<TR>
+		<TD WIDTH=800 HEIGHT=96 VALIGN=TOP>
+			<P ALIGN=LEFT><IMG SRC="MainHeader.jpg" NAME="graphics1" ALIGN=BOTTOM WIDTH=800 HEIGHT=94 BORDER=0></P>
+		</TD>
+		<TD WIDTH=2>
+			<P><SPACER TYPE=BLOCK ALIGN=BOTTOM WIDTH=2 HEIGHT=96></P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=800 HEIGHT=1259>
+			<DL>
+				<DT STYLE="text-align: left"><BR>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><U><B>1.
+				Introduction:</B></U></FONT> </FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<BR>
+				</DD><DD>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>AdvancedSkeleton</B>
+				is a collection of Maya tools for doing character setup. </FONT></FONT>
+				</DD><DD>
+				<BR>
+				</DD><DD STYLE="margin-bottom: 0.5cm">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Main Features: </FONT></FONT>
+				</DD></DL>
+			<UL>
+				<LI><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Unlimited body
+				configurations, 3 heads, 5 legs, 100 fingers, &amp; anything
+				goes. </FONT></FONT>
+				</DD><LI><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>You can at any time
+				go from AdvancedSkeleton, back to the FitSkeleton, make changes,
+				and rebuild.</FONT></FONT></DD><LI><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>SelectorDesigner,
+				tool that lets you easily create custom `Selector` user
+				interfaces. </FONT></FONT>
+				</DD><LI><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>AnimationLibrary,
+				tool for storing and retrieving poses and animation.</FONT></FONT></DD><LI><DD STYLE="margin-bottom: 0.5cm; text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>FaceSetup allows
+				quick setup of both realistic and cartoony faces.</FONT></FONT></DD></UL>
+			<HR>
+			<P ALIGN=LEFT><A NAME="Installation"></A><FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><U><B>2.
+			Installation:</B></U></FONT><BR><BR><FONT COLOR="#000000"><SPAN STYLE="font-style: normal"><U>Option
+			1:</U></SPAN></FONT><FONT COLOR="#000000"> Run the </FONT><FONT COLOR="#000000"><I><B>setup.exe</B></I></FONT><FONT COLOR="#000000">&nbsp;file
+			(</FONT><FONT COLOR="#000000"><SPAN STYLE="text-decoration: none"><SPAN STYLE="font-style: normal">*windows
+			only</SPAN></SPAN></FONT><FONT COLOR="#000000">) </FONT></FONT></FONT>
+			</P>
+			<DL>
+				<DD><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Choose the
+				Destination Folder </FONT></FONT>
+				</DD><DD>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>NOTE: destination
+				folder <B>must </B>be your Maya user directory </FONT></FONT>
+				</DD><DD>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>e.g.:
+				C:\Users\$user\Documents\maya\2011\</FONT></FONT></DD><DD>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Finish installation. </FONT></FONT>
+				</DD><DD STYLE="margin-bottom: 0.5cm">
+				<BR><BR>
+				</DD></DL>
+			<P ALIGN=LEFT>
+			<FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><SPAN STYLE="font-style: normal"><U>Option
+			2:</U></SPAN></FONT><FONT COLOR="#000000"> Manually copy the
+			files:</FONT></FONT></FONT></P>
+			<DL>
+				<DD><FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000">The
+				files are located in the </FONT><FONT COLOR="#000000"><I><B>Manual_Install</B></I></FONT><FONT COLOR="#000000">
+				folder</FONT></FONT></FONT></DD><DD>
+				<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Copy
+				the files and folder to your Maya user directory, and make sure
+				to preserve the icons/scripts/shelves folder structure.</FONT></FONT></FONT></DD><DD>
+				<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>(Windows)
+				C:\Documents and Settings\$user\My Documents\maya\2011\</FONT></FONT></FONT></DD><DD>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>(Mac OS X)
+				/Users/<FONT COLOR="#000000">$user</FONT>/Library/Preferences/Autodesk/maya/2011/</FONT></FONT></DD><DD>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>(Linux)
+				/home/<FONT COLOR="#000000">$user</FONT>/maya/2011/</FONT></FONT></DD><DD STYLE="text-align: left">
+				<BR>
+				</DD><DD STYLE="text-align: left">
+				<BR>
+				</DD><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>After installation,
+				start Maya, and you will find a new Shelf called
+				'advancedSkeleton` </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<BR>
+				</DT><DT STYLE="text-align: left">
+				<IMG SRC="Shelf.jpg" NAME="graphics2" ALIGN=BOTTOM WIDTH=322 HEIGHT=67 BORDER=0>
+								</DT><DD STYLE="text-align: left">
+				<BR>
+				</DD><HR>
+				<DT STYLE="text-align: left"><A NAME="UnderstandingAdvanceCharacterSetUp"></A>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><U><B>3.
+				Overview:</B></U></FONT> </FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<BR>
+				</DD><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The key functionality
+				of AdvancedSkeleton is to: </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Generate a complex
+				motion system (AdvancedSkeleton) from a simple joint chain
+				(FitSkeleton)<BR><IMG SRC="OverView.jpg" NAME="graphics3" ALIGN=BOTTOM WIDTH=622 HEIGHT=222 BORDER=0>
+				</FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Joints that are on
+				the `negative X` side of origin, gets read as the characters
+				right side, <BR>and will mirror these to the left side. </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The following
+				information gets read from the FitSkeleton joints: </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>names, positions,
+				rotations, rotation axis, rotation orders.</I> </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>It also reads the
+				following from the joints to determine the high level controls: </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>labels and
+				dependencyGraph </I>input/output connections<I>.</I> </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				&nbsp; 
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The following joint
+				labels will create high level controls: </FONT></FONT>
+				</DT><DD>
+				<TABLE WIDTH=607 BORDER=1 CELLPADDING=2 CELLSPACING=3>
+					<COL WIDTH=254>
+					<COL WIDTH=334>
+					<TR>
+						<TD WIDTH=254 HEIGHT=12>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>FitSkeleton
+							joint labels:</B></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>AdvancedSkeleton
+							high level controls:</B></FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=14>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;Hand&quot;
+							&amp; &quot;Shoulder&quot;</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Arm IK</FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=14>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;Hip&quot;
+							&amp; &quot;Foot&quot;</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Leg IK</FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=9>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;LegAim&quot;</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>3 bone (dog
+							leg) IK</FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=9>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;Heel&quot;,
+							&quot;Ball&quot; &amp; &quot;Toe&quot;</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>FootRoll system</FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=9>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;BigToe&quot;
+							&amp; &quot;PinkyToe&quot;</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Foot
+							rock-side-to-side system</FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=14>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;Root&quot;
+							&amp;</I> <I>&quot;Chest&quot; (optional:&quot;Mid&quot;)</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Spine IK</FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=14>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;Eye&quot;</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Look at.. aim
+							system</FONT></FONT></P>
+						</TD>
+					</TR>
+					<TR>
+						<TD WIDTH=254 HEIGHT=13>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;0&quot;,
+							&quot;1&quot;, &quot;2&quot;, etc..</I></FONT></FONT></P>
+						</TD>
+						<TD WIDTH=334>
+							<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Spline IK. (for
+							tails, trunk, ponytails, etc.)</FONT></FONT></P>
+						</TD>
+					</TR>
+				</TABLE>
+				<DT STYLE="text-align: left">&nbsp; 
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>FitTools also let you
+				add the following attributes to the FitSkeleton: </FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;TwistJoints&quot;
+				</I>: will generate joints for distributing twist rotation along
+				a bone. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;Global&quot;</I>
+				: will generate a control for maintaining world space
+				orientation. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>&quot;FreeOrient&quot;</I>
+				: will preserve joints orientation, instead of auto orienting to
+				X down. </FONT></FONT>
+				</DD><DT STYLE="text-align: left">
+				&nbsp; 
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>dependencyGraph
+				</I>input/output connections: </FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>AdvancedSkeleton will
+				read any input/output connections from the FitSkeleton joints, </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>and recreates the
+				dependencyNodes on both left &amp; right side on the
+				AdvancedSkeleton. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>A example of this is
+				on the yellow &ldquo;Fingers&rdquo; curve in the &quot;biped&quot;
+				FitSkeleton template,</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This is a simple
+				set-driven-keys setup, and it gets read by AdvancedSkeleton, </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>and implemented in
+				the full rig. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>You can create your
+				own custom attributes to control any parts of the FitSkeleton. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>And it is not limited
+				to setDrivenKey, but any nodes connected in any way. </FONT></FONT>
+				</DD><DT STYLE="text-align: left">
+				<BR>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Symmetry:</FONT></FONT></DT><DT STYLE="text-indent: 0.93cm; text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>By default all joints
+				and controls will be mirrored when building the AdvancedSkeleton.</FONT></FONT></DT><DD STYLE="margin-left: 0cm; text-indent: 0.93cm; text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To identify joints on
+				the FitSkeleton not to mirror, set the &ldquo;.side&rdquo;
+				attribute of the joint to &ldquo;None&rdquo;.</FONT></FONT></DD><DD STYLE="margin-left: 0cm; text-indent: 0.93cm; margin-bottom: 0.5cm; text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The &ldquo;.side&rdquo;
+				attribute can be found in the attribute editor, under the &ldquo;Joint
+				labeling&rdquo; section.</FONT></FONT></DD><HR>
+				<DT STYLE="text-align: left"><A NAME="CharacterTools"></A><FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><U><B>4.
+				The Tools:</B></U></FONT> </FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<BR>
+				</DD><DT STYLE="text-align: left">
+				<IMG SRC="IconFit.jpg" NAME="graphics4" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>FitTools</B></U></FONT></FONT></FONT>
+								</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Browse through
+				available FitSkeleton, and import any of them to the scene. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>You can add a your
+				FitSkeleton to the list of available FitSkeletons, by saving it
+				to the installDir/FitSkeletons/ folder. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>FitTools<FONT COLOR="#000000">
+				also has buttons for adding or removing FitSkeleton attributes
+				and labels.</FONT></FONT></FONT></DD><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><BR><IMG SRC="IconAdv.jpg" NAME="graphics5" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				</FONT><FONT COLOR="#000000"><U><B>AdvancedSkeleton</B></U></FONT>
+				</FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Builds the
+				AdvancedSkeleton from selected joint hierarchy. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Select the top joint
+				of the FitSkeleton before executing this. </FONT></FONT>
+				</DD><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><BR><IMG SRC="IconUtil.jpg" NAME="graphics6" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				<FONT COLOR="#000000"><U><B>Utilities</B></U></FONT> </FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Utilities has
+				<FONT COLOR="#000000">following tools:</FONT> </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>Rebuild: </B>The
+				FitSkeleton is always kept with the AdvancedSkeleton, allowing
+				for adjustments of joint placement at any time. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>To expose the
+				original FitSkeleton, click &quot;Toggle Fit/Advanced&quot;. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>This will
+				display the FitSkeleton, which allows you to modify the original
+				joint placement.</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>Run &quot;Rebuild
+				Skeleton&quot; after you made the modifications to the
+				FitSkeleton. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>Any objects
+				that have been parented to the skeleton, will be re-parented to
+				the newly built skeleton. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>And by turning
+				on the &quot;Rebuild Connections&quot; option, AdvancedSkeleton
+				will also re-link hypergraph connections.</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>The Rebuilding
+				of Connections means that all anything added (e.g skinning) will
+				be maintained in the newly built rig.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>Skinning:</B> <I>Go
+				to Build Pose</I>: applies all the values stored when the
+				AdvancedSkeleton was first build. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>Select
+				DeformJoints:</I></FONT></FONT> <FONT FACE="Arial, sans-serif"><FONT SIZE=2>s</FONT></FONT><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>elects
+				the joints intended for binding (skinning).</FONT></FONT></FONT> 
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>This can also
+				be done by selecting all members of the &quot;DeformSet&quot; </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2><I>Hide /
+				UnHide MotionSystem: </I></FONT></FONT><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Allows
+				you to display ONLY the joints intended for binding. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>Useful when
+				using `edit membership` or `paint weights` tools. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>SkinCage:</B></FONT></FONT>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Creates a polygon
+				mesh from the AdvancedSkeleton.</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>The SkinCage
+				have automatically assigned smooth skinning (skinCluster), and
+				the weighs from the SkinCage</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>can be copied
+				to your character with the &ldquo;Copy skin to selected mesh&rdquo;
+				button.</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>The SkinCage
+				comes with construction `history loft curves`, for convenient
+				controls to scale portions of the cage</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>to match your
+				character.<BR>&nbsp; Once the SkinCage are fitted to your
+				character, the `history loft curves` can be removed with the
+				`Delete SkinCurves` button.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><B>PolyBoxes:</B></FONT><FONT COLOR="#000000">
+				Create/Remove/Mirror Poly-Boxes to fit the character.</FONT> </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>These
+				boxes can be used as low-res geometry representation of your
+				character,</FONT></FONT></FONT> 
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>or use the
+				Boolean function to create a more accurate </FONT></FONT><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>low-res
+				representation.</FONT></FONT></FONT> 
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>Character Set:</B>
+				'CreateCharacter' :Brings together all the essential attributes
+				of the skeleton and creates a `character set node`, </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>for Maya's
+				non-linear animation tools. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>Control Curves:</B>
+				Mirrors the shape of the control curves from left to right or
+				vice versa </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>After you
+				created the AdvancedSkeleton, you might find that&nbsp; the
+				control curves. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>are not
+				ideally scaled/positioned for easy selecting. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>So you might
+				have to sculpt the curves (by moving/scaling the cv`s) to fit
+				better. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>This mirror
+				tool allows you to do the adjustments on one side, then mirror it
+				across. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>Partial Joints:</B>
+				creates childjoints in the deformationSystem that rotates
+				partially to its parent, </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>Skinning to
+				these joints provides partial rotation effect without the loss of
+				volume that occurs when blending weights. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>FitMode:</B>
+				Preserves X-down joint orientations, and maintains set driven
+				keys. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>This allows
+				you to move joints, without loosing it`s X down alignment. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>Also lets you
+				rotate finger joints, and preserve the `curl` set driven keys. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>Display: </B>Joint
+				visibility:Switches the visibility of joints. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>It is
+				recommended to hide the joints once the rig is complete, so
+				animators do not accidentally select and manipulate these. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				&nbsp; <FONT FACE="Arial, sans-serif"><FONT SIZE=2>Joint size:
+				Set the joint display size. </FONT></FONT>
+				</DD><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><BR><IMG SRC="IconFace.jpg" NAME="graphics30" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				</FONT><FONT COLOR="#000000"><U><B>Face</B></U></FONT></FONT></FONT></DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This is a
+				step-by-step guide to setting up a face rig.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The first steps are
+				to identify key vertices and edgeloops on the face.</FONT></FONT></DD><DD STYLE="font-weight: normal; text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>After the face rig is
+				built, there are steps for tuning of weights, and configuring
+				setDrivenKeys.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<BR>
+				</DD><DT STYLE="text-align: left">
+				<IMG SRC="IconUI.jpg" NAME="graphics7" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>SelectorDesigner</B></U></FONT></FONT></FONT>
+								</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This tool is for
+				creating `Selection Tools`. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>When you first open
+				this, it will be blank. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<IMG SRC="UI1.jpg" NAME="graphics8" ALIGN=BOTTOM WIDTH=165 HEIGHT=154 BORDER=0>
+								</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>First step is to
+				bring in an image of your character as the background
+				(Edit-&gt;Background..) </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<IMG SRC="UI2.jpg" NAME="graphics9" ALIGN=BOTTOM WIDTH=165 HEIGHT=154 BORDER=0>
+								</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Next you need to
+				create the buttons. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To create a button: </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>1.Select the
+				animation control object that you want the button to select when
+				clicked. (e.g. &quot;FKWrist_R&quot;) </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>2.Use the middle
+				mouse button to `click and drag` the area you want the button. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<IMG SRC="UI3.jpg" NAME="graphics10" ALIGN=BOTTOM WIDTH=165 HEIGHT=154 BORDER=0>
+								</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Finally make sure to
+				save the newly created tool. (File-&gt;Save) </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Once saved, you can
+				add a shelf button that will launch the tool (File-&gt;Put on
+				shelf) </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>See <A HREF="SelectorDesignerAnimation.gif" TARGET="_blank">animated
+				gif</A> for how to use create buttons, and access the popup
+				menus. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>These `Selection
+				Tools` that are built by the `SelectorDesigner`, can be freely
+				distributed to animators.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>AdvancedSkeleton is
+				not required to run these. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>A example `Selector`
+				called &quot;biped&quot; is provided, click the last button on
+				the shelf to run it. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This is what the
+				&quot;biped&quot; selector looks like: </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<IMG SRC="UIbiped.jpg" NAME="graphics11" ALIGN=BOTTOM WIDTH=165 HEIGHT=155 BORDER=0>
+								</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Selector Tools comes
+				with <A HREF="#animationUtilitiesMenus">animation utilities</A>
+				menus. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><BR>&nbsp; </FONT></FONT>
+				</DD><DT STYLE="text-align: left">
+				<IMG SRC="IconPoser.jpg" NAME="graphics12" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>PoserDesigner</B></U></FONT></FONT></FONT><U>
+				</U>
+				</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This tool is for
+				creating `Poser Tools`. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>When you first open
+				this, it will be blank. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<IMG SRC="Poser1.jpg" NAME="graphics13" ALIGN=BOTTOM WIDTH=240 HEIGHT=136 BORDER=0>
+								</DD><DD STYLE="text-align: left">
+				&nbsp; 
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Along the toolbar of
+				the window are the following controls: </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<IMG SRC="PoserToolBar.jpg" NAME="graphics14" ALIGN=BOTTOM WIDTH=475 HEIGHT=130 BORDER=0>
+								</DD><DD STYLE="text-align: left">
+				&nbsp; 
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>By using these
+				controls, you can build up your poser library: </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<IMG SRC="Poser2.jpg" NAME="graphics15" ALIGN=BOTTOM WIDTH=240 HEIGHT=136 BORDER=0>
+								</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Finally make sure to
+				save the newly created tool. (File-&gt;Save) </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>And like
+				SelectorDesigner,&nbsp; you can add a shelf button that will
+				launch the tool (File-&gt;Put on shelf) </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>`Poser Tools` built
+				by `PoserDesigner` can also be distributed to animators, and does
+				not require AdvancedSkeleton. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Note that if you use
+				the `only selected` option, then not only does the selected
+				controls alone get stored, </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>but it also looks for
+				selected attributes in the channelBox. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>If you select 1
+				object and 1 attribute, and the attribute is of the `Limited
+				Range` type attribute, </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>then a slider will be
+				generated to control the attribute (useful for blendShape
+				attributes).</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The &quot;anim&quot;
+				checkBox allows you to store animation clips instead of poses.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Applying
+				poses/animations:</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To apply
+				pose/animation to your character simply <U>click</U> a button.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To select or key the
+				controls that are part of the pose/animation, <U>right&gt;click&gt;..</U>
+				a button.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To apply
+				pose/animation at the characters current position <U>shift&gt;click</U>
+				a button.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To apply animation
+				relative to current time <U>shift&gt;click</U> a button.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To apply animation
+				relative to current values <U>ctrl&gt;click</U> a button.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Poser Tools comes
+				with <A HREF="#animationUtilitiesMenus">animation utilities</A>
+				menus.</FONT></FONT></DD><DT STYLE="text-align: left">
+				&nbsp; 
+				</DT><DT STYLE="text-align: left">
+				<IMG SRC="IconHelp.jpg" NAME="graphics16" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>Help</B></U></FONT></FONT>
+								</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Open the help files
+				in a browser. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<BR>
+				</DD><DT STYLE="text-align: left">
+				<IMG SRC="IconBipedSelector.jpg" NAME="graphics17" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+								<IMG SRC="IconFaceSelector.jpg" NAME="graphics32" ALIGN=BOTTOM WIDTH=32 HEIGHT=32 BORDER=0>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>Selectors:biped
+				&amp; face</B></U></FONT></FONT> 
+				</DT><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>These are samples of
+				`Selectors`, built with the SelectorDesigner tool. </FONT></FONT>
+				</DD><DT STYLE="text-align: left">
+				<BR>
+				</DT><HR SIZE=1 COLOR="#000000">
+				<DT STYLE="text-align: left"><BR>
+				</DT><DD STYLE="text-align: left">
+				<BR>
+				</DD><DT STYLE="text-align: left">
+				<A NAME="animationUtilitiesMenus"></A><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>5.
+				Animation Utilities:</B></U> </FONT></FONT>
+				</DT><DD STYLE="text-align: left">
+				<BR>
+				</DD><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Tools created by
+				SelectorDesigner comes with a standard set of menu items, </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>providing useful
+				utilities for the animator.<BR><BR><IMG SRC="aniUtilMenus.jpg" NAME="graphics18" ALIGN=TEXTTOP WIDTH=260 HEIGHT=64 BORDER=0>
+				</FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><BR>-Edit&gt;Refresh:
+				Rescan the scene, and update the character drop down
+				menu.<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&gt;Filter:
+				Set a filter for which rigs to appear in the drop down menu of
+				the selector.</FONT></FONT></DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>-Display&gt;Controls:
+				Toggles the visibility of AdvancedSkeleton controls.</FONT></FONT></DT><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>&gt;Set
+				Hotkey: Assigns the &ldquo;Toggle of controls-visibility&rdquo;
+				to the ~ hotkey.</FONT></FONT></DT><DD STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This
+				mean that the ~ key must be held down while selecting control.</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>As
+				soon as the ~ key is released the controls will be invisible
+				again.</FONT></FONT></DD><DD STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Hold
+				down the Ctrl key while pressing the ~ key will do a normal
+				toggle of controls-visibility.</FONT></FONT></DD><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>&gt;Joints:
+				Toggle the visibility of joints, by switching the &ldquo;Show&gt;Joints&rdquo;
+				in all viewports.</FONT></FONT></DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>-Pose&gt;Copy:&nbsp;&nbsp;
+				Copy current pose. Ctrl/Alt&gt;click will copy selected controls
+				only. </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>&gt;Paste:&nbsp;
+				Paste pose. Ctrl/ Alt&gt;click keeps the All control in the same
+				place. </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>&gt;Reset:&nbsp;
+				Go to Build Pose </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>&gt;Mirror:&nbsp;
+				Mirror Pose. Use optionBox to specify side, space &amp; axis. </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>-Anim&gt;Copy:&nbsp;&nbsp;
+				Copy animation. Ctrl&gt;click will copy selected controls only. </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>&gt;Paste:&nbsp;
+				Paste animation. Alt&gt;click pastes &quot;relative to current
+				time&quot;</FONT></FONT></DT><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Ctrl&gt;click
+				pastes &quot;relative to current time &amp; values&quot; </FONT></FONT>
+				</DT><DT STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>-Dynamics&gt;Add:
+				Dynamics can by added to any FK control.</FONT></FONT></DT><DT STYLE="text-align: left">
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<FONT FACE="Arial, sans-serif"><FONT SIZE=2>&gt;Bake:
+				Bakes all Dynamics.</FONT></FONT></DT><DD STYLE="margin-left: 0cm; text-align: left">
+				<BR>
+				</DD><HR SIZE=1 COLOR="#000000">
+				<DT STYLE="text-align: left"><BR>
+				</DT><DT STYLE="text-align: left">
+				<A NAME="AdvanceSkeletoncontrols"></A><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>6</B></U><FONT COLOR="#000000"><U><B>.
+				The Controls:</B></U></FONT> </FONT></FONT>
+				</DT><DL>
+					<DT STYLE="text-align: left">
+					<IMG SRC="FKIKControlCurve.jpg" NAME="graphics19" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>FKIKControlCurves</B></FONT></FONT>
+										</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>For every IK system
+					there is a FKIKControlCurve. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>These are the
+					controls that let you blend between FK / IK modes,<BR>The
+					attributes for these control curves are: </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>FKIKBlend</U>:
+					value 0 = FK&nbsp; and value 10 = IK.</FONT></FONT></DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>AutoVis</U>:
+					Automatically sets visibility fro<SPAN STYLE="text-decoration: none">m
+					the FKIKBlend value.</SPAN></FONT></FONT></DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>FKVis</U>: value
+					On = FK-Control-Curves visible<BR><U>IKVis</U>: value On =
+					IK-Control-Curves visible</FONT></FONT></DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The FKVis / IKVis
+					attributes are used for changing / animating the visibility of
+					FK- / IK- Control-Curves. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Useful for
+					displaying only the ControlCurves needed for the mode you are
+					working in. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><FONT COLOR="#000000"><B><BR><IMG SRC="FKCurve.jpg" NAME="graphics20" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0></B></FONT><FONT COLOR="#000000"><U><B>FKCurves</B></U></FONT>
+					</FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The FKCurves are
+					light-blue circles.</FONT></FONT></DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The following
+					attributes might be found on this type of control: </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>global</U>: for
+					maintaining world space orientation.<BR><BR><IMG SRC="IKCurve.jpg" NAME="graphics21" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0><U><B>IKCurves</B></U><BR>The
+					IKCurves are red boxes.<BR>IKCurve can be translated and rotated
+					(PoleVectorCurves can only be translated). </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The following
+					attributes might be found on this type of control: </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>swivel</U>: sets
+					the orientation of the knee </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>follow</U>: for
+					switching whether to inherit parent transform or not. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>roll</U>: foot
+					rolling from heel to toe. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>rollAngle</U>:
+					the number of degrees to `roll` each transform in the foot roll
+					system </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>stiff</U>:
+					sharpness of splineIk curvature. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>stretchy</U>: for
+					blending in/out IK stretching. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>antiPop</U>: set
+					amount of scale compensating to avoid IK popping. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>See <A HREF="AntiPop.gif" TARGET="_blank">animated
+					gif</A> for example of antiPop. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					&nbsp; 
+					</DT><DT STYLE="text-align: left">
+					<IMG SRC="IKCurveRoll.jpg" NAME="graphics22" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>IKCurves(foot-roll)</B></U></FONT></FONT>
+										</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Controls for manual
+					rolling of heel and toe. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<BR>
+					</DT><DT STYLE="text-align: left">
+					<IMG SRC="AimCurve.jpg" NAME="graphics25" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>AimCurves</B></FONT></FONT>
+										</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This controls the
+					`Look At` aim system. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Most used for eyes,
+					were this control is the target that the eyes look at. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The added attributes
+					are: </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>cross</U>: Amount
+					of cross eyed. Default is 1, where the eyes will be looking
+					straight forward (empty stare) </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Set the value to 0,
+					where the eyes will be converging to focus on the AimCurve
+					control. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>follow</U>: for
+					switching whether to inherit parent transform or not. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					&nbsp; 
+					</DT><DT STYLE="text-align: left">
+					<IMG SRC="BendControlCurve.jpg" NAME="graphics27" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>BendCurves</B></FONT></FONT>
+										</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>These controls the
+					`bending` of joint chains.</FONT></FONT></DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>To enable these
+					controls to get built, make sure the fitSkeleton joint has
+					twistJoints,</FONT></FONT></DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>and that the &ldquo;Bend&rdquo;
+					attribute on the fitSkeleton joint is set to &ldquo;On&rdquo;.<BR>&nbsp;
+					</FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<IMG SRC="RootCurve.jpg" NAME="graphics26" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>CenterCurve</B></U></FONT></FONT>
+										</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This controls the
+					top of the AdvancedSkeleton FK hierarchy. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The following
+					attributes might be found on this type of control: </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>CenterBtwFeet</U>:
+					Set whether the center of the character should automatically be
+					kept between the IK feet. <BR>&nbsp; </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<IMG SRC="MainControlCurve.jpg" NAME="graphics24" ALIGN=BOTTOM WIDTH=70 HEIGHT=70 BORDER=0><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>MainCurve</B></U></FONT></FONT>
+										</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This is the Main
+					control for the entire AdvancedSkeleton.<BR>With sets the
+					overall scale and placement for the character.</FONT></FONT></DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The following
+					attributes might be found on this type of control: </FONT></FONT>
+					</DT></DL>
+				<DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>FkVis</U>:
+				Visibility off all FK controls. </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>IkVis</U>:
+				Visibility off all FkIk switches (the blue crosses). </FONT></FONT>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>AimVis</U>:
+				Visibility off all Aim controls (typically the eye look at
+				control)</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>EyeVis</U>:
+				Visibility for the FK Eye controls.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U>FingerVis</U>:
+				Visibility for all the FK Finger controls (Fingers can still be
+				controlled with the curl attributes)<BR><U>BendVis</U>:
+				Visibility for all the bend controls (the brown
+				circles)<BR><U>ArrowVis</U>: Visibility for the arrows that
+				indicates pole-vectors and look-at control directions.<BR><U>JointVis</U>:
+				Visibility for the joints.</FONT></FONT></DD><DL>
+					<DT STYLE="text-align: left">
+					&nbsp; 
+					</DT><DT STYLE="text-align: left">
+					&nbsp; 
+					</DT><DT STYLE="text-align: left">
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>Extra</B></U></FONT></FONT>
+										</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>All the animation
+					controls have a &quot;Extra&quot; control. </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>These are accessed
+					by selecting a curve, then pick-walk up (up-arrow). </FONT></FONT>
+					</DT><DT STYLE="margin-bottom: 0.5cm; text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The `Extra-Controls`
+					can be useful for many situations, <BR>such as avoiding gimbal
+					lock, ot combining constraints with animation.</FONT></FONT></DT></DL>
+			</DL>
+			<P ALIGN=LEFT>
+			<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The shapes and colors
+			of all the control curves can be changed, by modifying the file:
+			&quot;asCurveIcons.ma&quot;.</FONT></FONT></P>
+			<HR>
+			<DL>
+				<DL>
+					<DT STYLE="text-align: left"><BR>
+					</DT><DT STYLE="text-align: left">
+					<A NAME="Referencing"></A><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>7.
+					Referencing:</B></U> </FONT></FONT>
+					</DT></DL>
+				<DD>
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>The recommended work
+				flow for rigging and animating characters is to have each
+				character rig in their own files.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Then use Maya`s
+				referencing to bring the character(s) into the animation file.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Make sure the &ldquo;Use
+				namespaces&rdquo; option is on:</FONT></FONT></DD><DD STYLE="text-align: left">
+				<IMG SRC="createReference.jpg" NAME="graphics28" ALIGN=BOTTOM WIDTH=414 HEIGHT=301 BORDER=0></DD><DD STYLE="text-align: left">
+				<BR>
+				</DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>By using NameSpaces,
+				the AdvancedSkeleton animation tools recognises the characters in
+				the scene:</FONT></FONT></DD><DD STYLE="text-align: left">
+				<IMG SRC="charactersDropDownMenu.jpg" NAME="graphics29" ALIGN=BOTTOM WIDTH=377 HEIGHT=298 BORDER=0></DD><DD STYLE="text-align: left">
+				<BR>
+				</DD><HR>
+				<DL>
+					<DT STYLE="text-align: left"><BR>
+					</DT><DT STYLE="text-align: left">
+					<BR>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>8.
+					Customising:</B></U> </FONT></FONT>
+					</DT></DL>
+				<DD>
+				<A NAME="Customising"></A><FONT FACE="Arial, sans-serif"><FONT SIZE=2>There
+				are several ways of customising AdvancedSkeleton to your specific
+				needs.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>For custom `selection
+				curves`, you can open the file &quot;asCurveIcons.ma&quot; which
+				contains the icons,</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>and make any changes,
+				as long as the names remains unchanged.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>For modifications of
+				the default values of AdvancedSkeleton, you can use the &ldquo;run&rdquo;
+				attribute.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>This is a string
+				attribute on the top node of the FitSkeleton. e.g. Root.run</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Any mel command
+				entered here, will get called any time the AdvancedSkeleton gets
+				built,</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>As well as any time
+				the function &ldquo;Reset Pose&rdquo; gets used by the animation
+				tools.</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>For example, if you
+				would like a character to have its spine set to IK by default,</FONT></FONT></DD><DD STYLE="text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>then you could add
+				the following to the run attribute: <I>setAttr
+				&quot;FKIKSpine_M.FKIKBlend&quot; 10;</I></FONT></FONT></DD><DD STYLE="text-align: left">
+				<BR>
+				</DD><HR>
+				<DL>
+					<DT STYLE="text-align: left"><BR>
+					</DT><DT STYLE="text-align: left">
+					<BR>
+					</DT><DT STYLE="text-align: left">
+					<A NAME="Feedback"></A><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>9.
+					Feedback:</B></U> </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2>AdvancedSkeleton is
+					constantly improving with&nbsp;input from the users.&nbsp; </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>If you have any
+					suggestions/comments about AdvancedSkeleton, </B></FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>please do not
+					hesitate to contact us.</B> </FONT></FONT>
+					</DT><DT STYLE="text-align: left">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2><A HREF="mailto:support@animationstudios.com.au">support@animationstudios.com.au</A>
+					</FONT></FONT>
+					</DT></DL>
+				<DT STYLE="margin-bottom: 0.5cm; text-align: left">
+				<BR><BR>
+				</DT><DT STYLE="margin-bottom: 0.5cm; text-align: left">
+				<FONT FACE="Arial, sans-serif"><FONT SIZE=2>Copyright 2010
+				'Animation Studios' </FONT></FONT>
+				</DT></DL>
+		</TD>
+		<TD WIDTH=2></TD>
+	</TR>
+</TABLE>
+<P><BR><BR>
+</P>
+</BODY>
+</HTML>

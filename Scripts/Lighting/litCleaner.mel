@@ -1,0 +1,86 @@
+global proc litCleaner()
+{
+	unLockNodes();
+	deleteunUsedNodes();
+	deleteEmptyUVSets();
+	deleteScriptNodes();
+	deleteBrushNodes();
+	unKnownNodes();
+	removeAudio();
+}
+
+global proc unLockNodes()
+{
+	string $default[] = {"initialShadingGroup","initialParticleSE"};
+	string $list[] = `ls -type "shadingEngine"`;
+	string $diff[] = stringArrayRemove($default, $list);
+	for($each in $diff)
+	{
+		lockNode -lock off $each;
+	}
+	print ("--------------------------------------\n");
+	print ("All SENodes UnLocked"); 
+	print ("\n--------------------------------------");
+}
+
+global proc deleteunUsedNodes()
+{
+	catch(hyperShadePanelMenuCommand("hyperShadePanel1", "deleteUnusedNodes"));
+	print ("--------------------------------------\n");
+	print ("All UnUsed Nodes Deleted");
+	print ("\n--------------------------------------\n");
+}
+
+global proc deleteEmptyUVSets()
+{
+	string $list[] = `polyUVSet -q -auv`; 	
+	for($i in $list)
+	{
+		if($i == "map1")
+		continue;
+		else
+		catch( `polyUVSet -d -uvSet $i` );
+	}
+	print ("--------------------------------------\n");
+	print ("Empty UVSets deleted");
+	print ("\n--------------------------------------\n");
+}
+global proc deleteScriptNodes()
+{
+	catch(`delete uiConfigurationScriptNode`);
+	catch(`delete sceneConfigurationScriptNode`);
+	print ("--------------------------------------\n");
+	print ("Empty Script Nodes deleted");
+	print ("\n--------------------------------------\n");
+}
+
+global proc deleteBrushNodes()
+{
+	string $SC_brushnodes[] = `ls -typ brush`; 
+	for ($SC_brush in $SC_brushnodes)
+	{ 
+		catch(`delete $SC_brush`); 
+	} 
+	print ("--------------------------------------\n");
+	print ("BrushNodes deleted");
+	print ("\n--------------------------------------\n");
+}
+
+global proc unKnownNodes()
+{
+	string $unKnown[] = `ls -typ unknown`;
+	for($each in $unKnown)
+	{
+		catch(`delete $each`);
+	}
+	print ("--------------------------------------\n");
+	print ("UnKnown Nodes deleted");
+	print ("\n--------------------------------------\n");
+}
+global proc removeAudio()
+{
+	catch(`DeleteAllSounds`);
+	print ("--------------------------------------\n");
+	print ("All Audio Files are deleted");
+	print ("\n--------------------------------------\n");
+}

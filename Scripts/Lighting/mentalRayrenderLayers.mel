@@ -1,0 +1,54 @@
+global proc mentalRayrenderLayers()
+{
+	string $fileName = `file -q -loc`;
+	string $basename = basename( $fileName, ".ma" );
+	string $colorLayer = `createRenderLayer -n ($basename+"_CLR")`;
+	string $selList[] = `ls -g`;
+	for($z=0; $z<size($selList); $z++)
+	{
+		editRenderLayerMembers $colorLayer $selList[$z];
+	}	
+	
+	string $occLayer = `createRenderLayer -n ($basename+"_OCC")`;
+	renderLayerBuiltinPreset occlusion $occLayer;
+	setAttr "mib_amb_occlusion1.samples" 64;
+	setAttr "mib_amb_occlusion1.bright" -type double3 0.96 0.96 0.96 ;
+	setAttr "mib_amb_occlusion1.spread" 1;
+	setAttr "mib_amb_occlusion1.max_distance" 12;
+
+	string $diffLayer = `createRenderLayer -n ($basename+"_DIF")`;
+	renderLayerBuiltinPreset diffuse $diffLayer;
+	defaultAmbientLight(1, 0.45, 1,1,1, "0", 0,0,0, "1");
+	setAttr "ambientLightShape1.ambientShade" 0;
+	editRenderLayerMembers ($basename+"_DIF") ambientLightShape1;
+	select -cl;
+
+	string $spcLayer = `createRenderLayer -n ($basename+"_SPC")`;
+	renderLayerBuiltinPreset specular $spcLayer;
+
+	string $depthLayer = `createRenderLayer -n ($basename+"_LDP")`;
+	renderLayerBuiltinPreset linearDepth $depthLayer;
+
+	string $shadowLayer = `createRenderLayer -n ($basename+"_SHD")`;
+	renderLayerBuiltinPreset shadow $shadowLayer;
+
+	string $shadowLayer = `createRenderLayer -n ($basename+"_FG")`;
+	$ibl =`createNode -n mentalRayIbl mentalrayIblShape`;
+	evalDeferred -lp ("connectAttr -f "+$ibl+".message mentalrayGlobals.imageBasedLighting");
+	editRenderLayerMembers -noRecurse ($basename+"_FG") `ls -selection`;
+
+	setCurrentRenderer mentalRay;
+	//setAttr defaultRenderGlobals.currentRenderer -type "string" "mentalRay";
+	setAttr "miDefaultOptions.finalGather" 1;
+	setAttr mentalRayIbl.type 1;
+	setAttr "mentalRayIbl.color" -type double3 1 1 1 ;
+	setAttr "mentalRayIbl.hardwareAlpha" 1;
+	setAttr "mentalRayIbl.primaryVisibility" 0;
+
+	setAttr "mentalRayIbl.visibleInEnvironment" 1;
+	setAttr "mentalRayIbl.visibleInReflections" 1;
+	setAttr "mentalRayIbl.visibleInRefractions" 1;
+	setAttr "mentalRayIbl.visibleInFinalGather" 1;
+	layerEditorLayerButtonRenderabilityChange defaultRenderLayer;
+}
+

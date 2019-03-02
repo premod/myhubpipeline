@@ -1,0 +1,970 @@
+//     AdvancedSkeleton
+//     Version 2.00_beta2
+// 
+// 
+// AdvancedSkeleton is is a collection of Maya tools for doing character setup.
+//   
+// INSTALLATION: 
+// Run the SETUP file (setup.exe) 
+// Choose the Destination Folder.
+// NOTE: destination folder must be your Maya user directory 
+// eg: C:\Documents and Settings\user\My Documents\maya\8.5\
+// Continue installation.
+// Start Maya. 
+// Now you will find a new Shelf called 'advancedSkeleton':  
+// 
+// For detailed instructions go to: www.animationstudios.com.au
+// 
+// Copyright (C)2007 Animation Studios
+// 
+// email: support@animationstudios.com.au
+// Last Modified 21/02/2007
+
+global proc asSelChange ()
+{
+global int $fileLoading;
+if ($fileLoading)
+	return;
+if (!`optionVar -q asShowSelection`)
+	return;
+string $sel[]=`ls -sl`;
+string $name,$obj,$nodeType,$projectName,$ann;
+string $ctls[],$buffer[],$connections[];
+int $numLetters,$numTok,$keyed;
+string $ext=".xpm";
+if (`about -mac`)
+	$ext=".iff";
+if (`about -linux`)
+	$ext=".xpm";
+string $currImage,$buttonImageFile,$buttonImageFileOnK0,$buttonImageFileOnK1,$buttonImageFileOffK0,$buttonImageFileOffK1;
+string $controlLayouts[]=`lsUI -type controlLayout`;
+for ($layout in $controlLayouts)
+	{
+	if (!`gmatch $layout "asSelector*FormLayout"`)
+		continue;
+	$numLetters=size($layout);
+	$name=`substring $layout 11 ($numLetters-10)`;
+	$ctls=`formLayout -q -ca $layout`;
+	for ($ctl in $ctls)
+		if (`gmatch $ctl "asSelector*:*"`)
+			{
+			$selState="On";
+			$keyed=0;
+			$ann=`control -q -ann $ctl`;
+			$numTok=`tokenize $ann ";" $buffer`;
+			for ($i=0;$i<$numTok;$i++)
+				{
+				$obj=`asSelectorResolveNameSpace $name $buffer[$i]`;
+				if (!`stringArrayCount $obj $sel`)
+					$selState="Off";
+				if (`objExists $obj`)
+					{
+					$connections=`listConnections -s 1 -d 0 $obj`;
+					for ($node in $connections)
+						{
+						$nodeType=`objectType $node`;
+						if (`gmatch $nodeType "animCurve*"`)
+							$keyed=1;
+						}
+					}
+				}
+	
+			$currImage=`iconTextButton -q -i1 $ctl`;
+			if ($currImage=="")
+				return;
+			$numTok=`tokenize $currImage "_" $buffer`;
+			$projectName=$buffer[0];
+			for ($b=1;$b<size($buffer)-3;$b++)
+				$projectName+="_"+$buffer[$b];
+			$buttonImageFile=$projectName+"_"+$buffer[$numTok-3]+"_"+$buffer[$numTok-2]+"_"+$selState+"K"+$keyed+$ext;
+
+			if ($buttonImageFile!=$currImage)
+				iconTextButton -e -i $buttonImageFile $ctl;		
+			}
+	}
+}
+
+global proc asCharChange (string $uiName)
+{
+string $gridOrder[];
+if (`gridLayout -q -ex ($uiName+"GridLayout")`)
+	{
+	$gridOrder=`gridLayout -q -go ($uiName+"GridLayout")`;
+	for ($i=1;$i<size($gridOrder)+1;$i++)
+		if (`floatSlider -q -ex ($uiName+"FloatSlider"+$i)`)
+			{
+			$ann=`floatSlider -q -ann ($uiName+"FloatSlider"+$i)`;
+			$resolvedName=`asPoserResolveNameSpace $uiName $ann`;
+			if (`objExists $resolvedName`)
+				connectControl ($uiName+"FloatSlider"+$i) $resolvedName;
+			}
+	}
+asSelChange;
+}
+
+global proc asShowSelJob ()
+{
+global int $asSelChangeScripJobNr;
+if ($asSelChangeScripJobNr)
+	return;
+$asSelChangeScripJobNr=`scriptJob -e "SelectionChanged" "asSelChange"`;
+}
+
+global proc string asSelectorResolveNameSpace (string $name, string $obj)
+{
+string $nameSpace=`optionMenu -q -v ("asSelector"+$name+"OptionMenu")`;
+if ($nameSpace==":")
+	$nameSpace="";
+return ($nameSpace+$obj);
+}
+
+global proc asSelect (string $name, string $objs[])
+{
+for ($i=0;$i<size($objs);$i++)
+	$objs[$i]=`asSelectorResolveNameSpace $name $objs[$i]`;
+
+string $tgl="-r";
+int $modifier=`getModifiers`;
+if (($modifier %  2)==0)
+	select -cl;
+if ($objs[0]=="")
+	{
+	select -cl;
+	return;
+	}
+for ($obj in $objs)
+	if (!`objExists $obj`)
+		error ("Object:\""+$obj+"\" does not exists !");
+for ($obj in $objs)
+	select -tgl $obj;		
+}
+
+global proc asKey (string $name, string $objs[])
+{
+for ($i=0;$i<size($objs);$i++)
+	$objs[$i]=`asSelectorResolveNameSpace $name $objs[$i]`;
+
+for ($obj in $objs)
+	setKeyframe $obj;
+select `ls -sl`;
+asSelChange;
+}
+
+global proc asLinearKey (string $name, string $objs[])
+{
+for ($i=0;$i<size($objs);$i++)
+	$objs[$i]=`asSelectorResolveNameSpace $name $objs[$i]`;
+
+for ($obj in $objs)
+	setKeyframe -itt linear -ott linear $obj;
+select `ls -sl`;
+asSelChange;
+}
+
+global proc asAlignIK2FK (string $name, string $objs[])
+{
+string $W2K="IK2FK";
+string $alignSwitchCmd="asAlignFKIK";
+asAssembleAlignSwitchCmd $name $objs $alignSwitchCmd $W2K;
+}
+
+global proc asAlignFK2IK (string $name, string $objs[])
+{
+string $W2K="FK2IK";
+string $alignSwitchCmd="asAlignFKIK";
+asAssembleAlignSwitchCmd $name $objs $alignSwitchCmd $W2K;
+}
+
+global proc asSwitchIK2FK (string $name, string $objs[])
+{
+string $W2K="IK2FK";
+string $alignSwitchCmd="asSwitchFKIK";
+asAssembleAlignSwitchCmd $name $objs $alignSwitchCmd $W2K;
+}
+
+global proc asSwitchFK2IK (string $name, string $objs[])
+{
+string $W2K="FK2IK";
+string $alignSwitchCmd="asSwitchFKIK";
+asAssembleAlignSwitchCmd $name $objs $alignSwitchCmd $W2K;
+}
+
+global proc asAssembleAlignSwitchCmd (string $name, string $objs[], string $alignSwitchCmd, string $W2K)
+{
+int $numLetters=size($objs[0]);
+string $IK=`substring $objs[0] 17 ($numLetters-2)`;
+string $side=`substring $objs[0] ($numLetters-1) $numLetters`;
+eval ($alignSwitchCmd+" "+$name+" "+$IK+" "+$side+" "+$W2K);
+}
+
+global proc asAlignFKIK (string $name, string $IK, string $side, string $W2K)
+{
+string $sel[]=`ls -sl`;
+string $nameSpace=`asSelectorResolveNameSpace $name ""`;
+string $controlCurve=$nameSpace+"FKIKControlCurve"+$IK+$side;
+if (!`objExists $controlCurve`)
+	error ("Object:\""+$controlCurve+"\" does not exists !");
+string $startJoint=`getAttr ($controlCurve+".startJoint")`;
+string $middleJoint=`getAttr ($controlCurve+".middleJoint")`;
+string $endJoint=`getAttr ($controlCurve+".endJoint")`;
+string $alignIkToGroup=$nameSpace+"AlignIKTo"+$endJoint+$side;
+string $tempLoc1[],$tempLoc2[],$tempConstraint[];
+string $requiredObj[]={($nameSpace+"All"),($nameSpace+"FKEnd"+$endJoint+$side),($nameSpace+"FK"+$startJoint+$side),($nameSpace+"FK"+$endJoint+$side),
+	($nameSpace+"IKPoleVectorCurve"+$IK+$side),($nameSpace+"IK"+$startJoint+$side),($nameSpace+"IK"+$middleJoint+$side)};
+for ($obj in $requiredObj)
+	if (!`objExists $obj`)
+		error ("Object:\""+$obj+"\" does not exists !");
+float $charsize=`getAttr ($nameSpace+"All.height")`;
+float $tempFloat[],$alignIkToFloat[];
+int $autoKey=`autoKeyframe -q -st`;
+if ($autoKey)
+	autoKeyframe -st 0;
+
+if ($W2K=="IK2FK")
+	{
+	if (`objExists $alignIkToGroup`)
+		$alignIkToFloat=`xform -q -ws -ro $alignIkToGroup`;
+	$tempFloat=`xform -q -ws -t ($nameSpace+"FKEnd"+$endJoint+$side)`;
+	xform -ws -t $tempFloat[0] $tempFloat[1] $tempFloat[2] ($nameSpace+"IKCurve"+$IK+$side);
+	if (`objExists $alignIkToGroup`)
+		{
+		xform -ws -ro $alignIkToFloat[0] $alignIkToFloat[1] $alignIkToFloat[2] ($nameSpace+"IKCurve"+$IK+$side);
+		setAttr -type float3 ($nameSpace+"FKCurve"+$endJoint+$side+".rotate") 0 0 0;
+		}
+
+	$tempLoc1=`spaceLocator`;
+	$tempConstraint=`pointConstraint ($nameSpace+"FK"+$startJoint+$side) ($nameSpace+"FK"+$endJoint+$side) $tempLoc1[0]`;
+	delete $tempConstraint[0];
+	$tempConstraint=`aimConstraint -aimVector 1 0 0 ($nameSpace+"FK"+$middleJoint+$side) $tempLoc1[0]`;
+	$tempLoc2=`spaceLocator`;
+	parent $tempLoc2[0] $tempLoc1[0];
+	setAttr -type float3 ($tempLoc2[0]+".translate") ($charsize/3.333) 0 0;
+	$tempFloat=`xform -q -ws -t $tempLoc2[0]`;
+	xform -ws -t $tempFloat[0] $tempFloat[1] $tempFloat[2] ($nameSpace+"IKPoleVectorCurve"+$IK+$side);
+	delete $tempLoc1;
+	}
+else
+	{
+	if (`objExists $alignIkToGroup`)
+		$alignIkToFloat=`xform -q -ws -ro ($nameSpace+"FK"+$endJoint+$side)`;
+	$tempFloat=`xform -q -ws -ro ($nameSpace+"IK"+$startJoint+$side)`;
+	xform -ws -ro $tempFloat[0] $tempFloat[1] $tempFloat[2] ($nameSpace+"FKCurve"+$startJoint+$side);
+	$tempFloat=`xform -q -ws -ro ($nameSpace+"IK"+$middleJoint+$side)`;
+	xform -ws -ro $tempFloat[0] $tempFloat[1] $tempFloat[2] ($nameSpace+"FKCurve"+$middleJoint+$side);
+
+	if (`objExists $alignIkToGroup`)
+		{
+		setAttr ($controlCurve+".FKIKBlend") 0;
+		xform -ws -ro $alignIkToFloat[0] $alignIkToFloat[1] $alignIkToFloat[2] ($nameSpace+"FKCurve"+$endJoint+$side);
+		}
+	}
+
+if ($autoKey)
+	autoKeyframe -st 1;
+select $sel;
+}
+
+global proc asSwitchFKIK (string $name, string $IK, string $side, string $W2K)
+{
+string $sel[]=`ls -sl`;
+string $nameSpace=`asSelectorResolveNameSpace $name ""`;
+string $controlCurve=$nameSpace+"FKIKControlCurve"+$IK+$side;
+if (!`objExists $controlCurve`)
+	error ("Object:\""+$controlCurve+"\" does not exists !");
+string $startJoint=`getAttr ($controlCurve+".startJoint")`;
+string $middleJoint=`getAttr ($controlCurve+".middleJoint")`;
+string $endJoint=`getAttr ($controlCurve+".endJoint")`;
+string $requiredObj[]={($nameSpace+"All"),($nameSpace+"FKEnd"+$endJoint+$side),($nameSpace+"FK"+$startJoint+$side),($nameSpace+"FK"+$endJoint+$side),
+	($nameSpace+"IKPoleVectorCurve"+$IK+$side),($nameSpace+"IK"+$startJoint+$side),($nameSpace+"IK"+$middleJoint+$side)};
+for ($obj in $requiredObj)
+	if (!`objExists $obj`)
+		error ("Object:\""+$obj+"\" does not exists !");
+int $Blend;
+int $BlendInverse=10;
+string $W2KInverse="FK2IK";
+int $onOff;
+if ($W2K=="FK2IK")
+	{
+	$Blend=10;
+	$BlendInverse=0;
+	$W2KInverse="IK2FK";
+	$onOff=1;
+	}
+
+if ($W2K=="FK2IK" && `getAttr ($controlCurve+".FKIKBlend")`>0)
+	{
+	warning ("Could not switch FK2IK, because \"FKIKBlend\" is not \"0\"\n");
+	return;
+	}
+if ($W2K=="IK2FK" && `getAttr ($controlCurve+".FKIKBlend")`<10)
+	{
+	warning ("Could not switch IK2FK, because \"FKIKBlend\" is not \"10\"\n");
+	return;
+	}
+
+int $autoKey=`autoKeyframe -q -st`;
+if ($autoKey)
+	autoKeyframe -st 0;
+
+currentTime (`currentTime -q` -1);
+setAttr ($controlCurve+".FKIKBlend") $BlendInverse;
+setKeyframe ($controlCurve+".FKIKBlend");
+setAttr ($controlCurve+".FKVis") $onOff;
+setKeyframe ($controlCurve+".FKVis");
+setAttr ($controlCurve+".IKVis") (!$onOff);
+setKeyframe ($controlCurve+".IKVis");
+
+setKeyframe ($nameSpace+"FKCurve"+$startJoint+$side+".rotate");
+setKeyframe ($nameSpace+"FKCurve"+$middleJoint+$side+".rotate");
+setKeyframe ($nameSpace+"FKCurve"+$endJoint+$side+".rotate");
+setKeyframe ($nameSpace+"IKCurve"+$IK+$side+".translate");
+setKeyframe ($nameSpace+"IKCurve"+$IK+$side+".rotate");
+setKeyframe ($nameSpace+"IKPoleVectorCurve"+$IK+$side+".translate");
+
+currentTime (`currentTime -q` +1);
+
+if ($W2K=="FK2IK")
+	asAlignFKIK $name $IK $side "IK2FK";
+if ($W2K=="IK2FK")
+	asAlignFKIK $name $IK $side "FK2IK";
+
+setAttr ($controlCurve+".FKIKBlend") $Blend;
+
+setKeyframe ($controlCurve+".FKIKBlend");
+setAttr ($controlCurve+".FKVis") (!$onOff);
+setKeyframe ($controlCurve+".FKVis");
+setAttr ($controlCurve+".IKVis") $onOff;
+setKeyframe ($controlCurve+".IKVis");
+
+setKeyframe ($nameSpace+"FKCurve"+$startJoint+$side+".rotate");
+setKeyframe ($nameSpace+"FKCurve"+$middleJoint+$side+".rotate");
+setKeyframe ($nameSpace+"FKCurve"+$endJoint+$side+".rotate");
+setKeyframe ($nameSpace+"IKCurve"+$IK+$side+".translate");
+setKeyframe ($nameSpace+"IKCurve"+$IK+$side+".rotate");
+setKeyframe ($nameSpace+"IKPoleVectorCurve"+$IK+$side+".translate");
+
+if ($autoKey)
+	autoKeyframe -st 1;
+select $sel;
+}
+
+global proc asPopulateNameSpaceMenu (string $name)
+{
+string $optionMenu=$name+"OptionMenu";
+string $nameSpacesList[]=`namespaceInfo -lon`;
+$nameSpacesList=`stringArrayRemove {"UI"} $nameSpacesList`;
+$nameSpacesList[size($nameSpacesList)]="";
+string $itemList[]=`optionMenu -q -ils $optionMenu`;
+$nameSpacesList=`sort $nameSpacesList`;
+for ($item in $itemList)
+	deleteUI $item;
+
+for ($nameSpace in $nameSpacesList)
+	if (`objExists ($nameSpace+":All")`)
+		if (`attributeExists "version" ($nameSpace+":All")`)
+			menuItem -p $optionMenu -l ($nameSpace+":");
+
+if (!`optionMenu -q -ni ($name+"OptionMenu")`)
+	{
+	if ($name=="asUtilities" || `gmatch $name "asPoser*"`)
+		menuItem -p $optionMenu -l "None";
+	else
+		menuItem -p $optionMenu -l ":";
+	}
+}
+
+global proc asCopyToClipBloard (string $uiName, int $anim)
+{
+string $cmd=`asPoserGetCmd $uiName $anim`;
+if (!$anim)
+	menuItem -e -en 1 -c $cmd ($uiName+"PosePaste");
+else
+	menuItem -e -en 1 -c $cmd ($uiName+"AnimPaste");
+}
+
+global proc string asPoserGetCmd (string $uiName, int $anim)
+{
+global string $gChannelBoxName;
+global string $gMainProgressBar;
+string $sel[]=`ls -sl`;
+string $selectedMainAttrs[]=`channelBox -q -sma $gChannelBoxName`;
+string $selectedShapeAttrs[]=`channelBox -q -ssa $gChannelBoxName`;
+string $selectedHistoryAttrs[]=`channelBox -q -sha $gChannelBoxName`;
+string $selectedOutputAttrs[]=`channelBox -q -soa $gChannelBoxName`;
+string $selectedAttrs[];
+$selectedAttrs=`stringArrayCatenate $selectedMainAttrs $selectedShapeAttrs`;
+$selectedAttrs=`stringArrayCatenate $selectedAttrs $selectedHistoryAttrs`;
+$selectedAttrs=`stringArrayCatenate $selectedAttrs $selectedOutputAttrs`;
+int $ctrlButton,$altButton;
+if ((`getModifiers`/4) %  2)
+	$ctrlButton=1;
+if ((`getModifiers`/8) %  2)
+	$altButton=1;
+int $onlySel;
+if ($uiName=="asPoserDefault")
+	{
+	if (`checkBox -q -ex asPoserOnlySel`)
+		$onlySel=`checkBox -q -v asPoserOnlySel`;
+	}
+else if ($altButton || $ctrlButton)
+	$onlySel=1;
+string $nameSpace=`optionMenu -q -v ($uiName+"OptionMenu")`;
+if ($nameSpace==":")
+	$nameSpace="";
+string $cmd;
+string $controls[],$buffer[];
+int $weightedTangents[];
+int $onlyOneObj,$onlyOneAttr;
+string $connectObj;
+
+string $animCurves[];
+int $numKeys;
+float $times[],$values[],$inAngles[],$inWeights[],$outAngles[],$outWeights[];
+string $inTangentTypes[],$outTangentTypes[];
+
+if ($onlySel)
+	{
+	for ($i=$y=0;$i<size($sel);$i++)
+		{
+		if (`gmatch $sel[$i] ($nameSpace+"*")`)
+			{
+			tokenize $sel[$i] ":" $buffer;
+			$controls[$y]=$buffer[size($buffer)-1];
+			$y++;
+			}
+		}
+	}
+else
+	{
+	string $controlSet=`asPoserResolveNameSpace $uiName "ControlSet"`;
+	if (!`objExists $controlSet`)
+		error ("Object :\""+$controlSet+"\" does not exists !\n");
+	$controls=`sets -q $controlSet`;
+	for ($i=0;$i<size($controls);$i++)
+		$controls[$i]=`substitute  $nameSpace $controls[$i] ""`;
+	}
+string $attrs[];
+if (size($controls)<1)
+	error "No Controls Available!";
+evalDeferred ("progressBar -e -ep "+$gMainProgressBar);
+progressBar -e -st "Storing Data" -bp -ii 1 -min 0 -max (size($controls)) $gMainProgressBar;
+for ($obj in $controls)
+	{
+	progressBar -e -s 1 $gMainProgressBar;
+	if (`progressBar -q -ic $gMainProgressBar`)
+		error "Interrupted";
+	$allKeyableAttrs=`listAttr -k -m -sn ($nameSpace+$obj)`;
+	if ($onlySel && (size($selectedAttrs)>0))
+		$attrs=$selectedAttrs;
+	else
+		$attrs=$allKeyableAttrs;
+	for ($attr in $attrs)
+		{
+		for ($allKeyableAttr in $allKeyableAttrs)
+			if ($attr==$allKeyableAttr)
+				{
+				if (!$anim)
+					//Pose
+					$cmd+=$obj+"."+$attr+" "+`getAttr ($nameSpace+$obj+"."+$attr)`+";";
+				else
+					{
+					//Animation
+					$animCurves=`listConnections -type animCurve -s 1 -d 0 ($nameSpace+$obj+"."+$attr)`;
+					for ($y=0;$y<size($animCurves);$y++)
+						{
+						$numKeys=`keyframe -q -kc $animCurves[$y]`;
+						$weightedTangents=`keyTangent -q -weightedTangents $animCurves[$y]`;
+						$cmd+=$obj+"."+$attr+" keyTangent -e -weightedTangents "+$weightedTangents[0]+";";
+						for ($z=0;$z<$numKeys;$z++)
+							{
+							$times=`keyframe -in $z -q $animCurves[$y]`;
+							$values=`keyframe -in $z -q -vc $animCurves[$y]`;
+							$cmd+=$obj+"."+$attr+" setKeyframe -t "+$times[0]+" -v "+$values[0]+";";
+
+							$inAngles=`keyTangent -in $z -q -inAngle $animCurves[$y]`;
+							$inWeights=`keyTangent -in $z -q -inWeight $animCurves[$y]`;
+							$inTangentTypes=`keyTangent -in $z -q -inTangentType $animCurves[$y]`;
+							$outAngles=`keyTangent -in $z -q -outAngle $animCurves[$y]`;
+							$outWeights=`keyTangent -in $z -q -outWeight $animCurves[$y]`;
+							$outTangentTypes=`keyTangent -in $z -q -outTangentType $animCurves[$y]`;
+							$cmd+=$obj+"."+$attr+" keyTangent -e -a -t "+$times[0]+" -inAngle "+$inAngles[0]+" -inWeight "+$inWeights[0]
+								+" -outAngle "+$outAngles[0]+" -outWeight "+$outWeights[0]+";";
+							$cmd+=$obj+"."+$attr+" keyTangent -e -t "+$times[0]+" -inTangentType "+$inTangentTypes[0]+" -outTangentType "+$outTangentTypes[0]+";";
+							}
+						}
+					}
+				}
+		}
+	}
+if ($cmd!="")
+	{
+	if (!$anim)
+		$cmd="asSetAttrs "+$uiName+" \""+$cmd+"\"";
+	else
+		$cmd="asKeyAttrs "+$uiName+" \""+$cmd+"\"";
+	}
+if (size($controls)==0)
+	$cmd="";
+return $cmd;
+}
+
+global proc asSetAttrs (string $uiName, string $cmds)
+{
+int $ctrlButton,$altButton;
+if ((`getModifiers`/4) %  2)
+	$ctrlButton=1;
+if ((`getModifiers`/8) %  2)
+	$altButton=1;
+string $buffer[],$buffer2[];
+string $objAttr;
+float $value;
+int $numTok=`tokenize $cmds ";" $buffer`;
+int $showWarning;
+string $warningMsg="The following attributes can not be set:";
+if (`about -win`)
+	{
+	waitCursor -st 1;
+	evalDeferred "waitCursor -st 0";
+	}
+for ($i=0;$i<$numTok;$i++)
+	{
+	tokenize $buffer[$i] $buffer2;
+	$objAttr=$buffer2[0];
+	$value=$buffer2[1];
+	$objAttr=`asPoserResolveNameSpace $uiName $objAttr`;
+	if (($ctrlButton||$altButton) && `gmatch $objAttr "*All.*"`)
+		continue;
+	if (`objExists $objAttr`)
+		catch (`eval ("setAttr "+$objAttr+" "+$value)`);
+	else
+		{
+		$showWarning=1;
+		$warningMsg+=$objAttr+",";
+		}
+	}
+if ($showWarning)
+	warning $warningMsg;
+}
+
+global proc asKeyAttrs (string $uiName, string $cmds)
+{
+int $ctrlButton,$altButton;
+if ((`getModifiers`/4) %  2)
+	$ctrlButton=1;
+if ((`getModifiers`/8) %  2)
+	$altButton=1;
+string $buffer[],$buffer2[],$spaceBuffer[];
+string $objAttr,$previousObjAttr,$restOfBuffers;
+float $time,$value,$currentValue;
+float $currentTime=`currentTime -q`;
+int $numTok=`tokenize $cmds ";" $buffer`;
+int $showWarning,$firstValueSet;
+string $warningMsg="The following attributes can not be keyed:";
+float $firstValue;
+if (`about -win`)
+	{
+	waitCursor -st 1;
+	evalDeferred "waitCursor -st 0";
+	}
+for ($i=0;$i<$numTok;$i++)
+	{
+	tokenize $buffer[$i] $buffer2;
+	$objAttr=$buffer2[0];
+	$objAttr=`asPoserResolveNameSpace $uiName $objAttr`;
+	$restOfBuffers="";
+	if ($objAttr!=$previousObjAttr)
+		$firstValueSet=0;
+	$previousObjAttr=$objAttr;
+	for ($y=1;$y<size($buffer2);$y++)
+		$restOfBuffers+=$buffer2[$y]+" ";
+	if (`objExists $objAttr`)
+		{
+		tokenize $restOfBuffers $spaceBuffer;
+		for ($y=0;$y<size($spaceBuffer);$y++)
+			{
+			//TimeOffset
+			if ($spaceBuffer[$y]=="-t" && ($ctrlButton||$altButton))
+				{
+				$time=$spaceBuffer[$y+1];
+				$spaceBuffer[$y+1]=$time+$currentTime;
+				}
+			//ValueOffset
+			if ($spaceBuffer[$y]=="-v" && $ctrlButton)
+				{
+				$value=$spaceBuffer[$y+1];
+				$currentValue=`getAttr $objAttr`;
+				if (!$firstValueSet)
+				$firstValue=$value;
+				$firstValueSet=1;
+				$spaceBuffer[$y+1]=$value+$currentValue-$firstValue;
+				}
+			}
+		$restOfBuffers="";
+		for ($y=0;$y<size($spaceBuffer);$y++)
+			$restOfBuffers+=$spaceBuffer[$y]+" ";
+		eval ($restOfBuffers+$objAttr);
+		}
+	else
+		{
+		$showWarning=1;
+		$warningMsg+=$objAttr+",";
+		}
+	}
+if ($showWarning)
+	warning $warningMsg;
+}
+
+global proc asPoseObjects (string $uiName, string $button,string $action)
+{
+string $cmd=`iconTextButton -q -c $button`;
+string $buffer[],$buffer2[];
+string $objAttr,$value;
+tokenize $cmd "\"" $buffer;
+$cmd=$buffer[1];
+int $numTok=`tokenize $cmd ";" $buffer`;
+int $showWarning;
+string $warningMsg="The following objects can not be found:";
+if (`about -win`)
+	{
+	waitCursor -st 1;
+	evalDeferred "waitCursor -st 0";
+	}
+if ($action==" select -add")
+select -cl;
+for ($i=0;$i<$numTok;$i++)
+	{
+	tokenize $buffer[$i] $buffer2;
+	$objAttr=$buffer2[0];
+	$value=$buffer2[1];
+	tokenize $objAttr "." $buffer2;
+	$obj=$buffer2[0];
+	if ($action!=" select -add")
+		$obj=$objAttr;
+	$obj=`asPoserResolveNameSpace $uiName $obj`;
+	if (`objExists $obj`)
+		eval ($action+" "+$obj);
+	else
+		{
+		$showWarning=1;
+		$warningMsg+=$obj+",";
+		}
+	}
+if ($showWarning)
+	warning $warningMsg;
+}
+
+global proc asBakeDynamics (string $uiName)
+{
+if (!`objExists "DynamicSystem"`)
+	error "No Character Available !\n";
+string $dynamicsSystem=`asPoserResolveNameSpace $uiName "DynamicSystem"`;
+string $allDescendents[]=`listRelatives -ad -type joint $dynamicsSystem`;
+string $dynJoints[];
+for ($i=0;$i<size($allDescendents);$i++)
+	if (`gmatch $allDescendents[$i] "*DynSpline*"`)
+		$dynJoints[size($dynJoints)]=$allDescendents[$i];
+if (!size($dynJoints))
+	error "Character has no dynamics setup !\n";
+bakeResults -sm 1 -t (`playbackOptions -q -min`+":"+`playbackOptions -q -max`) -sb 1 -dic 1 -pok 1 -sac 0 -at "rx" -at "ry" -at "rz" $dynJoints;
+}
+
+global proc asRemoveBakedDynamics (string $uiName)
+{
+string $nameSpace=`asPoserResolveNameSpace $uiName ""`;
+string $dynIKSpines[]=`ls ($nameSpace+"DynIKSpline*")`;
+string $bakedAnimCurves[]=`ls -type animCurveTA "DynSpline*_rotate*"`;
+delete $bakedAnimCurves;
+print ("Removed "+`size($bakedAnimCurves)`+" baked animationCurves.\n");
+for ($ik in $dynIKSpines)
+	setAttr ($ik+".ikBlend") 1;
+}
+
+global proc asMirrorOptions (string $uiName)
+{
+if (`window -q -ex asMirrorOptions`)
+	deleteUI asMirrorOptions;
+window -t "Mirror Options" asMirrorOptions;
+columnLayout -adj 1;
+	separator -h 25 -st "none";
+	rowLayout -nc 4 -cw 1 40;
+		text -l "side:";
+		radioCollection asMOSideRadioCollection;
+		radioButton -label "Right To Left" asMOSideR2L;
+		radioButton -label "Left To Right" asMOSideL2R;
+		radioButton -label "Flip" asMOSideFlip;
+		setParent..;
+	rowLayout -nc 4 -cw 1 40;
+		text -l "space:";
+		radioCollection asMOSpaceRadioCollection;
+		radioButton -label "All" asMOSpaceAll;
+		radioButton -label "World" asMOSpaceWorld;
+		radioButton -label "Root" asMOSpaceRoot;
+		radioCollection -e -sl "asMOSpaceWorld" asMOSpaceRadioCollection;
+		setParent..;
+	rowLayout -nc 4 -cw 1 40;
+		text -l "axis:";
+		radioCollection asMOAxisRadioCollection;
+		radioButton -label "X" asMOAxisX;
+		radioButton -label "Y" asMOAxisY;
+		radioButton -label "Z" asMOAxisZ;
+		radioCollection -e -sl "asMOAxisX" asMOAxisRadioCollection;
+		setParent..;
+
+	rowLayout -nc 4 -cw 1 40;
+		text -l "include:";
+		radioCollection asMOSelOnlyRadioCollection;
+		radioButton -label "All" asMOSelOnlyAll;
+		radioButton -label "Selected" asMOSelOnlySel;
+		radioCollection -e -sl "asMOSelOnlyAll" asMOSelOnlyRadioCollection;
+		setParent..;
+
+	setParent..;
+separator -st "none" -h 25;
+button -w 100 -l "Mirror" -c ("asMirror "+$uiName);
+showWindow;
+
+string $optionVars[]={"asMOSide","asMOSpace","asMOAxis"};
+string $cia[];
+string $radioCollection;
+for ($i=0;$i<size($optionVars);$i++)
+	{
+	$radioCollection=$optionVars[$i]+"RadioCollection";
+	$cia=`radioCollection -q -cia $radioCollection`;
+	if (`optionVar -ex $optionVars[$i]`)
+		radioCollection -e -sl (`optionVar -q $optionVars[$i]`) $radioCollection;
+	else
+		radioCollection -e -sl $cia[0] $radioCollection;
+	}
+}
+
+global proc asMirror (string $uiName)
+{
+if (!`window -q -ex $uiName`)
+	error ("Window : "+$uiName+" not found !");
+string $side="asMOSideR2L";
+string $space="asMOSpaceAll";
+string $axis="asMOAxisX";
+string $selOnly="asMOSelOnlyAll";
+if (`window -q -ex asMirrorOptions`)
+	{
+	$side=`radioCollection -q -sl asMOSideRadioCollection`;
+	$space=`radioCollection -q -sl asMOSpaceRadioCollection`;
+	$axis=`radioCollection -q -sl asMOAxisRadioCollection`;
+	$selOnly=`radioCollection -q -sl asMOSelOnlyRadioCollection`;
+	optionVar -sv asMOSide $side;
+	optionVar -sv asMOSpace $space;
+	optionVar -sv asMOAxis $axis;
+	optionVar -sv asMOSelOnly $selOnly;
+	}
+if (`optionVar -ex asMOSide`)
+	$side=`optionVar -q asMOSide`;
+if (`optionVar -ex asMOSpace`)
+	$space=`optionVar -q asMOSpace`;
+if (`optionVar -ex asMOAxis`)
+	$axis=`optionVar -q asMOAxis`;
+if (`optionVar -ex asMOSelOnly`)
+	$selOnly=`optionVar -q asMOSelOnly`;
+string $sel[]=`ls -sl`;
+string $nameSpace=`optionMenu -q -v ($uiName+"OptionMenu")`;
+if ($nameSpace==":")
+	$nameSpace="";
+string $controls[]=`sets -q ($nameSpace+"ControlSet")`;
+string $sortedControls[];
+for ($i=$y=0;$i<size($controls);$i++)
+	{
+	if ($i<2)
+		$sortedControls[$y]=$controls[$i];
+	if (`gmatch $controls[$i] ($nameSpace+"Root*")`)
+		$sortedControls[$y]=$controls[$i];
+	if ($sortedControls[$y]!="")
+		$y++;
+	}
+for ($i=0;$i<size($controls);$i++)
+	{
+	if (`gmatch $controls[$i] ($nameSpace+"IK*Spine*")`)
+		$sortedControls[$y]=$controls[$i];
+	if ($sortedControls[$y]!="")
+		$y++;
+	}
+for ($i=0;$i<size($controls);$i++)
+	{
+	if (`gmatch $controls[$i] ($nameSpace+"IK*Leg_*")` || `gmatch $controls[$i] ($nameSpace+"IK*Arm_*")`)
+		$sortedControls[$y]=$controls[$i];
+	if ($sortedControls[$y]!="")
+		$y++;
+	}
+appendStringArray $sortedControls $controls (size($controls));
+$sortedControls=`stringArrayRemoveDuplicates $sortedControls`;
+$controls=$sortedControls;
+if ($selOnly=="asMOSelOnlySel")
+	$controls=$sel;
+string $allKeyableAttrs[],$tempString[];
+string $source,$dest,$cmd,$loc1,$loc2;
+float $pos[3],$rot[3];
+int $wsXform[];
+int $flip;
+string $flipAxis,$t0;
+if ($axis=="asMOAxisX")
+	{$flipAxis="X";$t0="tx";}
+if ($axis=="asMOAxisY")
+	{$flipAxis="Y";$t0="ty";}
+if ($axis=="asMOAxisZ")
+	{$flipAxis="Z";$t0="tz";}
+
+createNode -n flipGroup transform;
+if ($space=="asMOSpaceRoot")
+	parent flipGroup ($nameSpace+"RootCurveRoot_M");
+if ($space=="asMOSpaceAll")
+	parent flipGroup ($nameSpace+"All");
+xform -os -t 0 0 0 -ro 0 0 0 flipGroup;
+if ($space!="asMOSpaceWorld")
+	parent -w flipGroup;
+for ($i=0;$i<size($controls);$i++)
+	{
+	if ($side=="asMOSideR2L")
+		{
+		if (`gmatch $controls[$i] "*_L"`)
+			continue;
+		$dest=`substitute "_R" $controls[$i] "_L"`;
+		}
+	else if ($side=="asMOSideL2R")
+		{
+		if (`gmatch $controls[$i] "*_R"`)
+			continue;
+		$dest=`substitute "_L" $controls[$i] "_R"`;
+		}
+	else if ($side=="asMOSideFlip")
+		{
+		if (!`gmatch $controls[$i] "*_L"` && !`gmatch $controls[$i] "*_R"` && !`gmatch $controls[$i] "*_M"`)
+			continue;
+		if (`gmatch $controls[$i] "*FKExtraBackA_M"`)
+			continue;
+		if (`gmatch $controls[$i] "*_L"`)
+			$dest=`substitute "_L" $controls[$i] "_R"`;
+		if (`gmatch $controls[$i] "*_R"`)
+			$dest=`substitute "_R" $controls[$i] "_L"`;
+		if (`gmatch $controls[$i] "*_M"`)
+			$dest=$controls[$i];
+		}
+	$source=$controls[$i];
+	$allKeyableAttrs=`listAttr -k -m -sn $controls[$i]`;
+	for ($y=0;$y<size($allKeyableAttrs);$y++)
+		{
+		$flip=1;
+		if (`gmatch $controls[$i] ($nameSpace+"Aim*")` || `gmatch $controls[$i] ($nameSpace+"IK*")` || `gmatch $controls[$i] ($nameSpace+"Root*")`)
+			{
+			if ($allKeyableAttrs[$y]=="tx" || $allKeyableAttrs[$y]=="ry" || $allKeyableAttrs[$y]=="rz")
+				$flip=-1;
+			}
+		else if (`gmatch $controls[$i] "*_M"`)
+			if ($allKeyableAttrs[$y]==$t0 || $allKeyableAttrs[$y]=="rx" || $allKeyableAttrs[$y]=="ry")
+				$flip=-1;
+
+		if ($side!="asMOSideFlip" && `gmatch $controls[$i] "*_M"`)
+			$flip=1;
+
+		if (`gmatch $controls[$i] ($nameSpace+"Aim*")` || `gmatch $controls[$i] ($nameSpace+"IK*")` || `gmatch $controls[$i] ($nameSpace+"Root*")`)
+			if ($space!="asMOSpaceAll")
+				$wsXform[$i]=1;
+		if (!$wsXform[$i])
+
+			$cmd+="setAttr "+$dest+"."+$allKeyableAttrs[$y]+" "+(`getAttr ($source+"."+$allKeyableAttrs[$y])`*$flip)+";";
+		}
+
+	if ($wsXform[$i])
+		{
+		$tempString=`spaceLocator`;
+		$loc1=$tempString[0];
+		$tempString=`spaceLocator`;
+		$loc2=$tempString[0];
+		parent $loc2 $loc1;
+		parent $loc1 $source;
+		xform -os -t 0 0 0 -ro 0 0 0 $loc1;
+		setAttr ($loc1+".rotateOrder") `getAttr ($source+".rotateOrder")`;
+		setAttr ($loc2+".rotateOrder") `getAttr ($source+".rotateOrder")`;
+		setAttr ("flipGroup.scale"+$flipAxis) 1;
+		parent $loc1 flipGroup;
+		setAttr ("flipGroup.scale"+$flipAxis) -1;
+		setAttr ($loc1+".scaleX") -1;
+		$pos=`xform -q -ws -t $loc2`;
+		$rot=`xform -q -ws -ro $loc2`;
+		$cmd+="xform -ws -t "+$pos[0]+" "+$pos[1]+" "+$pos[2]+" -ro "+$rot[0]+" "+$rot[1]+" "+$rot[2]+" "+$dest+";";
+		}
+	}
+delete flipGroup;
+eval ($cmd);
+select $sel;
+}
+
+global proc asGoToBuildPose (string $uiName)
+{
+int $ctrlButton;
+if ((`getModifiers`/4) %  2)
+	$ctrlButton=1;
+string $nameSpace=`optionMenu -q -v ($uiName+"OptionMenu")`;
+if ($nameSpace==":")
+	$nameSpace="";
+string $setAttrCmd=`getAttr ($nameSpace+"buildPose.udAttr")`;
+string $tempString[],$buffer[];
+string $cmd;
+tokenize $setAttrCmd ";" $tempString;
+for ($i=0;$i<size($tempString);$i++)
+	{
+	$cmd=$tempString[$i];
+	if ($nameSpace!="")
+		{
+		tokenize $cmd $buffer;
+		$cmd=$buffer[0]+" "+$nameSpace+$buffer[1]+" "+$buffer[2];
+		} 
+	if ($ctrlButton)
+		if (`gmatch $cmd "*All.*"`)
+			continue;
+	if (catchQuiet (`eval ($cmd)`)) warning ("Failed: "+$cmd+"\n");
+	}
+}
+
+global proc asPoserupdateGridBlock (string $uiName, int $childNum)
+{
+string $existingPopUpMenus[]=`control -q -pma ($uiName+"IconTextButton"+$childNum)`;
+for ($pop in $existingPopUpMenus)
+	deleteUI $pop;
+
+string $button=$uiName+"IconTextButton"+$childNum;
+string $selectCmd="asPoseObjects "+$uiName+" "+$button+"\" select -add\"";
+string $keyCmd="asPoseObjects "+$uiName+" "+$button+" setKeyframe";
+string $linearKeyCmd="asPoseObjects "+$uiName+" "+$button+" \"setKeyframe -itt linear -ott linear\"";
+
+popupMenu -p ($uiName+"IconTextButton"+$childNum);
+	menuItem -l "Select" -c $selectCmd;
+	menuItem -l "Key" -c $keyCmd;
+	menuItem -l "LinearKey" -c $linearKeyCmd;
+	if ($uiName=="asPoserDefault")
+		{
+		menuItem -d 1;
+		menuItem -l "Label Button" -c ("asPoserRename "+$childNum);
+		menuItem -l "Remove Button" -c ("deleteUI "+$uiName+"ColumnLayout"+$childNum);
+		}
+}
+
+global proc string asPoserResolveNameSpace (string $uiName, string $obj)
+{
+string $nameSpace=`optionMenu -q -v ($uiName+"OptionMenu")`;
+if ($nameSpace==":")
+	$nameSpace="";
+return ($nameSpace+$obj);
+}
+
+global proc string asSelectorScriptLocation ()
+{
+string $whatIs=`whatIs asSelectorScriptLocation`;
+string $fullPath=`substring $whatIs 25 999`;
+string $buffer[];
+int $numTok=`tokenize $fullPath "/" $buffer`;
+if ($numTok<2)
+	if (`about -win`)
+		$numTok=`tokenize $fullPath "\\" $buffer`;
+int $numLetters=size($fullPath);
+int $numLettersLastFolder=size($buffer[$numTok-1]);
+string $scriptLocation=`substring $fullPath 1 ($numLetters-$numLettersLastFolder)`;
+return $scriptLocation;
+}

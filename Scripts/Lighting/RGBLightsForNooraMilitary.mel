@@ -1,0 +1,117 @@
+global proc RGBLightsForNooraMilitary()
+{
+	
+	string $getNS[] = `ls -rf`;
+	string $buffer[];
+	$numTokens = `tokenize $getNS[0] " " $buffer`;
+	string $buffer1[];
+	$numTokens = `tokenize $buffer[0] "RN" $buffer1`;
+	string $all = $buffer1[0]+"Noora"; 
+	
+	shadingNode -asShader surfaceShader -n custRShader;
+	setAttr "custRShader.outColor" -type double3 1 0 0 ;
+	select -r ($all+":Face5");
+	hyperShade -assign custRShader ;
+	select -r (($all+":NooraMilitrey")+"|"+($all+":polySurface8"));	
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary4") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary16") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Noora12") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Noora13") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Noora14") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Noora11") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary35") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary30") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary34") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary33") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary32") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary29");
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary31");
+	hyperShade -assign custRShader ;
+	select -r ($all+":Nooramiliteary28");
+	hyperShade -assign custRShader ;
+
+
+	shadingNode -asShader surfaceShader -n custGShader;
+	setAttr "custGShader.outColor" -type double3 0 1 0 ;
+	select -r (($all+":NooraMilitrey")+"|"+($all+":Hand"));
+	hyperShade -assign custGShader ;
+	select -r ($all+":Nooramiliteary_suit");
+	hyperShade -assign custGShader ;
+	select -r ($all+":Nooramiliteary5") ;
+	hyperShade -assign custGShader;
+	select -r ($all+":Nooramiliteary21") ;
+	hyperShade -assign custGShader ;
+	select -r ($all+":Belt") ;
+	hyperShade -assign custGShader ;
+	select -r ($all+":Outter_eyeball1") ;
+	hyperShade -assign custGShader ;
+	select -r ($all+":Outter_eyeball") ;
+	hyperShade -assign custGShader ;
+
+
+	shadingNode -asShader surfaceShader -n custBShader;
+	setAttr "custBShader.outColor" -type double3 0 0 1 ;
+	select -r ($all+":polySurface167");
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary6") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary25") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary7") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary8") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary3") ; 
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary23") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary11") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary10") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary24") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary9") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary12") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary13") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Nooramiliteary14") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":polySurface1") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Noora2") ;
+	hyperShade -assign custBShader ;
+	select -cl;	
+
+	createRenderLayer -name ("Noora_Mil_RGB_Layer1");
+	editRenderLayerMembers Noora_Mil_RGB_Layer1 ($all+":Face5") (($all+":NooraMilitrey")+"|"+($all+":Hand")) ($all+":polySurface167");
+
+	createRenderLayer -name ("Noora_Mil_RGB_Layer2");
+	editRenderLayerMembers Noora_Mil_RGB_Layer2 ($all+":Nooramiliteary_suit") (($all+":NooraMilitrey")+"|"+($all+":polySurface8"));
+
+	createRenderLayer -name ("Noora_Mil_RGB_Layer3");
+	editRenderLayerMembers Noora_Mil_RGB_Layer3 ($all+":Nooramiliteary4") ($all+":Nooramiliteary16") ($all+":Nooramiliteary5") ($all+":Nooramiliteary21") ($all+":Nooramiliteary6") ($all+":Nooramiliteary25") ($all+":Nooramiliteary7") ($all+":Nooramiliteary8") ($all+":Nooramiliteary3"); 
+	
+	createRenderLayer -name ("Noora_Mil_RGB_Layer4");
+	editRenderLayerMembers Noora_Mil_RGB_Layer4 ($all+":Noora12") ($all+":Noora13") ($all+":Noora14") ($all+":Noora11") ($all+":Belt") ($all+":Nooramiliteary23") ($all+":Nooramiliteary11")  ($all+":Nooramiliteary10") ($all+":Nooramiliteary24") ($all+":Nooramiliteary9") ($all+":Nooramiliteary12") ($all+":Nooramiliteary13")  ($all+":Nooramiliteary14"); 
+	
+	createRenderLayer -name ("Noora_Mil_RGB_Layer5");
+	editRenderLayerMembers Noora_Mil_RGB_Layer5 ($all+":Nooramiliteary35") ($all+":Nooramiliteary28") ($all+":Nooramiliteary29") ($all+":Nooramiliteary30") ($all+":Nooramiliteary31") ($all+":Nooramiliteary32") ($all+":Nooramiliteary33") ($all+":Nooramiliteary34") ($all+":Outter_eyeball1") ($all+":Outter_eyeball") ($all+":polySurface1") ($all+":Noora2"); 
+}
+RGBLightsForNooraMilitary;
+

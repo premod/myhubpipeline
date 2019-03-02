@@ -1,0 +1,239 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+/*
+ * FUNCTION NAME	lG_managerWin
+ * DESCRIPTION		Creates UI for The Manager 
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_managerWin()
+{
+	global int $g_lG_linkManagerToLightGirl;
+	
+	global string $g_lG_allLights[];
+	string $lGSlaveLightList[];
+	
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		$g_lG_allLights[$i] = lG_getShape($g_lG_allLights[$i]);
+	}
+
+	// create UI layout - vars for global sizing
+	int $uiLabelWidth = 120;
+	int $uiInputWidth = 80;
+	int $uiWidth = $uiLabelWidth + $uiInputWidth;
+
+	// delete UI function on close/open
+	if ( `window -exists lG_managerWin` == true )
+		deleteUI lG_managerWin;
+	window 
+		-title "[lG] Manager"
+		-iconName "manager"
+		-maximizeButton false 
+		-minimizeButton true
+		-sizeable true
+		-resizeToFitChildren false
+		-menuBar true
+		-menuBarVisible true 
+		-wh 235 358
+		lG_managerWin;
+	
+	// LOAD MENU -->
+	////////////////
+	menu
+		-label "Load"
+		-tearOff true;
+	menuItem
+    		-label "Ambient Lights"
+		-command ("lG_lightGirlLoadLights 3 lG_managerWin \"\" \"\" 0")
+		-ann "Load ambient lights";
+	menuItem
+    		-label "Directional Lights"
+		-command ("lG_lightGirlLoadLights 4 lG_managerWin \"\" \"\" 0")
+		-ann "Load directional lights";
+	menuItem
+    		-label "Point Lights"
+		-command ("lG_lightGirlLoadLights 1 lG_managerWin \"\" \"\" 0")
+		-ann "Load point lights";
+	menuItem
+    		-label "Spot Lights"
+		-command ("lG_lightGirlLoadLights 0 lG_managerWin \"\" \"\" 0")
+		-ann "Load spot lights";
+	menuItem
+    		-label "Area Lights"
+		-command ("lG_lightGirlLoadLights 2 lG_managerWin \"\" \"\" 0")
+		-ann "Load area lights";
+	menuItem
+    		-label "Volume Lights"
+		-command ("lG_lightGirlLoadLights 9 lG_managerWin \"\" \"\" 0")
+		-ann "Load volume lights";
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "All Lights"
+		-command ("lG_lightGirlLoadLights 6 lG_managerWin \"\" \"\" 0")
+		-ann "Load all lights";
+	menuItem
+    		-label "Selected Lights"
+		-command ("lG_lightGirlLoadLights 5 lG_managerWin \"\" \"\" 0")
+		-ann "Load selected lights";
+	menuItem
+    		-label "Visible Lights"
+		-command ("lG_lightGirlLoadLights 7 lG_managerWin \"\" \"\" 0")
+		-ann "Load visible lights";
+	menuItem
+		-divider 1;
+		
+	menuItem
+    		-label "By Attribute"
+		-command ("lG_customAttributeWin \"lG_loadLightsAttributeFilter\" \"Load\"")
+		-ann "Load lights that meet a given attribute criteria";
+		
+	menuItem
+		-divider 1;
+	menuItem
+		-sm 1
+    		-label "Lights Casting Shadows"
+		-ann "Load shadow casting lights (by shadow type)";
+		menuItem
+			-label "Depth Map Shadows"
+			-command ("lG_lightGirlLoadLights 8 lG_managerWin \"DM\" \"\" 0")
+			-ann "Load lights casting depth map shadows";
+		menuItem
+			-label "Ray Trace Shadows"
+			-command ("lG_lightGirlLoadLights 8 lG_managerWin \"RT\" \"\" 0")
+			-ann "Load lights casting ray trace shadows";
+		menuItem
+			-label "All Shadow Types"
+			-command ("lG_lightGirlLoadLights 8 lG_managerWin \"both\" \"\" 0")
+			-ann "Load lights casting both depth map and ray trace shadows";
+		setParent -m ..;
+	
+	menuItem
+    		-label "Lights Not Casting Shadows"
+		-ann "Load non-shadow casting lights"
+		-command ("lG_lightGirlLoadLights 8 lG_managerWin \"none\" \"\" 0");
+	
+	// light sets...
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Light Sets"
+		-pmc "lG_populateSetsMenu lG_loadLightSet lMenuLoadLightSets_lG_managerWin lG_managerWin"
+		-ann "Load a specific light set"
+		-sm 1
+		lMenuLoadLightSets_lG_managerWin;
+		setParent -m ..;
+		
+	//menu
+	//	-label "View"
+	//	-tearOff false;
+	//menuItem
+	//	-cb $g_lG_linkManagerToLightGirl
+    	//	-label "Link to lightGirl"
+	//	-en 1
+	//	-command ("$g_lG_linkManagerToLightGirl = !$g_lG_linkManagerToLightGirl;")
+	//	-ann "";
+		
+	// begin actual form content
+	string $lForm = `formLayout -numberOfDivisions 100`;
+	string $lColumn;
+	string $lScroll;
+
+		textScrollList 
+			-numberOfRows 20
+			-allowMultiSelection true
+			-showIndexedItem 4
+			-fn "plainLabelFont"
+			-sc lG_ManagerSelector
+			-width 190
+			lGTextScrollListAll;
+
+		for($i=0;$i<size($g_lG_allLights);$i++)
+		{
+			//$lGSlaveLightList = `listRelatives -parent $g_lG_allLights[$i]`;
+			textScrollList -e 
+				//-append $lGSlaveLightList[0]
+				-append $g_lG_allLights[$i]
+				lGTextScrollListAll;
+		}
+		setParent ..;
+
+	// buttonz...
+	string $lRefresh = `button
+		-label "Update"
+		-command "lG_ManagerRefreshList"`;
+
+	// set form layouts
+	formLayout -edit
+		-attachForm lGTextScrollListAll "top" 2
+		-attachForm lGTextScrollListAll "left" 2
+		-attachControl lGTextScrollListAll "bottom" 2 $lRefresh
+		-attachForm lGTextScrollListAll "right" 2
+
+		-attachNone $lRefresh "top"
+		-attachPosition $lRefresh "left" 2 0
+		-attachForm $lRefresh "bottom" 2
+		-attachForm $lRefresh "right" 2
+
+		$lForm;
+
+	showWindow lG_managerWin;
+}
+
+/*
+ * FUNCTION NAME	lGManagerSelector
+ * DESCRIPTION		Selects the active manager light 
+ * CALLED BY		lG_lG_managerWin
+ * INPUT	None
+ * RETURN	None
+ */
+
+global proc lG_ManagerSelector()
+{	
+	select `textScrollList -q -si lGTextScrollListAll`;
+}
+
+/*
+ * FUNCTION NAME	lG_ManagerRefreshList
+ * DESCRIPTION		Updates the list
+ * CALLED BY		lG_lG_managerWin
+ * INPUT	None
+ * RETURN	None
+ */
+
+global proc lG_ManagerRefreshList()
+{	
+	global string $g_lG_allLights[];
+	
+	textScrollList -e -ra lGTextScrollListAll;
+	
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		//$lGSlaveLightList = `listRelatives -parent $g_lG_allLights[$i]`;
+		textScrollList -e 
+			//-append $lGSlaveLightList[0]
+			-append $g_lG_allLights[$i]
+			lGTextScrollListAll;
+	}
+}

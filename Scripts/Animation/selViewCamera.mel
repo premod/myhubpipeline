@@ -1,0 +1,33 @@
+global proc selViewCamera()
+{
+  string $camera;
+
+  // First get the panel that currently has focus
+  string $panel = `getPanel -wf`;
+
+  // Compare the panel's type to confirm it is a "modelPanel"
+  if ( "modelPanel" == `getPanel -to $panel` )
+  {
+    // Get the name of the camera using the ‘modelEditor’ command
+    $camera = `modelEditor -q -camera $panel`;
+  }
+// creates camera from the selected view i.e current focus
+duplicate -st $camera;
+//select -add $camera;
+
+$strAll=`ls`;
+$szLast=`size($strAll)`;
+string $strLast=$strAll[$szLast-2];
+pickWalk -d up;
+int $mods = `getModifiers`;
+$strAll=`ls`;
+$szLast=`size($strAll)`;
+string $strLast=$strAll[$szLast-2];
+select $strLast;
+ShowSelectedObjects;
+if ($mods == 8)
+	{
+		FrameSelected;
+	}
+}
+

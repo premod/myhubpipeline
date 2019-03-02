@@ -1,0 +1,123 @@
+global proc lightingTools()
+{
+	if((`window -exists texbreakwin` ) == true) {deleteUI texbreakwin;}
+	window -wh 306 284 -t "Lighting Tools" texbreakwin;
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5`;
+	formLayout -edit
+	    -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+
+	string $child1 = `rowColumnLayout -rs 1 10 -numberOfRows 2 -rs 1 10 -rs 2 10`;
+	button -bgc 0.5 0.7 0.7 -l "Break Selected Textures " -c "breakSelected";
+	button -bgc 0.5 0.7 0.7 -l "Break Selected Incandence" -c "selectedObjBreakIncandence";
+      	button -bgc 0.5 0.7 0.7 -l "Break All Textures " 	-c "breakTexConnections";
+	button -bgc 0.5 0.7 0.7 -l "Break All Incandence" 	-c "breakIncandence";
+
+	setParent ..;
+
+	string $child2 = `rowColumnLayout -numberOfRows 2 -rs 1 10 -rs 2 10`;
+	button -l "RGB Materials" 				-c "createMaterials"; 
+      button -bgc 1 0 0 -l "    &RED      "  		-c redMatt;
+	button -bgc 0.4 0.4 0.4  -l "  Black Hole  " 	-c fixBlackHole;
+	button -bgc 0 1 0 -l "    &GREEN    " 		-c greenMatt;
+	button -bgc 0.8 0.8 0.8 -l  " Lambert " 		-c custLambert;
+	button -bgc 0 0.4 1 -l "    &BLUE     " 		-c "blueMatt";
+	setParent ..;
+
+	string $child3 = `rowColumnLayout -rs 1 10 -rs 2 10 -rs 3 10 -rs 4 10 -rs 5 10 -numberOfRows 5 `;
+	
+	button -l "Imoprt Reference" 		-c "importFromRef"; 
+	button -l "Bake And Export Camera" 	-c "bakeCameraAnimation"; 
+	button -l "Char Render Passes" 	-c "createCharRenderLayers"; 
+	button -l "Set Render Passes"  	-c "setRenderPasses";
+	button -l "File Cleaner" 		-c "assetCleanerLit"; 	
+	button -l "Sets Layout" 		-c "nnSetsLayout";	
+
+	tabLayout -edit
+      -tabLabel $child1 " RGB Lights " -tabLabel $child2 "  RGB Matt  " -tabLabel $child3 " Render Layers & Others " 
+
+      $tabs;
+	showWindow;
+}
+
+global proc createMaterials()
+{
+	catch(`delete RED`);
+	shadingNode -asShader lambert -n RED;
+	setAttr "RED.outColor" -type double3 1 0 0 ;
+	setAttr "RED.outColor" -type double3 1 0 0 ;
+	setAttr "RED.color" -type double3 1 0 0 ;
+	setAttr "RED.ambientColor" -type double3 1 0 0 ;
+	setAttr "RED.incandescence" -type double3 1 0 0 ;
+	setAttr "RED.diffuse" 0;
+	select -cl;
+
+	catch(`delete GREEN`);
+	shadingNode -asShader lambert -n GREEN;
+	setAttr "GREEN.outColor" -type double3 0 1 0 ;
+	setAttr "GREEN.color" -type double3 0 1 0 ;
+	setAttr "GREEN.ambientColor" -type double3 0 1 0 ;
+	setAttr "GREEN.incandescence" -type double3 0 1 0 ;
+	setAttr "GREEN.diffuse" 0;
+	select -cl;
+
+	catch(`delete BLUE`);
+	shadingNode -asShader lambert -n BLUE;
+	setAttr "BLUE.outColor" -type double3 0 0 1 ;
+	setAttr "BLUE.color" -type double3 0 0 1 ;
+	setAttr "BLUE.ambientColor" -type double3 0 0 1 ;
+	setAttr "BLUE.incandescence" -type double3 0 0 1 ;
+	setAttr "BLUE.diffuse" 0;
+	select -cl;
+
+	catch(`delete BHOLE`);
+	shadingNode -asShader lambert -n BHOLE;
+	setAttr "BHOLE.outColor" -type double3 0 0 0 ;
+	setAttr "BHOLE.color" -type double3 0 0 0 ;
+	setAttr "BHOLE.ambientColor" -type double3 0 0 0 ;
+	setAttr "BHOLE.incandescence" -type double3 0 0 0 ;
+	setAttr "BHOLE.diffuse" 0;
+	setAttr "BHOLE.translucenceDepth" 0;
+	setAttr "BHOLE.translucenceFocus" 0;
+	setAttr BHOLE.matteOpacityMode 0;
+	select -cl;
+	catch(`delete custLambert`);
+	shadingNode -asShader lambert -n custLambert;
+	print "RGB Created";
+	select -cl;
+}
+
+global proc redMatt()
+{
+	string $sel[] = `ls -sl`;
+	hyperShade -assign RED;
+}
+
+global proc greenMatt()
+{
+	string $sel[] = `ls -sl`;
+	hyperShade -assign GREEN;
+}
+
+global proc blueMatt()
+{
+	string $sel[] = `ls -sl`;
+	hyperShade -assign BLUE;
+}
+
+global proc fixBlackHole()
+{
+	string $sel[] = `ls -sl`;
+	hyperShade -assign BHOLE;
+}
+
+global proc custLambert()
+{
+	string $sel[] = `ls -sl`;
+	hyperShade -assign custLambert;
+}
+

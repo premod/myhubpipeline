@@ -1,0 +1,978 @@
+//Edited by Premod P Sankar..//
+//Author: Premod P Sankar 
+//website:premod.blogspot.com
+//E-mail: premodmultimedia@gmail.com 
+//CopyRight premod @ studio56.
+
+
+
+global proc IKFKMatchStudio56()
+
+{
+    
+if((`window -ex ikfkmatch`)==true)
+deleteUI ikfkmatch;
+
+string $window =`window -s 0 -h 300 -w 150 -t "IK FK Match Tool for Studio56" ikfkmatch`;
+columnLayout -adjustableColumn false;
+rowColumnLayout;
+    text -bgc .904 .904 0 -height 20 -w 220 -align "center" -font "boldLabelFont" -label "studio56 IKFK matching tool";
+    textFieldGrp -l "Name Space: " t1;
+    button -label "Adding Match feature To Rig" -h 50 -command "Add" addmatch;
+    checkBoxGrp
+        -numberOfCheckBoxes 1
+        -label "   Auto Set Key   "
+        -v1 0 autocheck;
+rowColumnLayout;
+        separator -st "double";
+		text -bgc .856 .788 1 -height 20 -w 220  -align "center" -font "boldLabelFont" -label "HAND";
+		separator -st "double";
+		
+
+string $rl = `rowColumnLayout -nc 2`;
+frameLayout -borderStyle "etchedIn"  -label "Right Hand" -bgc .774 .111 .111;
+    rowColumnLayout -nc 2 -bgc .774 .111 .111;
+
+    button -label "Right Hand >> IK" -command "RHtoIK" -bgc 1.0 0.656 0.557;
+    button -label "Right Hand >> FK" -command "RHtoFK" -bgc 1.0 0.656 0.557;
+    button -l "Reset FK" -c "RHresetFK" -bgc 1.0 0.656 0.557;
+    button -l "Reset IK" -c "RHresetIK" -bgc 1.0 0.656 0.557;
+
+setParent $rl;
+
+frameLayout -borderStyle "etchedIn" -label "Left Hand" -bgc 0 0 1 ;
+
+    rowColumnLayout -nc 2 -bgc .170 .313 .829 ;
+
+    button -label "Left Hand >>> IK" -command "LHtoIK" -bgc 0.557 0.736 1.0;
+    button -label "Left Hand >>> FK" -command "LHtoFK" -bgc 0.557 0.736 1.0;;
+    button -l "Reset FK" -c "LHresetFK" -bgc 0.557 0.736 1.0;;
+    button -l "Reset IK" -c "LHresetIK" -bgc 0.557 0.736 1.0;;
+    
+
+setParent.. ;
+setParent.. ;
+setParent.. ;
+
+
+       separator -st "doubleDash";
+		text -bgc .856 .788 1 -height 20 -w 220 -align "center" -font "boldLabelFont" -label "LEG";
+		separator -st "doubleDash";
+
+    string $rll = `rowLayout -nc 2`;
+
+
+ frameLayout -borderStyle "etchedIn"  -label "Right Leg" -bgc .774 .111 .111 ;
+    rowColumnLayout -nc 2 -bgc .774 .111 .111;
+   
+     
+    button -label "Right Foot >> IK" -command "RFtoIK" -bgc 1.0 0.656 0.557;
+    button -label "Right Foot >> FK" -command "RFtoFK" -bgc 1.0 0.656 0.557;
+    button -l "Reset FK" -c "RFresetFK" -bgc 1.0 0.656 0.557;
+    button -l "Reset IK" -c "RFresetIK" -bgc 1.0 0.656 0.557;
+
+ 
+setParent $rll;
+
+
+    frameLayout -borderStyle "etchedIn" -label "Left Leg"  -bgc 0 0 1  ;
+    
+    rowColumnLayout -nc 2 -bgc 0 0 1 ;
+   
+    button -label "Left Foot >>> IK" -command "LFtoIK" -bgc 0.557 0.736 1.0;;
+    button -label "Left Foot >>> FK" -command "LFtoFK" -bgc 0.557 0.736 1.0;;
+    button -l "Reset FK" -c "LFresetFK" -bgc 0.557 0.736 1.0;;
+    button -l "Reset IK" -c "LHresetIK" -bgc 0.557 0.736 1.0;;
+
+   
+
+showWindow ikfkmatch;
+
+
+
+    string $ex = ("*" +  "AFM_R");
+    if (`objExists  $ex`){
+    button -edit -en 0 -l "you have add Match feature already" addmatch;
+    };
+    
+        string $ex = ("*" + ":" +  "AFM_R");
+    if (`objExists  $ex`){
+    button -edit -en 0 -l "you have add Match feature already" addmatch;
+    };
+
+
+}
+
+
+global proc LFtoIK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+
+$fkt = `xform -q -ws -t ($ns + "IM_L_F")`;
+xform -ws -t $fkt[0] $fkt[1] $fkt[2] ($ns + "IKLeg_L") ;
+$fkr = `xform -q -ws -ro ($ns + "IM_L_F")`;
+xform -ws -ro $fkr[0] $fkr[1] $fkr[2] ($ns + "IKLeg_L") ;
+$kt = `xform -q -ws -t ($ns + "FKXKnee_L")`;
+xform -ws -t $kt[0] $kt[1] $kt[2] ($ns + "PoleLeg_L") ;
+setAttr ($ns + "IKLeg_L.rollAngle") 0;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 0 FKIKLeg_L.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 10 FKIKLeg_L.FKIKBlend;  
+
+setKeyframe -breakdown 0 -t $menhaye1 "FKHip_L" "FKKnee_L" "FKAnkle_L";
+setKeyframe -breakdown 0 -t $currentFrame  "IKLeg_L" "PoleLeg_L";  
+
+ 
+}
+
+setAttr ($ns + "FKIKLeg_L.FKIKBlend") 10;
+select ($ns + "IKLeg_L");
+}
+
+
+ global proc LFtoFK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+$ikt3 = `xform -q -ws -t ($ns + "HFM_L")`;
+xform -ws -t $ikt3[0] $ikt3[1] $ikt3[2] ($ns + "FKHip_L") ;
+$r = `xform -q -ws -ro ($ns + "HFM_L")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKHip_L") ;
+
+$ikt2 = `xform -q -ws -t ($ns + "KFM_L")`;
+xform -ws -t $ikt2[0] $ikt2[1] $ikt2[2] ($ns + "FKKnee_L") ;
+$r = `xform -q -ws -ro ($ns + "KFM_L")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKKnee_L") ;
+
+$ikt1 = `xform -q -ws -t ($ns + "AFM_L")`;
+xform -ws -t $ikt1[0] $ikt1[1] $ikt1[2] ($ns + "FKAnkle_L") ;
+$r = `xform -q -ws -ro ($ns + "AFM_L")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKAnkle_L") ;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 10 FKIKLeg_L.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 0 FKIKLeg_L.FKIKBlend;  
+
+setKeyframe -breakdown 0 -t $currentFrame "FKHip_L" "FKKnee_L" "FKAnkle_L";
+setKeyframe -breakdown 0 -t $menhaye1  "IKLeg_L" "PoleLeg_L"; 
+}
+
+
+
+setAttr ($ns + "FKIKLeg_L.FKIKBlend") 0;
+select -cl  ;
+}
+
+
+ global proc RFtoIK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+$fkt = `xform -q -ws -t ($ns + "IM_R_F")`;
+xform -ws -t $fkt[0] $fkt[1] $fkt[2] ($ns + "IKLeg_R") ;
+$fkr = `xform -q -ws -ro ($ns + "IM_R_F")`;
+xform -ws -ro $fkr[0] $fkr[1] $fkr[2] ($ns + "IKLeg_R") ;
+$kt = `xform -q -ws -t ($ns + "FKXKnee_R")`;
+xform -ws -t $kt[0] $kt[1] $kt[2] ($ns + "PoleLeg_R") ;
+
+setAttr ($ns + "IKLeg_R.rollAngle") 0;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 0 FKIKLeg_R.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 10 FKIKLeg_R.FKIKBlend; 
+
+setKeyframe -breakdown 0 -t $menhaye1 "FKHip_R" "FKKnee_R" "FKAnkle_R";
+setKeyframe -breakdown 0 -t $currentFrame  "IKLeg_R" "PoleLeg_R"; 
+}
+
+setAttr ($ns + "FKIKLeg_R.FKIKBlend") 10;
+select ($ns + "IKLeg_R");
+}
+
+
+global proc RFtoFK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+
+
+$ikt3 = `xform -q -ws -t ($ns + "HFM_R")`;
+xform -ws -t $ikt3[0] $ikt3[1] $ikt3[2] ($ns + "FKHip_R") ;
+$r = `xform -q -ws -ro ($ns + "HFM_R")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKHip_R") ;
+
+$ikt2 = `xform -q -ws -t ($ns + "KFM_R")`;
+xform -ws -t $ikt2[0] $ikt2[1] $ikt2[2] ($ns + "FKKnee_R") ;
+$r = `xform -q -ws -ro ($ns + "KFM_R")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKKnee_R") ;
+
+$ikt1 = `xform -q -ws -t ($ns + "AFM_R")`;
+xform -ws -t $ikt1[0] $ikt1[1] $ikt1[2] ($ns + "FKAnkle_R") ;
+$r = `xform -q -ws -ro ($ns + "AFM_R")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKAnkle_R") ;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 10 FKIKLeg_R.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 0 FKIKLeg_R.FKIKBlend; 
+
+setKeyframe -breakdown 0 -t $currentFrame "FKHip_R" "FKKnee_R" "FKAnkle_R";
+setKeyframe -breakdown 0 -t $menhaye1  "IKLeg_R" "PoleLeg_R";  
+}
+
+
+
+setAttr ($ns + "FKIKLeg_R.FKIKBlend") 0;
+select -cl  ;
+}
+
+ global proc LHtoIK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+
+$fkt = `xform -q -ws -t ($ns + "IM_L_H")`;
+xform -ws -t $fkt[0] $fkt[1] $fkt[2] ($ns + "IKArm_L") ;
+$fkr = `xform -q -ws -ro ($ns + "IM_L_H")`;
+xform -ws -ro $fkr[0] $fkr[1] $fkr[2] ($ns + "IKArm_L") ;
+$et = `xform -q -ws -t ($ns + "FKXElbow_L")`;
+xform -ws -t $et[0] $et[1] $et[2] ($ns + "PoleArm_L") ;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 0 FKIKArm_L.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 10 FKIKArm_L.FKIKBlend; 
+
+setKeyframe -breakdown 0 -t $menhaye1 "FKShoulder_L" "FKElbow_L" "FKWrist_L";
+setKeyframe -breakdown 0 -t $currentFrame  "IKArm_L" "PoleArm_L";    
+}
+
+setAttr ($ns + "FKIKArm_L.FKIKBlend") 10;
+select ($ns + "IKArm_L");
+}
+
+
+global proc LHtoFK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+
+$ikt3 = `xform -q -ws -t ($ns + "SFM_L_H")`;
+xform -ws -t $ikt3[0] $ikt3[1] $ikt3[2] ($ns + "FKShoulder_L") ;
+$r = `xform -q -ws -ro ($ns + "SFM_L_H")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKShoulder_L") ;
+
+$ikt2 = `xform -q -ws -t ($ns + "EFM_L_H")`;
+xform -ws -t $ikt2[0] $ikt2[1] $ikt2[2] ($ns + "FKElbow_L") ;
+$r = `xform -q -ws -ro ($ns + "EFM_L_H")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKElbow_L") ;
+
+$ikt1 = `xform -q -ws -t ($ns + "FM_L_H")`;
+xform -ws -t $ikt1[0] $ikt1[1] $ikt1[2] ($ns + "FKWrist_L") ;
+$r = `xform -q -ws -ro ($ns + "FM_L_H")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKWrist_L") ;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+ float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 10 FKIKArm_L.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 0 FKIKArm_L.FKIKBlend; 
+
+setKeyframe -breakdown 0 -t $currentFrame "FKShoulder_L" "FKElbow_L" "FKWrist_L";
+setKeyframe -breakdown 0 -t $menhaye1  "IKArm_L" "PoleArm_L"; 
+}
+
+
+
+setAttr ($ns + "FKIKArm_L.FKIKBlend") 0;
+select -cl  ;
+}
+
+
+ global proc RHtoIK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+
+$fkt = `xform -q -ws -t ($ns + "IM_R_H")`;
+xform -ws -t $fkt[0] $fkt[1] $fkt[2] ($ns + "IKArm_R") ;
+$fkr = `xform -q -ws -ro ($ns + "IM_R_H")`;
+xform -ws -ro $fkr[0] $fkr[1] $fkr[2] ($ns + "IKArm_R") ;
+$et = `xform -q -ws -t ($ns + "FKXElbow_R")`;
+xform -ws -t $et[0] $et[1] $et[2] ($ns + "PoleArm_R") ;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 0 FKIKArm_R.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 10 FKIKArm_R.FKIKBlend;
+ 
+setKeyframe -breakdown 0 -t $menhaye1 "FKShoulder_R" "FKElbow_R" "FKWrist_R";
+setKeyframe -breakdown 0 -t $currentFrame  "IKArm_R" "PoleArm_R";  
+}
+
+setAttr ($ns + "FKIKArm_R.FKIKBlend") 10;
+select ($ns +"IKArm_R");
+}
+
+ global proc RHtoFK()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+
+$ikt3 = `xform -q -ws -t ($ns + "SFM_R_H")`;
+xform -ws -t $ikt3[0] $ikt3[1] $ikt3[2] ($ns + "FKShoulder_R") ;
+$r = `xform -q -ws -ro ($ns + "SFM_R_H")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKShoulder_R") ;
+
+$ikt2 = `xform -q -ws -t ($ns + "EFM_R_H")`;
+xform -ws -t $ikt2[0] $ikt2[1] $ikt2[2] ($ns + "FKElbow_R") ;
+$r = `xform -q -ws -ro ($ns + "EFM_R_H")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKElbow_R") ;
+
+$ikt1 = `xform -q -ws -t ($ns + "FM_R_H")`;
+xform -ws -t $ikt1[0] $ikt1[1] $ikt1[2] ($ns + "FKWrist_R") ;
+$r = `xform -q -ws -ro ($ns + "FM_R_H")`;
+xform -ws -ro $r[0] $r[1] $r[2] ($ns + "FKWrist_R") ;
+string $k = `checkBoxGrp -q -v1 autocheck`;
+if ($k == 1){
+ float $currentFrame = `currentTime -query`;
+float $menhaye1 = $currentFrame -1 ;
+setKeyframe -breakdown 0 -t $menhaye1 -v 10 FKIKArm_R.FKIKBlend;
+setKeyframe -breakdown 0 -t $currentFrame -v 0 FKIKArm_R.FKIKBlend; 
+
+setKeyframe -breakdown 0 -t $currentFrame "FKShoulder_R" "FKElbow_R" "FKWrist_R";
+setKeyframe -breakdown 0 -t $menhaye1  "IKArm_R" "PoleArm_R"; 
+}
+
+
+setAttr ($ns + "FKIKArm_R.FKIKBlend") 0;
+select -cl  ;
+}
+
+
+
+
+
+
+
+
+ global proc Add()
+{
+string $ns = `textFieldGrp -q -tx t1 `;
+
+select -r FKShoulder_L FKElbow_L FKWrist_L ;
+duplicate -rr;
+parent -w;
+select -r FKShoulder_L1|FKXShoulder_L ;
+select -add |FKElbow_L|FKXElbow_L ;
+select -add |FKWrist_L|FKXWrist_L ;
+doDelete;
+rename "FKShoulder_L1" "SFM_L_H";
+rename "|FKElbow_L" "EFM_L_H";
+rename "|FKWrist_L" "FM_L_H";
+select -r SFM_L_H ;
+select -tgl IKXShoulder_L ;
+parent;
+select -r EFM_L_H ;
+select -tgl IKXElbow_L ;
+parent;
+select -r FM_L_H ;
+select -tgl IKArm_L ;
+parent;
+
+setAttr -lock true -keyable false -channelBox false "FM_L_H.tx";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.ty";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.tz";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.rx";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.ry";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.rz";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.sx";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.sy";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.sz";
+setAttr -lock true -keyable false -channelBox false "FM_L_H.Global";
+
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.tx";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.ty";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.tz";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.rx";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.ry";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.rz";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.sx";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.sy";
+setAttr -lock true -keyable false -channelBox false "EFM_L_H.sz";
+
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.tx";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.ty";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.tz";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.rx";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.ry";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.rz";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.sx";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.sy";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.sz";
+setAttr -lock true -keyable false -channelBox false "SFM_L_H.Global";
+setAttr "FM_L_H.overrideEnabled" 1;
+setAttr "FM_L_H.overrideVisibility" 0;
+setAttr "EFM_L_H.overrideEnabled" 1;
+setAttr "EFM_L_H.overrideVisibility" 0;
+setAttr "SFM_L_H.overrideEnabled" 1;
+setAttr "SFM_L_H.overrideVisibility" 0;
+
+select -r IKArm_L ;
+duplicate -rr;
+parent -w;
+select -r IKArm_L1|IKXArmHandle_L ;
+doDelete;
+//select -r IKArm_L1|IKmessureConstrainToArm_L ;
+//doDelete;
+
+select -r IKArm_L1 ;
+select -tgl FKWrist_L ;
+parent;
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.tx";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.ty";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.tz";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.rx";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.ry";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.rz";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.follow";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.stretchy";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.antiPop";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.Lenght1";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.Lenght2";
+setAttr "IKArm_L1Shape.overrideVisibility" 0;
+
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.tx";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.ty";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.tz";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.rx";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.ry";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.rz";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.follow";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.stretchy";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.antiPop";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.Lenght1";
+setAttr -lock true -keyable false -channelBox false "IKArm_L1.Lenght2";
+setAttr "IKArm_L1Shape.overrideVisibility" 0;
+rename "IKArm_L1" "IM_L_H";
+select -r IM_L_H|FM_L_H ;
+doDelete;
+
+select -r FKShoulder_R FKElbow_R FKWrist_R ;
+duplicate -rr;
+parent -w;
+select -r FKShoulder_R1|FKXShoulder_R ;
+select -add |FKElbow_R|FKXElbow_R ;
+select -add |FKWrist_R|FKXWrist_R ;
+doDelete;
+rename "FKShoulder_R1" "SFM_R_H";
+rename "|FKElbow_R" "EFM_R_H";
+rename "|FKWrist_R" "FM_R_H";
+select -r SFM_R_H ;
+select -tgl IKXShoulder_R ;
+parent;
+select -r EFM_R_H ;
+select -tgl IKXElbow_R ;
+parent;
+select -r FM_R_H ;
+select -tgl IKArm_R ;
+parent;
+
+setAttr -lock true -keyable false -channelBox false "FM_R_H.tx";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.ty";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.tz";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.rx";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.ry";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.rz";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.sx";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.sy";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.sz";
+setAttr -lock true -keyable false -channelBox false "FM_R_H.Global";
+
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.tx";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.ty";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.tz";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.rx";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.ry";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.rz";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.sx";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.sy";
+setAttr -lock true -keyable false -channelBox false "EFM_R_H.sz";
+
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.tx";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.ty";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.tz";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.rx";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.ry";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.rz";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.sx";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.sy";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.sz";
+setAttr -lock true -keyable false -channelBox false "SFM_R_H.Global";
+setAttr "FM_R_H.overrideEnabled" 1;
+setAttr "FM_R_H.overrideVisibility" 0;
+setAttr "EFM_R_H.overrideEnabled" 1;
+setAttr "EFM_R_H.overrideVisibility" 0;
+setAttr "SFM_R_H.overrideEnabled" 1;
+setAttr "SFM_R_H.overrideVisibility" 0;
+
+select -r IKArm_R ;
+duplicate -rr;
+parent -w;
+select -r IKArm_R1|IKXArmHandle_R ;
+doDelete;
+select -r IKArm_R1|IKmessureConstrainToArm_R ;
+doDelete;
+
+select -r IKArm_R1 ;
+select -tgl FKWrist_R ;
+parent;
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.tx";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.ty";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.tz";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.rx";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.ry";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.rz";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.follow";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.stretchy";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.antiPop";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.Lenght1";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.Lenght2";
+setAttr "IKArm_R1Shape.overrideVisibility" 0;
+
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.tx";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.ty";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.tz";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.rx";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.ry";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.rz";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.follow";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.stretchy";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.antiPop";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.Lenght1";
+setAttr -lock true -keyable false -channelBox false "IKArm_R1.Lenght2";
+setAttr "IKArm_R1Shape.overrideVisibility" 0;
+rename "IKArm_R1" "IM_R_H";
+select -r IM_R_H|FM_R_H ;
+doDelete;
+
+select -r FKHip_L ;
+duplicate -rr;
+// Result: FKHip_L1 //
+parent -w;
+// Result: FKHip_L1 // 
+select -add FKHip_L1|FKXHip_L|FKOffsetKnee_L|FKExtraKnee_L|FKKnee_L ;
+select -add FKHip_L1|FKXHip_L|FKOffsetKnee_L|FKExtraKnee_L|FKKnee_L|FKXKnee_L|FKOffsetAnkle_L|FKExtraAnkle_L|FKAnkle_L ;
+parent -w;
+// Warning: line 0: Object, 'FKHip_L1', skipped. It is already a child of the parent, 'world'. // 
+// Result: |FKKnee_L |FKAnkle_L // 
+select -r FKHip_L1|FKXHip_L FKHip_L1|FKXHip_L|FKOffsetKnee_L ;
+select -r FKHip_L1|FKXHip_L|FKOffsetKnee_L ;
+select -r FKHip_L1|FKXHip_L FKHip_L1|FKXHip_L|FKOffsetKnee_L FKHip_L1|FKXHip_L|FKOffsetKnee_L|FKExtraKnee_L ;
+doDelete;
+select -r |FKKnee_L|FKXKnee_L |FKKnee_L|FKXKnee_L|FKOffsetAnkle_L |FKKnee_L|FKXKnee_L|FKOffsetAnkle_L|FKExtraAnkle_L ;
+doDelete;
+select -r |FKAnkle_L|FKXAnkle_L |FKAnkle_L|FKXAnkle_L|AlignIKToAnkle_L |FKAnkle_L|FKXAnkle_L|FKXHeel_L ;
+doDelete;
+select -r FKHip_L1 ;
+select -r FKHip_L1 ;
+rename "FKHip_L1" "HFM_L";
+// Result: HFM // 
+select -r |FKKnee_L ;
+rename "|FKKnee_L" "KFM_L";
+// Result: KFM // 
+select -r |FKAnkle_L ;
+rename "|FKAnkle_L" "AFM_L";
+// Result: AFM // 
+select -r HFM_L ;
+select -tgl IKXHip_L ;
+parent;
+// Result: HFM // 
+select -r KFM_L ;
+select -tgl IKXKnee_L ;
+parent;
+// Result: KFM // 
+select -r AFM_L ;
+group; xform -os -piv 0 0 0;
+select -tgl IKXAnkle_L ;
+parent;
+// Result: group1 // 
+rename "group1" "AFM_L_GRP";
+// Result: AFM_L_GRP // 
+
+
+
+
+select -r IKLeg_L ;
+duplicate -rr;
+// Result: IKLeg_L1 //
+parent -w;
+// Result: IKLeg_L1 // 
+select -r IKLeg_L1|IKFootIndexPivotLeg_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKLiftToeLegToe_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKLiftToeLegToe_L|IKXLegHandleToe_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L|IKExtraLegBall_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L|IKExtraLegBall_L|IKLegBall_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L|IKExtraLegBall_L|IKLegBall_L|IKFootPivotBallReverseLeg_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L|IKExtraLegBall_L|IKLegBall_L|IKFootPivotBallReverseLeg_L|IKXLegHandle_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L|IKExtraLegBall_L|IKLegBall_L|IKFootPivotBallReverseLeg_L|IKXLegHandle_L|IKXLegHandle_L_poleVectorConstraint1 IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L|IKExtraLegBall_L|IKLegBall_L|IKFootPivotBallReverseLeg_L|IKXLegHandleBall_L IKLeg_L1|IKFootIndexPivotLeg_L|IKFootPinkyPivotLeg_L|IKFootRollLeg_L|IKRollLegHeel_L|IKExtraLegHeel_L|IKLegHeel_L|IKRollLegToe_L|IKExtraLegToe_L|IKLegToe_L|IKRollLegBall_L|IKExtraLegBall_L|IKLegBall_L|IKFootPivotBallReverseLeg_L|IKmessureConstrainToLeg_L ;
+doDelete;
+select -r IKLeg_L1 ;
+rename "IKLeg_L1" "IM_L_F";
+select -r IM_L_F ;
+select -tgl FKAnkle_L ;
+parent;
+
+select -r HFM_L ;
+select -tgl KFM_L ;
+select -tgl AFM_L ;
+setAttr -lock true -keyable false -channelBox false "AFM_L.tx";
+setAttr -lock true -keyable false -channelBox false "HFM_L.tx";
+setAttr -lock true -keyable false -channelBox false "KFM_L.tx";
+setAttr -lock true -keyable false -channelBox false "AFM_L.ty";
+setAttr -lock true -keyable false -channelBox false "HFM_L.ty";
+setAttr -lock true -keyable false -channelBox false "KFM_L.ty";
+setAttr -lock true -keyable false -channelBox false "AFM_L.tz";
+setAttr -lock true -keyable false -channelBox false "HFM_L.tz";
+setAttr -lock true -keyable false -channelBox false "KFM_L.tz";
+setAttr -lock true -keyable false -channelBox false "AFM_L.rx";
+setAttr -lock true -keyable false -channelBox false "HFM_L.rx";
+setAttr -lock true -keyable false -channelBox false "KFM_L.rx";
+setAttr -lock true -keyable false -channelBox false "AFM_L.ry";
+setAttr -lock true -keyable false -channelBox false "HFM_L.ry";
+setAttr -lock true -keyable false -channelBox false "KFM_L.ry";
+setAttr -lock true -keyable false -channelBox false "AFM_L.rz";
+setAttr -lock true -keyable false -channelBox false "HFM_L.rz";
+setAttr -lock true -keyable false -channelBox false "KFM_L.rz";
+setAttr -lock true -keyable false -channelBox false "AFM_L.sx";
+setAttr -lock true -keyable false -channelBox false "HFM_L.sx";
+setAttr -lock true -keyable false -channelBox false "KFM_L.sx";
+setAttr -lock true -keyable false -channelBox false "AFM_L.sy";
+setAttr -lock true -keyable false -channelBox false "HFM_L.sy";
+setAttr -lock true -keyable false -channelBox false "KFM_L.sy";
+setAttr -lock true -keyable false -channelBox false "AFM_L.sz";
+setAttr -lock true -keyable false -channelBox false "HFM_L.sz";
+setAttr -lock true -keyable false -channelBox false "KFM_L.sz";
+setAttr "HFM_L.overrideEnabled" 1;
+setAttr "HFM_L.overrideVisibility" 0;
+setAttr "KFM_L.overrideEnabled" 1;
+setAttr "KFM_L.overrideVisibility" 0;
+setAttr "AFM_L.overrideEnabled" 1;
+setAttr "AFM_L.overrideVisibility" 0;
+setAttr -lock true -keyable false -channelBox false "IM_L_F.tx";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.ty";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.tz";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.rx";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.ry";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.rz";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.swivel";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.toe";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.roll";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.rollAngle";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.stretchy";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.antiPop";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.Lenght1";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.Lenght2";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.tx";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.ty";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.tz";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.rx";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.ry";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.rz";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.sx";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.sy";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.sz";
+setAttr -lock true -keyable false -channelBox false "AFM_L_GRP.v";
+
+select -r FKHip_R ;
+duplicate -rr;
+// Result: FKHip_R1 //
+parent -w;
+// Result: FKHip_R1 // 
+select -add FKHip_R1|FKXHip_R|FKOffsetKnee_R|FKExtraKnee_R|FKKnee_R ;
+select -add FKHip_R1|FKXHip_R|FKOffsetKnee_R|FKExtraKnee_R|FKKnee_R|FKXKnee_R|FKOffsetAnkle_R|FKExtraAnkle_R|FKAnkle_R ;
+parent -w;
+// Warning: line 0: Object, 'FKHip_R1', skipped. It is already a child of the parent, 'world'. // 
+// Result: |FKKnee_R |FKAnkle_R // 
+select -r FKHip_R1|FKXHip_R FKHip_R1|FKXHip_R|FKOffsetKnee_R ;
+select -r FKHip_R1|FKXHip_R|FKOffsetKnee_R ;
+select -r FKHip_R1|FKXHip_R FKHip_R1|FKXHip_R|FKOffsetKnee_R FKHip_R1|FKXHip_R|FKOffsetKnee_R|FKExtraKnee_R ;
+doDelete;
+select -r |FKKnee_R|FKXKnee_R |FKKnee_R|FKXKnee_R|FKOffsetAnkle_R |FKKnee_R|FKXKnee_R|FKOffsetAnkle_R|FKExtraAnkle_R ;
+doDelete;
+select -r |FKAnkle_R|FKXAnkle_R |FKAnkle_R|FKXAnkle_R|AlignIKToAnkle_R |FKAnkle_R|FKXAnkle_R|FKXHeel_R ;
+doDelete;
+select -r FKHip_R1 ;
+select -r FKHip_R1 ;
+rename "FKHip_R1" "HFM_R";
+// Result: HFM // 
+select -r |FKKnee_R ;
+rename "|FKKnee_R" "KFM_R";
+// Result: KFM // 
+select -r |FKAnkle_R ;
+rename "|FKAnkle_R" "AFM_R";
+// Result: AFM // 
+select -r HFM_R ;
+select -tgl IKXHip_R ;
+parent;
+// Result: HFM // 
+select -r KFM_R ;
+select -tgl IKXKnee_R ;
+parent;
+// Result: KFM // 
+select -r AFM_R ;
+group; xform -os -piv 0 0 0;
+select -tgl IKXAnkle_R ;
+parent;
+// Result: group1 // 
+rename "group1" "AFM_R_GRP";
+// Result: AFM_R_GRP // 
+
+
+
+
+select -r IKLeg_R ;
+duplicate -rr;
+// Result: IKLeg_R1 //
+parent -w;
+// Result: IKLeg_R1 // 
+select -r IKLeg_R1|IKFootIndexPivotLeg_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKLiftToeLegToe_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKLiftToeLegToe_R|IKXLegHandleToe_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R|IKExtraLegBall_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R|IKExtraLegBall_R|IKLegBall_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R|IKExtraLegBall_R|IKLegBall_R|IKFootPivotBallReverseLeg_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R|IKExtraLegBall_R|IKLegBall_R|IKFootPivotBallReverseLeg_R|IKXLegHandle_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R|IKExtraLegBall_R|IKLegBall_R|IKFootPivotBallReverseLeg_R|IKXLegHandle_R|IKXLegHandle_R_poleVectorConstraint1 IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R|IKExtraLegBall_R|IKLegBall_R|IKFootPivotBallReverseLeg_R|IKXLegHandleBall_R IKLeg_R1|IKFootIndexPivotLeg_R|IKFootPinkyPivotLeg_R|IKFootRollLeg_R|IKRollLegHeel_R|IKExtraLegHeel_R|IKLegHeel_R|IKRollLegToe_R|IKExtraLegToe_R|IKLegToe_R|IKRollLegBall_R|IKExtraLegBall_R|IKLegBall_R|IKFootPivotBallReverseLeg_R|IKmessureConstrainToLeg_R ;
+doDelete;
+select -r IKLeg_R1 ;
+rename "IKLeg_R1" "IM_R_F";
+select -r IM_R_F ;
+select -tgl FKAnkle_R ;
+parent;
+
+select -r HFM_R ;
+select -tgl KFM_R ;
+select -tgl AFM_R ;
+setAttr -lock true -keyable false -channelBox false "AFM_R.tx";
+setAttr -lock true -keyable false -channelBox false "HFM_R.tx";
+setAttr -lock true -keyable false -channelBox false "KFM_R.tx";
+setAttr -lock true -keyable false -channelBox false "AFM_R.ty";
+setAttr -lock true -keyable false -channelBox false "HFM_R.ty";
+setAttr -lock true -keyable false -channelBox false "KFM_R.ty";
+setAttr -lock true -keyable false -channelBox false "AFM_R.tz";
+setAttr -lock true -keyable false -channelBox false "HFM_R.tz";
+setAttr -lock true -keyable false -channelBox false "KFM_R.tz";
+setAttr -lock true -keyable false -channelBox false "AFM_R.rx";
+setAttr -lock true -keyable false -channelBox false "HFM_R.rx";
+setAttr -lock true -keyable false -channelBox false "KFM_R.rx";
+setAttr -lock true -keyable false -channelBox false "AFM_R.ry";
+setAttr -lock true -keyable false -channelBox false "HFM_R.ry";
+setAttr -lock true -keyable false -channelBox false "KFM_R.ry";
+setAttr -lock true -keyable false -channelBox false "AFM_R.rz";
+setAttr -lock true -keyable false -channelBox false "HFM_R.rz";
+setAttr -lock true -keyable false -channelBox false "KFM_R.rz";
+setAttr -lock true -keyable false -channelBox false "AFM_R.sx";
+setAttr -lock true -keyable false -channelBox false "HFM_R.sx";
+setAttr -lock true -keyable false -channelBox false "KFM_R.sx";
+setAttr -lock true -keyable false -channelBox false "AFM_R.sy";
+setAttr -lock true -keyable false -channelBox false "HFM_R.sy";
+setAttr -lock true -keyable false -channelBox false "KFM_R.sy";
+setAttr -lock true -keyable false -channelBox false "AFM_R.sz";
+setAttr -lock true -keyable false -channelBox false "HFM_R.sz";
+setAttr -lock true -keyable false -channelBox false "KFM_R.sz";
+setAttr "HFM_R.overrideEnabled" 1;
+setAttr "HFM_R.overrideVisibility" 0;
+setAttr "KFM_R.overrideEnabled" 1;
+setAttr "KFM_R.overrideVisibility" 0;
+setAttr "AFM_R.overrideEnabled" 1;
+setAttr "AFM_R.overrideVisibility" 0;
+setAttr -lock true -keyable false -channelBox false "IM_R_F.tx";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.ty";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.tz";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.rx";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.ry";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.rz";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.swivel";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.toe";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.roll";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.rollAngle";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.stretchy";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.antiPop";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.Lenght1";
+setAttr -lock true -keyable false -channelBox false "IM_R_F.Lenght2";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.tx";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.ty";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.tz";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.rx";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.ry";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.rz";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.sx";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.sy";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.sz";
+setAttr -lock true -keyable false -channelBox false "AFM_R_GRP.v";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.tx";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.ty";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.tz";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.rx";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.ry";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.rz";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.swivel";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.toe";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.roll";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.rollAngle";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.stretchy";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.antiPop";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.Lenght1";
+setAttr -lock true -keyable false -channelBox false "IM_L_F.Lenght2";
+setAttr "IM_L_F.overrideEnabled" 1;
+setAttr "IM_L_F.overrideVisibility" 0;
+
+setAttr "IM_R_F.overrideEnabled" 1;
+setAttr "IM_R_F.overrideVisibility" 0;
+    string $ex = ("*" +  "AFM_R");
+    if (`objExists  $ex`){
+    button -edit -en 0 -l "you have add Match feature already" addmatch;
+    };
+    
+        string $ex = ("*" + ":" +  "AFM_R");
+    if (`objExists  $ex`){
+    button -edit -en 0 -l "you have add Match feature already" addmatch;
+    };
+select -cl  ;
+
+
+}
+
+
+global proc RHresetFK()
+{
+    setAttr "FKWrist_R.rotateZ" 0;
+    setAttr "FKWrist_R.translateX" 0;
+    setAttr "FKShoulder_R.translateX" 0;
+    setAttr "FKElbow_R.translateX" 0;
+    setAttr "FKWrist_R.translateY" 0;
+    setAttr "FKShoulder_R.translateY" 0;
+    setAttr "FKElbow_R.translateY" 0;
+    setAttr "FKWrist_R.translateZ" 0;
+    setAttr "FKShoulder_R.translateZ" 0;
+    setAttr "FKElbow_R.translateZ" 0;
+    setAttr "FKWrist_R.rotateX" 0;
+    setAttr "FKShoulder_R.rotateX" 0;
+    setAttr "FKElbow_R.rotateX" 0;
+    setAttr "FKWrist_R.rotateY" 0;
+    setAttr "FKShoulder_R.rotateY" 0;
+    setAttr "FKElbow_R.rotateY" 0;
+    setAttr "FKShoulder_R.rotateZ" 0;
+    setAttr "FKElbow_R.rotateZ" 0;
+}
+
+global proc RHresetIK()
+{
+    setAttr "PoleArm_R.translateZ" 0;
+    setAttr "PoleArm_R.translateX" 0;
+    setAttr "IKArm_R.translateX" 0;
+    setAttr "PoleArm_R.translateY" 0;
+    setAttr "IKArm_R.translateY" 0;
+    setAttr "IKArm_R.translateZ" 0;
+    setAttr "IKArm_R.rotateX" 0;
+    setAttr "IKArm_R.rotateY" 0;
+    setAttr "IKArm_R.rotateZ" 0;
+}
+
+global proc LHresetFK()
+{
+    setAttr "FKWrist_L.rotateZ" 0;
+    setAttr "FKWrist_L.translateX" 0;
+    setAttr "FKShoulder_L.translateX" 0;
+    setAttr "FKElbow_L.translateX" 0;
+    setAttr "FKWrist_L.translateY" 0;    
+    setAttr "FKShoulder_L.translateY" 0;
+    setAttr "FKElbow_L.translateY" 0;
+    setAttr "FKWrist_L.translateZ" 0;
+    setAttr "FKShoulder_L.translateZ" 0;
+    setAttr "FKElbow_L.translateZ" 0;
+    setAttr "FKWrist_L.rotateX" 0;
+    setAttr "FKShoulder_L.rotateX" 0;
+    setAttr "FKElbow_L.rotateX" 0;
+    setAttr "FKWrist_L.rotateY" 0;
+    setAttr "FKShoulder_L.rotateY" 0;
+    setAttr "FKElbow_L.rotateY" 0;
+    setAttr "FKShoulder_L.rotateZ" 0;
+    setAttr "FKElbow_L.rotateZ" 0;
+
+}
+ global proc LHresetIK()
+{
+    setAttr "PoleArm_L.translateZ" 0;
+    setAttr "PoleArm_L.translateX" 0;
+    setAttr "IKArm_L.translateX" 0;
+    setAttr "PoleArm_L.translateY" 0;
+    setAttr "IKArm_L.translateY" 0;
+    setAttr "IKArm_L.translateZ" 0;
+    setAttr "IKArm_L.rotateX" 0;
+    setAttr "IKArm_L.rotateY" 0;
+    setAttr "IKArm_L.rotateZ" 0;
+
+}
+
+global proc LFresetFK()
+{
+    setAttr "FKAnkle_L.rotateZ" 0;
+    setAttr "FKAnkle_L.translateX" 0;
+    setAttr "FKHip_L.translateX" 0;    
+    setAttr "FKKnee_L.translateX" 0;
+    setAttr "FKAnkle_L.translateY" 0;
+    setAttr "FKHip_L.translateY" 0;
+    setAttr "FKKnee_L.translateY" 0;
+    setAttr "FKAnkle_L.translateZ" 0;
+    setAttr "FKHip_L.translateZ" 0;
+    setAttr "FKKnee_L.translateZ" 0;
+    setAttr "FKAnkle_L.rotateX" 0;
+    setAttr "FKHip_L.rotateX" 0;
+    setAttr "FKKnee_L.rotateX" 0;
+    setAttr "FKAnkle_L.rotateY" 0;
+    setAttr "FKHip_L.rotateY" 0;
+    setAttr "FKKnee_L.rotateY" 0;
+    setAttr "FKHip_L.rotateZ" 0;
+    setAttr "FKKnee_L.rotateZ" 0;
+
+}
+
+global proc LFresetIK()
+{
+    setAttr "PoleLeg_L.translateZ" 0;
+    setAttr "PoleLeg_L.translateX" 0;
+    setAttr "IKLeg_L.translateX" 0;
+    setAttr "PoleLeg_L.translateY" 0;
+    setAttr "IKLeg_L.translateY" 0;
+    setAttr "IKLeg_L.translateZ" 0;
+    setAttr "IKLeg_L.roatateX" 0;
+    setAttr "IKLeg_L.rotateY" 0;
+    setAttr "IKLeg_L.rotateZ" 0;
+
+}
+global proc RFresetIK()
+{
+    setAttr "PoleLeg_R.translateZ" 0;
+    setAttr "PoleLeg_R.translateX" 0;
+    setAttr "IKLeg_R.translateX" 0;
+    setAttr "PoleLeg_R.translateY" 0;
+    setAttr "IKLeg_R.translateY" 0;
+    setAttr "IKLeg_R.translateZ" 0;
+    setAttr "IKLeg_R.roatateX" 0;
+    setAttr "IKLeg_R.rotateY" 0;
+    setAttr "IKLeg_R.rotateZ" 0;
+
+}
+ global proc RFresetFK()
+{
+    setAttr "FKAnkle_R.rotateZ" 0;
+    setAttr "FKAnkle_R.translateX" 0;
+    setAttr "FKHip_R.translateX" 0;
+    setAttr "FKKnee_R.translateX" 0;
+    setAttr "FKAnkle_R.translateY" 0;
+    setAttr "FKHip_R.translateY" 0;
+    setAttr "FKKnee_R.translateY" 0;
+    setAttr "FKAnkle_R.translateZ" 0;
+    setAttr "FKHip_R.translateZ" 0;
+    setAttr "FKKnee_R.translateZ" 0;
+    setAttr "FKAnkle_R.rotateX" 0;
+    setAttr "FKHip_R.rotateX" 0;
+    setAttr "FKKnee_R.rotateX" 0;
+    setAttr "FKAnkle_R.rotateY" 0;
+    setAttr "FKHip_R.rotateY" 0;
+    setAttr "FKKnee_R.rotateY" 0;
+    setAttr "FKHip_R.rotateZ" 0;
+    setAttr "FKKnee_R.rotateZ" 0;
+}
+IKFKMatchStudio56;

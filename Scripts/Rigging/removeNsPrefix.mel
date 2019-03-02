@@ -1,0 +1,16 @@
+global proc removeNsPrefix()
+{
+	string $trans[] = `ls -dep -mat -transforms`;
+	for($each in $trans)
+	{
+		string $mat = `match ":" $each`;
+		int $size = size($mat);
+		if($size == "1")
+		{
+			string $buffer[];
+			$numTokens = `tokenize $each ":" $buffer`;
+			rename $each $buffer[1];
+		}
+	}
+}
+removeNsPrefix;

@@ -1,0 +1,86 @@
+global proc getSelectedprop()
+{
+string $asset[] = {"COMMON","Episode05"};
+string $assetType[] = {"CHARACTERS","PROPS","SETS"};
+string $propname05[] =`textScrollList -q -si propslist`;
+string $shotName = `basenameEx($propname05[0])`;
+string $txtPath = "Q:/TNN/04_PRODUCTION/Episode05/scenes/ANIMATION/01_LAYOUT_WIP/SCENE_DESCRIPTION/";
+string $files[] = `getFileList -folder ($txtPath) -filespec "*.txt"`;
+for($a=0; $a<size($files); $a++){
+string $txtName = `basenameEx($files[$a])`;
+if($txtName == $shotName){
+$fileId=`fopen ($txtPath+$txtName+".txt") "r"`;
+string $nextLine = `fgetline $fileId`;
+if(size($nextLine) == "0"){
+warning "No Scene Input(s)";
+break;
+}
+while (size($nextLine) > 0 ){	
+string $buffer[];
+$numTokens = `tokenize $nextLine "\n" $buffer`;
+for($parent in $asset){
+string $parentPath = "Q:/TNN/04_PRODUCTION/REFERENCES/"+$parent+"/";
+for($child in $assetType){
+string $childPath[] = `getFileList -folder ($parentPath+$child+"/") -filespec "*.ma"`;
+for($m=0; $m<size($childPath); $m++){
+for($k=0; $k<size($buffer); $k++){
+if(tolower($childPath[$m]) == tolower($buffer[$k])){
+string $assetNS = `basenameEx($buffer[$k])`;
+string $refPath = "Q:/TNN/04_PRODUCTION/REFERENCES/"+$parent+"/"+$child+"/";
+catch(`file -rdi 1 -ns $assetNS ($refPath+$buffer[$k])`);
+catch(`file -r  -ns $assetNS ($refPath+$buffer[$k])`);
+}}}
+clear $childPath;
+}//clear $parentPath;	
+}
+clear $buffer;
+$nextLine = `fgetline $fileId`;
+}	
+fclose $fileId; 
+}}
+clear $files;
+clear $asset;
+clear $assetType;	 
+
+string $asset[] = {"COMMON","Episode06"};
+string $assetType[] = {"CHARACTERS","PROPS","SETS"};
+string $propname05[] =`textScrollList -q -si propslist`;
+string $shotName = `basenameEx($propname05[0])`;
+string $txtPath = "Q:/TNN/04_PRODUCTION/Episode06/scenes/ANIMATION/01_LAYOUT_WIP/SCENE_DESCRIPTION/";
+string $files[] = `getFileList -folder ($txtPath) -filespec "*.txt"`;
+for($a=0; $a<size($files); $a++){
+string $txtName = `basenameEx($files[$a])`;
+if($txtName == $shotName){
+$fileId=`fopen ($txtPath+$txtName+".txt") "r"`;
+string $nextLine = `fgetline $fileId`;
+if(size($nextLine) == "0"){
+warning "No Scene Input(s)";
+break;
+}
+while (size($nextLine) > 0 ){	
+string $buffer[];
+$numTokens = `tokenize $nextLine "\n" $buffer`;
+for($parent in $asset){
+string $parentPath = "Q:/TNN/04_PRODUCTION/REFERENCES/"+$parent+"/";
+for($child in $assetType){
+string $childPath[] = `getFileList -folder ($parentPath+$child+"/") -filespec "*.ma"`;
+for($m=0; $m<size($childPath); $m++){
+for($k=0; $k<size($buffer); $k++){
+if(tolower($childPath[$m]) == tolower($buffer[$k])){
+string $assetNS = `basenameEx($buffer[$k])`;
+string $refPath = "Q:/TNN/04_PRODUCTION/REFERENCES/"+$parent+"/"+$child+"/";
+catch(`file -rdi 1 -ns $assetNS ($refPath+$buffer[$k])`);
+catch(`file -r  -ns $assetNS ($refPath+$buffer[$k])`);
+}}}
+clear $childPath;
+}//clear $parentPath;	
+}
+clear $buffer;
+$nextLine = `fgetline $fileId`;
+}	
+fclose $fileId; 
+}}
+clear $files;	
+clear $asset;
+clear $assetType; 
+}

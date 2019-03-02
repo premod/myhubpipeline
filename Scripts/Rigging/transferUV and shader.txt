@@ -1,0 +1,76 @@
+//	SCRIPT: pd_transferObj.mel
+//	AUTHER: Prakritish Dutta
+//	WEBSITE: www.prakritish.in
+//	DATE: 18august2012
+//
+//DESCRIPTION:	This script is used to tranfer UV and shaders. Its not create any history on geometry, so you can also use it after rig and skining is done.
+
+//Direction:	select first source geometry then target geometry and just click transfer UV or transfer shader button....
+
+
+//***************************************************************
+
+global proc copyUv()
+{
+///////////// copy uv
+string $obj[2] = `ls -sl`;
+select -r $obj[1];
+polyTransfer;
+connectAttr -f ($obj[0]+ ".outMesh") polyTransfer1.otherPoly;
+doBakeNonDefHistory( 1, {"prePost" });
+select -cl;
+}
+
+global proc copyShader()
+{
+string $obj[2] = `ls -sl`;
+//////////// copy shader
+string $shape[1] = `listRelatives -s $obj[0]`;
+string $shader[1] = `listConnections -type shadingEngine $shape[0]`;
+sets -e -forceElement $shader[0] $obj[1];
+select -cl;
+}
+
+//******************************************************************************************
+global proc pd_transferObj()
+
+{
+
+window -h 80 -w 300 -t "TRANSFER OBJ" transferWin;
+
+
+formLayout fmLo;
+button -l "Close" -c "deleteUI -window transferWin;" close;
+button -l "TRANSFER UV" -c copyUv uv;
+button -l "TRANSFER SHADER" -c copyShader shader;
+
+formLayout -edit
+	-attachForm close "top" 80
+	-attachForm close "left" 100
+	-attachNone close "bottom" 
+	-attachNone close "right"
+
+	-attachForm uv "top" 20
+	-attachForm uv "left" 10
+	-attachNone uv "bottom" 
+	-attachNone uv "right"
+
+	-attachForm shader "top" 20
+	-attachForm shader "left" 120
+	-attachNone shader "bottom" 
+	-attachNone shader "right"
+
+fmLo;
+
+showWindow transferWin;
+
+Trans_UIwrapper("uv");
+Trans_UIwrapper("shader");
+
+}
+
+//****************************************************************************************
+
+
+
+

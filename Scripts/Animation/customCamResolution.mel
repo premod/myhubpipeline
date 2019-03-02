@@ -1,0 +1,35 @@
+global proc customCamResolution()
+{
+	displayRGBColor -c template 0 1 0;
+	displayRGBColor -c outlinerTemplatedColor 0.3961 0.2314 0.2314;
+	displayRGBColor -c hyperTemplatedColor 0.635 0.478 0.333;
+
+	string $myCamera[] = `ls -sl`; 
+	if(size($myCamera) == 1)	
+	{
+		polyCube -ch on -o on -w 0.736497 -h 0.298488 -d 0.182016 -cuv 4 -n camMesh;
+		duplicate -rr;
+		scale -r 0.900792 0.900792 0.900792 ; select -r camMesh ;
+		scale -r 1 1 0.005 ; select -r camMesh1 ;scale -r 1 1 0.005 ;
+		select -r camMesh.f[0] ; doDelete;
+		select -r camMesh.f[1] ; doDelete;
+		select -r camMesh1.f[0] ; doDelete;
+		select -r camMesh1.f[1] ; doDelete;
+		select -r camMesh ;select -add camMesh1 ;
+		scale -r 0.271046 0.271046 0.271046 ;scale -r 1 1.855556 1 ;
+		select -r camMesh ;select -tgl camMesh1 ;
+		rename "camMesh" ($myCamera[0]+"_mesh");rename "camMesh1" ($myCamera[0]+"_mesh");
+		group -n ($myCamera[0]+"CamRatio");
+		setAttr (($myCamera[0]+"CamRatio") + ".template") 1;
+		parent -r ($myCamera[0]+"CamRatio") $myCamera[0];
+		expression -s (($myCamera[0]+"CamRatio") + ".translateZ = " + $myCamera[0] + ".focalLength / -134.615385");
+		select $myCamera[0];
+		addAttr -longName showFourThreeSafe -defaultValue true -attributeType bool -keyable true;
+		connectAttr ($myCamera[0] + ".showFourThreeSafe") (($myCamera[0]+"CamRatio") + ".visibility");
+	}
+	else
+	{
+		warning "Select Camera and Apply";
+	}	
+}
+

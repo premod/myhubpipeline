@@ -1,0 +1,37 @@
+global proc openStoryBoard()
+{
+	if((`window -exists storyBoardWin`)==true) {deleteUI storyBoardWin;} 
+	window -wh 237 79 -s 0 -t "Story Boards" storyBoardWin;
+    	rowColumnLayout -numberOfColumns 2 -cs 1 10 -cs 2 10; 
+      button -l "Episode 01" -c "episode01";
+	button -l "Episode 02" -c "episode02";
+	button -l "Episode 03" -c "episode03";
+	button -l "Episode 04" -c "episode04"; 
+	showWindow;
+}
+
+global proc episode01()
+{
+	system ( "load " + "Q:/TNN Scripts/StoryBoards/99-Ep1_4th.pdf");
+}
+
+global proc episode02()
+{
+	system ( "load " + "Q:/TNN Scripts/StoryBoards/99-Ep2-3.pdf");
+}
+
+global proc episode03()
+{
+	system ( "load " + "Q:/TNN Scripts/StoryBoards/99-Ep3.pdf");
+}
+
+global proc episode04()
+{
+	system ( "load " + "Q:/TNN Scripts/StoryBoards/99-Ep4 -2.pdf");
+}
+
+
+
+
+
+

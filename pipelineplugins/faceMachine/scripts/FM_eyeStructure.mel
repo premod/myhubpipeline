@@ -1,0 +1,542 @@
+//-------------------------------------------
+//build all the controls necessary for an eye
+//
+//aligns the eye, builds the targets, weights them, builds the condition structure, adds the placementLocators
+//INPUTS:	string $side			= L or R
+//			string $eyeSurface		= visible object which will be rotated with the eye controls
+//-------------------------------------------
+
+global proc buildEye(string $side, string $eyeSurface, int $controlPosition)
+{
+	source FM_tools.mel;
+	
+	//variables
+	$eyeShape = ($side + "_eyeShape");
+	$eyeControl = ($side + "_eye_FC");
+	$pupilMarker = ($side + "_pupil_WC");
+	$IKeyeControl = "IK_eye_FC";
+	$innerMarker = ($side + "_innerEye_WC");
+	$outerMarker = ($side + "_outerEye_WC");
+	$upperLidMarker = ($side + "_upperLid_WC");
+	$lowerLidMarker = ($side + "_lowerLid_WC");
+	$upperMarker = ($side + "_upperEye_WC");
+	$lowerMarker = ($side + "_lowerEye_WC");
+	
+	//parent the $eyeShape under its proper buffer
+	parent $eyeShape ($eyeShape + "_buffer");
+	setAttr ($eyeShape + ".v") 0;
+		
+	//------------------------------------//
+	//---------------targets--------------//
+	//------------------------------------//
+	
+	//check to see if the $eyeShape_targets node exists
+	if (!objExists($eyeShape + "_targets"))
+	{
+		CreateEmptyGroup;
+		rename ($eyeShape + "_targets");
+		parent ($eyeShape + "_targets") ($eyeShape + "_buffer");
+		setAttr ($eyeShape + "_targets.v") 0;
+	}
+	
+	//check to see if the $eyeShape_boundingTargets node exists
+	if (!objExists($eyeShape + "_boundingTargets"))
+	{
+		CreateEmptyGroup;
+		rename ($eyeShape + "_boundingTargets");
+		parent ($eyeShape + "_boundingTargets") ($eyeShape + "_targets");
+	}
+	
+	//create targets:
+		//innerExtent
+	spaceLocator;
+	string $innerExtent = `rename ($side + "_pupil_innerExtent_target")`;
+	parent $innerExtent ($eyeShape + "_boundingTargets");
+	
+	float $move[] = `xform -q -ws -t $innerMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $innerExtent;
+	
+	//align with the eyeShape then geometryConstrain
+	string $tempArray[] = `normalConstraint -aimVector 0 0 1 -worldUpType "objectrotation" -worldUpObject $eyeShape $eyeShape $innerExtent`;
+	delete $tempArray[0];
+	geometryConstraint $eyeShape $innerExtent;
+	
+		//outerExtent
+	spaceLocator;
+	string $outerExtent = `rename ($side + "_pupil_outerExtent_target")`;
+	parent $outerExtent ($eyeShape + "_boundingTargets");
+	
+	float $move[] = `xform -q -ws -t $outerMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $outerExtent;
+	
+	//align with the eyeShape then geometryConstrain
+	string $tempArray[] = `normalConstraint -aimVector 0 0 1 -worldUpType "objectrotation" -worldUpObject $eyeShape $eyeShape $outerExtent`;
+	delete $tempArray[0];
+	geometryConstraint $eyeShape $outerExtent;
+	
+		//upperExtent
+	spaceLocator;
+	string $upperExtent = `rename ($side + "_pupil_upperExtent_target")`;
+	parent $upperExtent ($eyeShape + "_boundingTargets");
+	
+	float $move[] = `xform -q -ws -t $upperMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $upperExtent;
+	
+	//align with the eyeShape and move to surface
+	string $tempArray[] = `normalConstraint -aimVector 0 0 1 -worldUpType "objectrotation" -worldUpObject $eyeShape $eyeShape $upperExtent`;
+	delete $tempArray[0];
+	string $tempArray[] = `geometryConstraint $eyeShape $upperExtent`;
+	delete $tempArray[0];
+	
+		//lowerExtent
+	spaceLocator;
+	string $lowerExtent = `rename ($side + "_pupil_lowerExtent_target")`;
+	parent $lowerExtent ($eyeShape + "_boundingTargets");
+	
+	float $move[] = `xform -q -ws -t $lowerMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $lowerExtent;
+	
+	//align with the eyeShape and move to surface
+	string $tempArray[] = `normalConstraint -aimVector 0 0 1 -worldUpType "objectrotation" -worldUpObject $eyeShape $eyeShape $lowerExtent`;
+	delete $tempArray[0];
+	string $tempArray[] = `geometryConstraint $eyeShape $lowerExtent`;
+	delete $tempArray[0];
+	
+		//pupil_originTarget
+	spaceLocator;
+	string $origin = `rename ($side + "_pupil_originTarget")`;
+	parent $origin ($eyeShape + "_targets");
+	
+	// Jedi's original code:
+	//pointConstraint $innerExtent $outerExtent $origin;
+	//geometryConstraint $eyeShape $origin;
+	
+	
+	// What Brian changed it to:
+	float $f[] = `xform -q -ws -t $pupilMarker`;
+	xform -ws -t $f[0] $f[1] $f[2] $origin ;
+	pointConstraint -maintainOffset $innerExtent $outerExtent $origin;
+	
+	// New locator to fix eye pop problem:
+	spaceLocator;
+	string $pupilCenter = `rename ($side + "_pupil_center")`;
+	parent $pupilCenter ($eyeShape + "_targets");
+	pointConstraint $innerExtent $outerExtent $upperExtent $lowerExtent $pupilCenter;
+	geometryConstraint $eyeShape $pupilCenter;
+	
+	
+		//pupil_target: tells the FCs where the pupil is pointing.  later gets parent constrained to the actual eye control
+	spaceLocator;
+	string $pupil = `rename ($side + "_pupil_target")`;
+	parent $pupil ($eyeShape + "_targets");
+	
+	float $move[] = `xform -q -ws -t $origin`;
+	xform -ws -t $move[0] $move[1] $move[2] $pupil;
+	
+	
+		//pupil_lowerLid_target: exists at the origin of the lowerLid control, but is pointConstraint'd to the pupil_target with offset
+	spaceLocator;
+	string $pupilLowerLid = `rename ($side + "_pupil_lowerLid_target")`;
+	parent $pupilLowerLid ($eyeShape + "_targets");
+	
+	float $move[] = `xform -q -ws -t $lowerLidMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $pupilLowerLid;
+	pointConstraint -maintainOffset $pupil $pupilLowerLid;
+	
+		//pupil_upperLid_target: same deal, except for the upperLid control
+	spaceLocator;
+	string $pupilUpperLid = `rename ($side + "_pupil_upperLid_target")`;
+	parent $pupilUpperLid ($eyeShape + "_targets");
+	
+	float $move[] = `xform -q -ws -t $upperLidMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $pupilUpperLid;
+	pointConstraint -maintainOffset $pupil $pupilUpperLid;
+	
+	//------------------------------------//
+	//---------extent curves--------------//
+	//------------------------------------//
+	
+	//check to see if the eye_extents node exists
+	if (!objExists("eye_extents"))
+	{
+		CreateEmptyGroup;
+		rename eye_extents;
+		parent eye_extents deformation_buffer;
+		setAttr eye_extents.v 0;
+	}
+	
+	//create extent curves from the inner, upper, outer, and lower extent targets:
+		//upperCurve
+	string $arcInfo[] = buildArc({$innerExtent, $upperExtent, $outerExtent});
+	string $upperArcNode = `rename $arcInfo[0] ($side + "_upperThreePointArc")`;
+	string $upperArcCurve = `rename $arcInfo[1] ($side + "_upperExtent_curve")`;
+	parent $upperArcCurve "eye_extents";
+	setAttr ($upperArcCurve + ".v") 0;
+	
+		//lowerCurve
+	string $arcInfo[] = buildArc({$outerExtent, $lowerExtent, $innerExtent});
+	string $lowerArcNode = `rename $arcInfo[0] ($side + "_lowerThreePointArc")`;
+	string $lowerArcCurve = `rename $arcInfo[1] ($side + "_lowerExtent_curve")`;
+	parent $lowerArcCurve "eye_extents";
+	setAttr ($lowerArcCurve + ".v") 0;
+	
+		//extentCurve (combined upper and lower extent curves)
+	string $tempArray[] = `attachCurve -ch 1 -rpo 0 $upperArcCurve $lowerArcCurve`;
+	string $extentCurve = `rename $tempArray[0] ($side + "_extent_curve")`;
+	parent $extentCurve "eye_extents";	
+	
+	//------------------------------------//
+	//-------------lidParts---------------//
+	//------------------------------------//
+
+	//check to see if the $eyeShape_controlTargets node exists
+	if (!objExists($eyeShape + "_controlTargets"))
+	{
+		CreateEmptyGroup;
+		rename ($eyeShape + "_controlTargets");
+		parent ($eyeShape + "_controlTargets") ($eyeShape + "_targets");
+	}
+	
+	//check to see if the $eyeShape_maxDistTargets node exists
+	if (!objExists($eyeShape + "_maxDistTargets"))
+	{
+		CreateEmptyGroup;
+		rename ($eyeShape + "_maxDistTargets");
+		parent ($eyeShape + "_maxDistTargets") ($eyeShape + "_targets");
+	}
+	
+	//check to see if the $eyeShape_skinCluster_pivots node exists
+	if (!objExists($eyeShape + "_skinCluster_pivots"))
+	{
+		CreateEmptyGroup;
+		rename ($eyeShape + "_skinCluster_pivots");
+		parent ($eyeShape + "_skinCluster_pivots") ($eyeShape + "_targets");
+	}
+	
+	//build all the parts of the lid to measure and target the eyeLids
+	//list of all the eyelid parts
+	string $lidParts[6] = {"upperLid", "outerUpperLid", "innerUpperLid", "lowerLid", "outerLowerLid", "innerLowerLid"};
+	
+	for ($part in $lidParts)
+	{	
+			//controlTarget: follows the lid FC
+		spaceLocator;
+		string $controlTarget = `rename ($side + "_" + $part + "_controlTarget")`;
+		parent $controlTarget ($eyeShape + "_controlTargets");
+		
+			//maxDistTarget: stays on the extent curve and monitors the maximum travel in any direction for a lid part
+		spaceLocator;
+		string $maxDistTarget = `rename ($side + "_" + $part + "_maxDistTarget")`;
+		parent $maxDistTarget ($eyeShape + "_maxDistTargets");
+		geometryConstraint $extentCurve $maxDistTarget;
+		pointConstraint $controlTarget $maxDistTarget;
+		
+			//skinCluster_pivot: rides the eyeShape and gives transform information to the clusterDrivers
+		spaceLocator;
+		string $pivot = `rename ($side + "_" + $part + "_pivot")`;
+		parent $pivot ($eyeShape + "_skinCluster_pivots");
+		geoNorm($eyeShape, $pivot);
+		string $pivotConstraint[] = `pointConstraint $controlTarget $maxDistTarget $pivot`;
+		
+			//measure utilities: measures the distance between the origin and the maxDist/controlDist locators
+		shadingNode -au distanceBetween;
+		string $controlDist = `rename ($side + "_" + $part + "_controlDist")`;
+		connectAttr ($pupilCenter + "Shape.wp") ($controlDist + ".p1"); // NOTE: used to be $origin as the source of the connection
+		connectAttr ($controlTarget + "Shape.wp") ($controlDist + ".p2");
+		
+		shadingNode -au distanceBetween;
+		string $maxDist = `rename ($side + "_" + $part + "_maxDist")`;
+		connectAttr ($pupilCenter + "Shape.wp") ($maxDist + ".p1"); // NOTE: used to be $origin as the source of the connection
+		connectAttr ($maxDistTarget + "Shape.wp") ($maxDist + ".p2");
+		
+			//condition: determines which is further, the maxDist or the controlDist and assigns the result to the weights on the pivot_pointConstraint
+		shadingNode -asUtility condition;
+		string $condition = `rename ($side + "_" + $part + "_condition")`;
+		setAttr ($condition + ".ct") 1 0 0;
+		setAttr ($condition + ".cf") 0 1 0;
+		setAttr ($condition + ".op") 2;
+		connectAttr ($maxDist + ".d") ($condition + ".ft");
+		connectAttr ($controlDist + ".d") ($condition + ".st");
+		connectAttr -f ($condition + ".ocr") ($pivotConstraint[0] + "." + $side + "_" + $part + "_controlTargetW0");				//the controlTarget weight
+		connectAttr -f ($condition + ".ocg") ($pivotConstraint[0] + "." + $side + "_" + $part + "_maxDistTargetW1");				//the maxDistTarget weight
+	}
+
+	//------------------------------------//
+	//-------------alignment--------------//
+	//------------------------------------//
+	
+	//align the $eyeSurface with the eyeControl
+		//move the eyeControl to the position of the eyeShape
+	//float $move[] = `xform -q -ws -rp $eyeSurface`;
+	
+		// note from Brian: we're changing it to the eyePivot
+	float $move[] = `xform -q -ws -t ($side + "_eyePivot")`;
+	xform -ws -t $move[0] $move[1] $move[2] ($eyeControl + "_staticBuffer");
+	
+	float $s = `getAttr FM_data.worldScale`;
+	setAttr ($eyeControl + "_staticBuffer.s") $s $s $s;
+	
+		//aimConstrain the eyeControl_autoBuffer between the $origin and the $IKeyeControl (+ set the weights)
+	string $tempArray[] = `aimConstraint -aim 0 0 1 -wut "objectrotation" -wuo "Face_Machine_WC" $origin $IKeyeControl ($eyeControl + "_autoBuffer")`;
+	connectAttr -f "eyeControl_follow_reverse.ox" ($tempArray[0] + "." + $origin + "W0");
+	connectAttr -f ($IKeyeControl + ".follow") ($tempArray[0] + "." + $IKeyeControl + "W1");
+	
+	/*
+	// Given the code was changed so that the pupilMarker is at the same location as the origin, this code shouldn't be necessary
+		//then aimConstrain the $eyeSurface to the $pupilMarker w/offset
+	string $tempArray[] = `aimConstraint -mo $pupilMarker $eyeSurface`;
+		
+		//then move the $pupilMarker to the $origin
+	float $move[] = `xform -q -ws -t $origin`;
+	xform -ws -t $move[0] $move[1] $move[2] $pupilMarker;
+		
+		//then kill the aimConstraint
+	delete $tempArray[0];
+	*/	
+		
+	
+	string $strings[];
+	string $shapes[] = `listRelatives -fullPath -shapes $eyeSurface`;
+	string $nodeType = "";
+	if (size($shapes) > 0)
+		$nodeType = `nodeType $shapes[0]`;
+	// We want to use a cluster if this object is some kind of geometry
+	if ($nodeType == "mesh" || $nodeType == "nurbsSurface" || $nodeType == "subdiv") {
+		string $skinCluster = findRelatedSkinCluster($eyeSurface);
+		$strings = `cluster -frontOfChain -n ($side + "_eye_cluster") $eyeSurface`;
+		// And now we manually move the cluster in front of the skinCluster, because the cluster command often won't do that on its own
+		if ($skinCluster != "")
+			reorderDeformers $skinCluster $strings[0] $eyeSurface;
+		
+		if ($controlPosition == 1) {
+			
+			string $eyeGroup = `createNode transform -n ($side + "_eye_clusterGroup")`;
+			parent $eyeGroup other_deformers;
+			orientConstraint $eyeControl $eyeGroup;
+			pointConstraint $eyeControl $eyeGroup;
+			scaleConstraint $eyeControl $eyeGroup;
+			parent $strings[1] $eyeGroup;
+			
+		} else {
+			
+			// Creata a node that will be the eye control's location in face-relative space
+			string $local = `createNode transform -n ($side + "_eye_local")`;
+			parent $local FM_controls;
+			orientConstraint $eyeControl $local;
+			
+			// Now connect that to another node so that it'll only move when the eye control moves locally 
+			string $eyeGroup = `createNode transform -n ($side + "_eye_clusterGroup")`;
+			parent $eyeGroup other_deformers;
+			
+			// Make sure the group is sitting at the initial location of the cluster.  We don't want the cluster to translate ever.
+			float $f[] = `xform -q -ws -rp $eyeSurface`;
+			xform -ws -t $f[0] $f[1] $f[2] $eyeGroup;
+			
+			connectAttr -f ($local + ".r") ($eyeGroup + ".r");
+			
+			// Parent the cluster to that.
+			parent $strings[1] $eyeGroup; 
+		}
+		
+	} else {
+		//then apply orient/point/scale constraints from the $eyeControl to the $eyeSurface w/offset
+		orientConstraint -mo $eyeControl $eyeSurface;
+		pointConstraint -mo $eyeControl $eyeSurface;
+		scaleConstraint -mo $eyeControl $eyeSurface;
+	}
+	
+		
+		//then parentConstrain the $pupil target to the $eyeControl
+	parentConstraint -mo $eyeControl $pupil;
+	
+	//------------------------------------//
+	//---------placementLocators----------//
+	//------------------------------------//
+	
+	//create placementLocators for all the various eye parts, positioned according to the extents/origin
+		//innerEye
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_innerEye")`;
+	parent $PL "placement_locators";	
+	pointConstraint $innerExtent $PL;
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	setAttr ($PL + ".directFC")			1;
+	setAttr ($PL + ".type")				2;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	1;
+	setAttr ($PL + ".FC_autoBuffer")	0;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") "";
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_overEye1_curve.cp[0] " + $side + "_overEye1_curve.cp[1] " + $side + "_overEye2_curve.cp[1] " + $side + "_upperLid3_curve.cp[0] " + $side + "_upperLid3_curve.cp[1] " + $side + "_upperLid2_curve.cp[0] " + $side + "_upperLid2_curve.cp[1] " + $side + "_upperLid1_curve.cp[0] " + $side + "_upperLid1_curve.cp[1] " + $side + "_lowerLid1_curve.cp[0] " + $side + "_lowerLid1_curve.cp[1] " + $side + "_lowerLid2_curve.cp[0] " + $side + "_lowerLid2_curve.cp[1] " + $side + "_lowerLid3_curve.cp[2] " + $side + "_lowerLid3_curve.cp[1] " + $side + "_underEye1_curve.cp[0] " + $side + "_underEye1_curve.cp[1] " + $side + "_overEye2_curve.cp[0] " + $side + "_underEye2_curve.cp[0] " + $side + "_underEye2_curve.cp[1] " + $side + "_underEye3_curve.cp[0] " + $side + "_underEye3_curve.cp[1] " + $side + "_lowerLid3_curveShape.cp[0]");
+	
+		//outerEye
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_outerEye")`;
+	parent $PL "placement_locators";
+	pointConstraint $outerExtent $PL;
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	setAttr ($PL + ".directFC")			1;
+	setAttr ($PL + ".type")				2;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	0;
+	setAttr ($PL + ".FC_autoBuffer")	0;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") "";
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_overEye1_curve.cp[4] " + $side + "_overEye1_curve.cp[3] " + $side + "_upperLid3_curve.cp[5] " + $side + "_upperLid2_curve.cp[5] " + $side + "_upperLid1_curve.cp[5] " + $side + "_lowerLid3_curve.cp[5] " + $side + "_lowerLid2_curve.cp[5] " + $side + "_lowerLid1_curve.cp[5] " + $side + "_underEye1_curve.cp[4] " + $side + "_underEye1_curve.cp[3] " + $side + "_overEye2_curve.cp[3] " + $side + "_underEye2_curve.cp[4] " + $side + "_underEye2_curve.cp[3] " + $side + "_overEye2_curve.cp[4]");
+		
+		//upperEye
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_upperEye")`;
+	parent $PL "placement_locators";
+	pointConstraint $upperExtent $PL;
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				4;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	1;
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_innerEye_directFC " + $side + "_outerEye_directFC " + $side + "_brow2_directFC " + $side + "_brow3_directFC");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_overEye1_curve.cp[2]");
+		
+		//lowerEye
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_lowerEye")`;
+	parent $PL "placement_locators";
+	pointConstraint $lowerExtent $PL;
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				4;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	1; // changed
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_innerEye_directFC " + $side + "_outerEye_directFC " + $side + "_lowerOrbital_FC_autoBuffer");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_underEye1_curve.cp[2]");
+
+		//upperLid
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_upperLid")`;
+	parent $PL "placement_locators";
+	float $move[] = `xform -q -ws -t $upperLidMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $PL;
+	geometryConstraint $eyeShape $PL;
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				2;
+	setAttr ($PL + ".extraBuffer")		1;
+	setAttr ($PL + ".maintainOffset")	1; // changed
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		1;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_innerEye_directFC " + $side + "_outerEye_directFC");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_upperLid3_curve.cp[3] " + $side + "_upperLid2_curve.cp[3] " + $side + "_upperLid1_curve.cp[3]");
+	setAttr -type "string" ($PL + ".proxyStack") ($side + "_upperLid_pivot");
+
+		//outerUpperLid
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_outerUpperLid")`;
+	parent $PL "placement_locators";
+	pointConstraint $outerExtent ($side + "_upperLid") $PL;														//SLOPPY HARD CODED
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	geometryConstraint $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				6;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	1; // changed
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_outerEye_directFC " + $side + "_upperLid_FC");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_upperLid3_curve.cp[4] " + $side + "_upperLid2_curve.cp[4] " + $side + "_upperLid1_curve.cp[4]");
+	setAttr -type "string" ($PL + ".proxyStack") ($side + "_outerUpperLid_pivot");
+
+		//innerUpperLid
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_innerUpperLid")`;
+	parent $PL "placement_locators";
+	pointConstraint $innerExtent ($side + "_upperLid") $PL;														//SLOPPY HARD CODED
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	geometryConstraint $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				6;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	1; // changed
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_innerEye_directFC " + $side + "_upperLid_FC");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	//setAttr -type "string" ($PL + ".points") ($side + "_upperLid3_curve.cp[2] " + $side + "_upperLid2_curve.cp[2] " + $side + "_upperLid1_curve.cp[2]");
+	setAttr -type "string" ($PL + ".points") ($side + "_upperLid3_curve.cp[2] " + $side + "_upperLid2_curve.cp[2] " + $side + "_upperLid1_curve.cp[2] " + $side + "_upperLid3_curve.cp[1] " + $side + "_upperLid2_curve.cp[1] " + $side + "_upperLid1_curve.cp[1]");
+	setAttr -type "string" ($PL + ".proxyStack") ($side + "_innerUpperLid_pivot");
+	
+			//lowerLid
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_lowerLid")`;
+	parent $PL "placement_locators";
+	float $move[] = `xform -q -ws -t $lowerLidMarker`;
+	xform -ws -t $move[0] $move[1] $move[2] $PL;
+	geometryConstraint $eyeShape $PL;
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				2;
+	setAttr ($PL + ".extraBuffer")		1;
+	setAttr ($PL + ".maintainOffset")	1; // changed
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		1;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_innerEye_directFC " + $side + "_outerEye_directFC");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_lowerLid3_curve.cp[3] " + $side + "_lowerLid2_curve.cp[3] " + $side + "_lowerLid1_curve.cp[3]");
+	setAttr -type "string" ($PL + ".proxyStack") ($side + "_lowerLid_pivot");
+
+		//outerLowerLid
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_outerLowerLid")`;
+	parent $PL "placement_locators";
+	pointConstraint $outerExtent ($side + "_lowerLid") $PL;													//SLOPPY HARD CODED
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	geometryConstraint $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				6;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	1; // changed
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_outerEye_directFC " + $side + "_lowerLid_FC");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	setAttr -type "string" ($PL + ".points") ($side + "_lowerLid3_curve.cp[4] " + $side + "_lowerLid2_curve.cp[4] " + $side + "_lowerLid1_curve.cp[4]");
+	setAttr -type "string" ($PL + ".proxyStack") ($side + "_outerLowerLid_pivot");
+	
+		//innerLowerLid
+	duplicate -n "tempLoc" placementLocator;
+	string $PL = `rename "tempLoc" ($side + "_innerLowerLid")`;
+	parent $PL "placement_locators";
+	pointConstraint $innerExtent ($side + "_lowerLid") $PL;													//SLOPPY HARD CODED
+	normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $eyeShape $eyeShape $PL;
+	geometryConstraint $eyeShape $PL;
+	setAttr ($PL + ".directFC")			0;
+	setAttr ($PL + ".type")				6;
+	setAttr ($PL + ".extraBuffer")		0;
+	setAttr ($PL + ".maintainOffset")	1; // changed
+	setAttr ($PL + ".FC_autoBuffer")	1;
+	setAttr ($PL + ".detailLevel")		2;
+	setAttr -type "string" ($PL + ".drivers") ($side + "_innerEye_directFC " + $side + "_lowerLid_FC");
+	setAttr -type "string" ($PL + ".surface") $eyeShape;
+	setAttr ($PL + ".eyeLocator") 1;
+	//setAttr -type "string" ($PL + ".points") ($side + "_lowerLid3_curve.cp[2] " + $side + "_lowerLid2_curve.cp[2] " + $side + "_lowerLid1_curve.cp[2]");
+	setAttr -type "string" ($PL + ".points") ($side + "_lowerLid3_curve.cp[2] " + $side + "_lowerLid2_curve.cp[2] " + $side + "_lowerLid1_curve.cp[2] " + $side + "_lowerLid3_curve.cp[1] " + $side + "_lowerLid2_curve.cp[1] " + $side + "_lowerLid1_curve.cp[1]");
+	setAttr -type "string" ($PL + ".proxyStack") ($side + "_innerLowerLid_pivot");
+}

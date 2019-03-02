@@ -1,0 +1,48 @@
+global proc charControlsSelectionWin()
+{
+	if ((`window -ex animSelectionWin`)== true) deleteUI animSelectionWin;
+	window -t "Controls Selection" -wh 242 121 -s 0 animSelectionWin;
+	columnLayout -adj true;
+	button -l "Select Hierarchy" -c "selectCurveHierarchy";
+	button -l "Show Only Polygons" -c "displayPoly";
+	button -l "Show Polygons/Nurbs Curves" -c "displayPolyNurbs";
+	showWindow;
+}
+
+global proc selectCurveHierarchy()
+{
+	string $buffer[];
+	string $selList[] = `ls -sl`;
+	if(`size($selList)` == "1")
+	{
+		$numTokens = `tokenize $selList[0] ":" $buffer`;
+		string $curves[] = `ls -et "nurbsCurve"`;
+		for($each in $curves)
+		{
+			int $val = startsWith($each, $buffer[0]);
+			if($val == 1)
+			{
+				select -tgl $each;
+			}
+				
+		}
+		pickWalk -d up;
+	}
+	else
+	{
+		warning "Select atleast one Curve";
+	}
+}
+
+global proc displayPoly()
+{
+	modelEditor -e -allObjects 0 modelPanel4;
+	modelEditor -e -polymeshes 1 modelPanel4;
+}
+global proc displayPolyNurbs()
+{
+	modelEditor -e -allObjects 0 modelPanel4;
+	modelEditor -e -polymeshes 1 modelPanel4;
+	modelEditor -e -nurbsCurves 1 modelPanel4;
+}
+animationSelectionWin;

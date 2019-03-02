@@ -1,0 +1,47 @@
+global string $mName;
+global proc myRenderSettings()
+{
+	int $stFrame = `playbackOptions -q -ast`;
+	int $endFrame = `playbackOptions -q -aet`;
+	string $currFileName = `file -q -sceneName`;
+	string $mName = `basenameEx($currFileName)`;
+	setAttr -e -type "string" defaultRenderGlobals.imageFilePrefix $mName;
+	setAttr "defaultRenderGlobals.animation" 1 ;
+	string $list[] = `listConnections defaultRenderGlobals.resolution`;
+	setAttr "defaultRenderGlobals.startFrame" $stFrame;
+	setAttr "defaultRenderGlobals.endFrame" $endFrame;
+	setAttr defaultRenderGlobals.imageFormat 19;
+	setAttr "defaultRenderGlobals.extensionPadding" 4;
+	setAttr ( $list[0]+".width") 720;
+	setAttr ( $list[0]+".height") 504;
+	setAttr "defaultRenderQuality.edgeAntiAliasing" 1;
+	setAttr "defaultRenderQuality.shadingSamples" 2;
+	setAttr "defaultRenderQuality.maxShadingSamples" 6;
+	setAttr "defaultRenderQuality.useMultiPixelFilter" 1;
+	setAttr "defaultRenderQuality.pixelFilterType" 4;
+
+	string $eachCam;
+	string $getCamera[] = `ls -typ "camera"`;
+	for($eachCam in $getCamera)
+	{
+		if(($eachCam == "frontShape") || ($eachCam == "perspShape") ||
+		($eachCam == "sideShape") || ($eachCam == "topShape")) 
+		{
+			continue;
+		}
+		else
+		{
+			setAttr ($eachCam+".renderable") 1;
+			setAttr ("perspShape.renderable") 0;
+		}			
+	}
+	mySettings();
+}
+
+myRenderSettings;
+
+global proc mySettings()
+{
+	global string $mName;
+	batchRender -f $mName; 
+}

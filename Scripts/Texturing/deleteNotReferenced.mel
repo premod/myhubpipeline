@@ -1,0 +1,12 @@
+global proc deleteNotReferenced( ) 
+{
+	int $i;
+	string $nodeToDelete1[] = `ls -sl`;
+	for ($i = 0; $i < size($nodeToDelete1); $i++ )
+	{
+		reference -q -isNodeReferenced $nodeToDelete1[$i]; 
+		delete;
+	}
+}
+
+deleteNotReferenced;

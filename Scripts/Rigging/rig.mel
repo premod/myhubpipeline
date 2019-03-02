@@ -1,0 +1,1922 @@
+global proc rig()  
+{
+        string $confirmResult;
+	$confirmResult=`confirmDialog -t SanraaRigSetup -m "Generate RigSetup ?" -b "Skeleton" -b "Setup" -db "Setup"`;
+	if ($confirmResult=="Setup")
+	{
+		optionVar -iv "ptConstMaintainOffset" 1;
+		optionVar -iv "aimConstMaintainOffset" 1;
+		optionVar -iv "orientConstMaintainOffset" 1;
+		optionVar -iv "parConstMaintainOffset" 1;
+		optionVar -iv "scaleConstMaintainOffset" 1;
+
+		optionVar -iv "freezeTransformationsRotate" 1;
+		optionVar -iv "freezeTransformationsScale" 1;
+		optionVar -iv "freezeTransformationsTranslate" 1;
+
+		optionVar -iv "freezeTransformationsJointOrient" 0;
+		optionVar -iv "freezeTransformationsNormal" 0;
+		
+		optionVar -iv "clusterRelative" 0;
+		rigsetup();
+	}
+	else
+		if ($confirmResult=="Skeleton")
+		file -import -type "mayaBinary" -rpr "Skeleton" -options "v=0;p=17"  -pr -loadReferenceDepth "all" "//anil/SHARING/Anil_Sk/AUTOMATION/Skeleton.mb";
+}
+////////////////////////////////////////////////////////////////////////////////////
+
+global proc rigsetup()
+{
+////////////////////////////////////////////////////Spine_Creation////////////////////////////////////////////////////////////
+//unparenting//
+          select -r Chest L_Scapula L_Ches_Xtra L_UArm_Xtra L_Blade_Xtra R_Ches_Xtra R_Blade_Xtra R_UArm_Xtra R_Scapula Waist;
+          Unparent;
+
+//Spine ik Creation //
+          ikHandle -n Spine_ik -sj Spine -ee Spine6 -pcv 0 -sol ikSplineSolver -ns 2;
+          rename "curve1" "SpineCurve";
+          rename "effector1" "Spine_Eff";
+
+//Parenting//
+          select -r Chest L_Scapula L_Ches_Xtra L_UArm_Xtra L_Blade_Xtra R_Ches_Xtra R_Blade_Xtra R_UArm_Xtra R_Scapula Spine6;
+          Parent;
+          parent Waist Spine ;
+
+//clustering & Controllers//
+          select -r SpineCurve.cv[0] ;
+          CreateCluster;
+          select -r SpineCurve.cv[4] ;
+          CreateCluster;
+          select -r SpineCurve.cv[2] ;
+          CreateCluster;
+          
+          select -r cluster1Handle ;
+          EditMembershipTool;
+          sets -fe cluster1Set SpineCurve.cv[1] ;
+          select -add SpineCurve.cv[1] ;
+          sets -fe cluster2Set SpineCurve.cv[3] ;
+          select -add SpineCurve.cv[3] ;
+          
+          rename "cluster1Handle" "Base_Cluster";
+          rename "cluster2Handle" "Top_Cluster";
+          rename "cluster3Handle" "Mid_Cluster";
+          setAttr "Base_Cluster.visibility" 0;
+          setAttr "Mid_Cluster.visibility" 0;
+          setAttr "Top_Cluster.visibility" 0;
+          setAttr -lock true "Base_Cluster.v";
+          setAttr -lock true "Mid_Cluster.v";
+          setAttr -lock true "Top_Cluster.v";
+          
+          circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "Spine_Ctrl" ;
+          pointConstraint Spine Spine_Ctrl; 
+	    delete Spine_Ctrl_pointConstraint1;
+          FreezeTransformations Spine_Ctrl;
+          Duplicate;
+          pointConstraint Mid_Cluster Spine_Ctrl1;
+          delete Spine_Ctrl1_pointConstraint1;
+          FreezeTransformations Spine_Ctrl1;
+          Duplicate;
+          pointConstraint Top_Cluster Spine_Ctrl2;
+          delete Spine_Ctrl2_pointConstraint1 ;
+          FreezeTransformations Spine_Ctrl2;
+          
+          select -r Spine_Ctrl ;
+          Duplicate;
+          select -r Spine_Ctrl3.cv[0:7] ;
+          move -r -os -wd 0 -0.344468 0 ;
+          select -r Spine_Ctrl3 ;
+          scale -r 1.058881 1.058881 1.058881 ;
+          FreezeTransformations;
+                   
+          rename "Spine_Ctrl3" "Waist_Ctrl";
+          rename "Spine_Ctrl1" "Mid_Spine_Ctrl";
+          rename "Spine_Ctrl2" "Chest_Ctrl";
+          select -cl  ;
+
+          string $CONTROLLER1[] = `circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 16 -ch 1 -n Main_Ctrl` ;
+	    select -r ($CONTROLLER1[0] + ".cv[0]") ($CONTROLLER1[0] + ".cv[2]") ($CONTROLLER1[0] + ".cv[4]")($CONTROLLER1[0] + ".cv[6]")($CONTROLLER1[0] + ".cv[8]")($CONTROLLER1[0] + ".cv[10]")($CONTROLLER1[0] + ".cv[12]") ($CONTROLLER1[0] + ".cv[14]") ;
+	    string $CONTROLCLUSTER[] = `cluster -relative -envelope 1` ;
+	    setAttr ($CONTROLCLUSTER[0] + "Handle.scale") 0.5 0.5 0.5 ;
+	    select -r $CONTROLLER1[0]; DeleteHistory ;
+
+          pointConstraint Root Main_Ctrl;
+          delete Main_Ctrl_pointConstraint1 ;
+          FreezeTransformations Main_Ctrl;
+	    select -r Main_Ctrl.cv[0:15] ;
+          move -r -os -wd 0 -0.3 0 ;
+          select -cl  ;
+          
+          parent Base_Cluster Waist_Ctrl ;
+          parent Top_Cluster Chest_Ctrl ;
+          parent Mid_Cluster Mid_Spine_Ctrl ;
+          
+          parent Chest_Ctrl Mid_Spine_Ctrl ;
+          parent Mid_Spine_Ctrl Spine_Ctrl ;
+          parent Spine_Ctrl Main_Ctrl ;
+          parent Waist_Ctrl Main_Ctrl ;
+          orientConstraint -mo -weight 1 Waist_Ctrl Waist;
+
+	   addAttr -ln "SpineStretch"  -at double  -min 0 -max 1 -dv 1 Main_Ctrl;
+         setAttr -e-keyable true Main_Ctrl.SpineStretch;
+
+// Sq_St Spine//
+          setAttr "Spine_ik.dTwistControlEnable" 1;
+          setAttr Spine_ik.dWorldUpType 4;
+          setAttr Spine_ik.dWorldUpAxis 3;
+          setAttr "Spine_ik.dWorldUpVectorX" 1;
+          setAttr "Spine_ik.dWorldUpVectorY" 0;
+          setAttr "Spine_ik.dWorldUpVectorZ" 0;
+          setAttr "Spine_ik.dWorldUpVectorEndX" 1;
+          setAttr "Spine_ik.dWorldUpVectorEndY" 0;
+          setAttr "Spine_ik.dWorldUpVectorEndZ" 0;
+          connectAttr -f Waist_Ctrl.worldMatrix[0] Spine_ik.dWorldUpMatrix;
+          connectAttr -f Chest_Ctrl.worldMatrix[0] Spine_ik.dWorldUpMatrixEnd;
+
+          arclen -ch on SpineCurve;
+          createNode multiplyDivide -n Sp_St_Div;
+          setAttr Sp_St_Div.operation 2;
+
+          connectAttr -f curveInfo1.arcLength Sp_St_Div.input1X;
+          createNode multiplyDivide -n Sp_St_Mul;
+          connectAttr -f Sp_St_Div.outputX Sp_St_Mul.input1X;
+
+          createNode blendColors -n Spine_CBN;
+          connectAttr -f Sp_St_Mul.outputX Spine_CBN.color1R;
+          connectAttr -f Main_Ctrl.SpineStretch Spine_CBN.blender;
+          setAttr "Spine_CBN.color2R" 1;
+
+          circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "Global_Ctrl" ;
+          scale -r 2.745311 2.745311 2.745311 ;
+          FreezeTransformations Global_Ctrl;
+          createNode multiplyDivide -n Glb_Mul;
+          connectAttr -f Global_Ctrl.scaleX Glb_Mul.input1X;
+          float $val = getAttr ("curveInfo1.arcLength");
+          setAttr ("Glb_Mul.input2X") $val;
+
+          select -r Global_Ctrl ;
+          duplicate -rr -n Local_Ctrl;
+          select -r Local_Ctrl.cv[2] Local_Ctrl.cv[0] Local_Ctrl.cv[6] Local_Ctrl.cv[4] ;
+          scale -r -p 0cm 0cm 0cm 0.0168984 0.0168984 0.0168984 ;
+          select -r Local_Ctrl.cv[0:7] ;
+          scale -r -p 0cm 0cm 0cm 1.356491 1.356491 1.356491 ;
+          select -cl  ;
+          createNode multiplyDivide -n Locl_Mul;
+          connectAttr -f Glb_Mul.outputX Locl_Mul.input2X;
+          connectAttr -f Local_Ctrl.scaleX Locl_Mul.input1X;
+          connectAttr -f Locl_Mul.outputX Sp_St_Div.input2X;
+
+          connectAttr -f Spine_CBN.outputR Spine.scaleX;
+          connectAttr -f Spine_CBN.outputR Spine1.scaleX;
+          connectAttr -f Spine_CBN.outputR Spine2.scaleX;
+          connectAttr -f Spine_CBN.outputR Spine3.scaleX;
+          connectAttr -f Spine_CBN.outputR Spine4.scaleX;
+          connectAttr -f Spine_CBN.outputR Spine5.scaleX;
+
+          select -r Waist_Ctrl Root ;
+          ParentConstraint;
+
+//end//
+///////////////////////////////////////////Leg_Creation///////////////////////////////////////////////////////////////
+//L_Leg_Creation//
+        ikHandle -n L_Ankel_ik  -sol ikRPsolver -sj L_Thi -ee L_Ankel;
+        ikHandle -n L_Ball_ik  -sol ikSCsolver -sj L_Ankel -ee L_Ball;
+        ikHandle -n L_Toe_ik  -sol ikSCsolver -sj L_Ball -ee L_Toe;
+		
+        group -em -n L_Foot_Roll;
+        pointConstraint L_Ball L_Foot_Roll;
+        delete L_Foot_Roll_pointConstraint1;
+        FreezeTransformations L_Foot_Roll;
+        rename "effector1" "L_Ankel_Eff";
+        rename "effector2" "L_Ball_Eff";
+        rename "effector3" "L_Toe_Eff";
+        
+	  select -r L_Foot_Roll ;
+        duplicate -rr -n L_Toe_Lift;
+        parent L_Ankel_ik L_Foot_Roll ;
+
+	  group -em -n L_Toe_Side;
+        pointConstraint L_Toe L_Toe_Side;
+        delete L_Toe_Side_pointConstraint1 ;
+        FreezeTransformations L_Toe_Side;
+
+        parent L_Ball_ik L_Toe_Side ;
+        parent L_Foot_Roll L_Toe_Side ;
+        parent L_Toe_ik L_Toe_Lift ;
+	  parent L_Toe_Lift L_Toe_Side; 
+       
+        group -n L_Heel_Grp L_Toe_Side; xform -os -piv 0 0 0;
+        move 0.492141 0.763856 -0.425941 L_Heel_Grp.scalePivot L_Heel_Grp.rotatePivot ;
+        move -r 0 -0.66486 0 L_Heel_Grp.scalePivot L_Heel_Grp.rotatePivot ;
+        
+        group -em -n L_Leg_Grp;
+	  pointConstraint L_Ankel L_Leg_Grp ;
+        delete L_Leg_Grp_pointConstraint1;
+        parent L_Heel_Grp L_Leg_Grp ;
+
+        curve -d 1 -p 0.5 -1 0.866025 -p -0.5 -1 0.866025 -p 0 1 0 -p 0.5 -1 0.866025 -p 1 -1 0 -p 0 1 0 -p 0.5 -1 -0.866025 -p 1 -1 0 -p 0 1 0 -p -0.5 -1 -0.866026 -p 0.5 -1 -0.866025 -p 0 1 0 -p -1 -1 -1.5885e-007 -p -0.5 -1 -0.866026 -p 0 1 0 -p -0.5 -1 0.866025 -p -1 -1 -1.5885e-007 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n L_L_PV_Ctrl;
+        pointConstraint L_Knee L_L_PV_Ctrl;
+        delete L_L_PV_Ctrl_pointConstraint1;
+        move -r -os -wd 0 0 5 L_L_PV_Ctrl;
+	  setAttr "L_L_PV_Ctrl.rotateX" -90;
+        FreezeTransformations L_L_PV_Ctrl;
+        rename "curveShape1" "L_L_PV_CtrlShape";
+        poleVectorConstraint L_L_PV_Ctrl L_Ankel_ik;
+
+	  curve -d 1 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -n "L_Leg_Ctrl" ;
+        pointConstraint L_Ankel L_Leg_Ctrl;
+        delete L_Leg_Ctrl_pointConstraint1;
+        rename "curveShape1" "L_Leg_CtrlShape";
+        FreezeTransformations L_Leg_Ctrl;
+        parent L_Leg_Grp L_Leg_Ctrl ;
+		
+	select -r L_L_PV_Ctrl ;
+	group -n L_L_PV_CtrlGrp;
+	pointConstraint -mo -weight 1 L_Leg_Ctrl L_L_PV_CtrlGrp;
+	addAttr -ln "follow"  -at double  -min 0 -max 1 -dv 0 L_L_PV_Ctrl;
+	setAttr -e-keyable true L_L_PV_Ctrl.follow;
+	connectAttr -f L_L_PV_Ctrl.follow L_L_PV_CtrlGrp_pointConstraint1.L_Leg_CtrlW0;
+              
+	  addAttr -ln "FOOT_CONTROLS"  -at double L_Leg_Ctrl;
+        setAttr -e-keyable true L_Leg_Ctrl.FOOT_CONTROLS;
+        setAttr -lock true "L_Leg_Ctrl.FOOT_CONTROLS";
+        addAttr -ln "FOOT_ROLL"  -at double L_Leg_Ctrl;
+        setAttr -e-keyable true L_Leg_Ctrl.FOOT_ROLL;
+        addAttr -ln "TOE_ROLL"  -at double L_Leg_Ctrl;
+        setAttr -e-keyable true L_Leg_Ctrl.TOE_ROLL;
+        addAttr -ln "TOE_SIDE"  -at double L_Leg_Ctrl;
+        setAttr -e-keyable true L_Leg_Ctrl.TOE_SIDE;
+        addAttr -ln "TOE_LIFT"  -at double L_Leg_Ctrl;
+        setAttr -e-keyable true L_Leg_Ctrl.TOE_LIFT;
+        addAttr -ln "TOE_TAP"  -at double L_Leg_Ctrl;
+        setAttr -e-keyable true L_Leg_Ctrl.TOE_TAP;
+        
+        connectAttr -f L_Leg_Ctrl.FOOT_ROLL L_Foot_Roll.rotateX;
+        connectAttr -f L_Leg_Ctrl.TOE_ROLL L_Toe_Side.rotateX;
+        connectAttr -f L_Leg_Ctrl.TOE_SIDE L_Toe_Side.rotateY;
+        connectAttr -f L_Leg_Ctrl.TOE_LIFT L_Toe_Lift.rotateX;
+        connectAttr -f L_Leg_Ctrl.TOE_TAP L_Heel_Grp.rotateX;
+
+        circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "L_L_Switch_Ctrl" ;
+        pointConstraint L_Ankel L_L_Switch_Ctrl;
+        delete L_L_Switch_Ctrl_pointConstraint1;
+        rotate -r -os 90 0 0 L_L_Switch_Ctrl ;
+        FreezeTransformations L_L_Switch_Ctrl;
+        select L_Ankel;
+        float $LAnkelpos[] = `xform -query -worldSpace -rotatePivot`;
+	  select -r L_L_Switch_Ctrl.cv[0] L_L_Switch_Ctrl.cv[2] L_L_Switch_Ctrl.cv[6] L_L_Switch_Ctrl.cv[4] ;
+        scale -r -p $LAnkelpos[0] $LAnkelpos[1] $LAnkelpos[2] 0.06 0.06 0.06 ;
+        select -cl  ;
+        select -r L_L_Switch_CtrlShape.cv[0:7] ;
+        move -r -os -wd 2.2 1.5 0 ;
+        select -cl  ;
+        
+        addAttr -ln "SWITCH"  -at "enum" -en "FK:IK:" L_L_Switch_Ctrl;
+        setAttr -e-keyable true L_L_Switch_Ctrl.SWITCH;
+        
+        connectAttr -f L_L_Switch_Ctrl.SWITCH L_Leg_Ctrl.visibility;
+        connectAttr -f L_L_Switch_Ctrl.SWITCH L_L_PV_Ctrl.visibility;
+        connectAttr -f L_L_Switch_Ctrl.SWITCH L_Ankel_ik.ikBlend;
+        connectAttr -f L_L_Switch_Ctrl.SWITCH L_Ball_ik.ikBlend;
+        connectAttr -f L_L_Switch_Ctrl.SWITCH L_Toe_ik.ikBlend;
+        //setAttr "L_L_Switch_Ctrl.SWITCH" 0;
+        //setAttr "L_Thi.visibility" 1;
+        //setDrivenKeyframe -currentDriver L_L_Switch_Ctrl.SWITCH L_Thi.visibility;
+        setAttr "L_L_Switch_Ctrl.SWITCH" 1;
+        //setAttr "L_Thi.visibility" 0;
+        //setDrivenKeyframe -currentDriver L_L_Switch_Ctrl.SWITCH L_Thi.visibility;
+        parentConstraint -mo -weight 1 L_Ankel L_L_Switch_Ctrl;
+
+///L_Foot bank creation///
+	select -r L_Heel_Grp ;
+	group -n LL_Bank_Grp;
+	select -r LL_Bank_Grp;
+	group -n LR_Bank_Grp;
+      move 1 0 0 LL_Bank_Grp.scalePivot LL_Bank_Grp.rotatePivot ;
+	move 0 0 0 LR_Bank_Grp.scalePivot LR_Bank_Grp.rotatePivot ;
+
+	select -r L_Leg_Ctrl ;
+	addAttr -ln "FOOTBANK"  -at double  L_Leg_Ctrl;
+	setAttr -e-keyable true L_Leg_Ctrl.FOOTBANK;
+
+	createNode clamp -n LF_BankClamp;
+	setAttr "LF_BankClamp.maxR" 100;
+	setAttr "LF_BankClamp.minG" -100;
+
+	connectAttr -f L_Leg_Ctrl.FOOTBANK LF_BankClamp.inputR;
+	connectAttr -f L_Leg_Ctrl.FOOTBANK LF_BankClamp.inputG;
+	connectAttr -f LF_BankClamp.outputR LR_Bank_Grp.rotateZ;
+	connectAttr -f LF_BankClamp.outputG LL_Bank_Grp.rotateZ;
+
+//////Leg Scale////////
+	addAttr -ln "Scale"  -at "enum" -en "**********:"  L_L_Switch_Ctrl;
+	setAttr -e-keyable true L_L_Switch_Ctrl.Scale;
+
+	addAttr -ln "HipScale"  -at double  -min 0 -max 2 -dv 1 L_L_Switch_Ctrl;
+	setAttr -e-keyable true L_L_Switch_Ctrl.HipScale;
+
+	addAttr -ln "KneeScale"  -at double  -min 0 -max 2 -dv 1 L_L_Switch_Ctrl;
+	setAttr -e-keyable true L_L_Switch_Ctrl.KneeScale;
+	setAttr -lock true "L_L_Switch_Ctrl.Scale";
+	connectAttr -f L_L_Switch_Ctrl.HipScale L_Thi.scaleX;
+	connectAttr -f L_L_Switch_Ctrl.KneeScale L_Knee.scaleX;
+//end////////////////////////////
+
+//R_Leg_Creation///////
+        ikHandle -n R_Ankel_ik  -sol ikRPsolver -sj R_Thi -ee R_Ankel;
+	  ikHandle -n R_Ball_ik  -sol ikSCsolver -sj R_Ankel -ee R_Ball;
+        ikHandle -n R_Toe_ik  -sol ikSCsolver -sj R_Ball -ee R_Toe;
+
+        group -em -n R_Foot_Roll;
+        pointConstraint R_Ball R_Foot_Roll;
+        delete R_Foot_Roll_pointConstraint1;
+        FreezeTransformations R_Foot_Roll;
+        rename "effector1" "R_Ankel_Eff";
+        rename "effector2" "R_Ball_Eff";
+        rename "effector3" "R_Toe_Eff";
+
+	  select -r R_Foot_Roll ;
+        duplicate -rr -n R_Toe_Lift;
+        parent R_Ankel_ik R_Foot_Roll ;
+
+	  group -em -n R_Toe_Side;
+        pointConstraint R_Toe R_Toe_Side;
+        delete R_Toe_Side_pointConstraint1 ;
+        FreezeTransformations R_Toe_Side;
+
+        parent R_Ball_ik R_Toe_Side ;
+        parent R_Foot_Roll R_Toe_Side ;
+        parent R_Toe_ik R_Toe_Lift ;
+	  parent R_Toe_Lift R_Toe_Side; 
+
+        group -n R_Heel_Grp R_Toe_Side; xform -os -piv 0 0 0;
+        move -0.492141 0.763856 -0.425941 R_Heel_Grp.scalePivot R_Heel_Grp.rotatePivot ;
+        move -r 0 -0.66486 0 R_Heel_Grp.scalePivot R_Heel_Grp.rotatePivot ;
+
+        group -em -n R_Leg_Grp;
+	  pointConstraint R_Ankel R_Leg_Grp ;
+        delete R_Leg_Grp_pointConstraint1;
+        parent R_Heel_Grp R_Leg_Grp ;
+
+        curve -d 1 -p 0.5 -1 0.866025 -p -0.5 -1 0.866025 -p 0 1 0 -p 0.5 -1 0.866025 -p 1 -1 0 -p 0 1 0 -p 0.5 -1 -0.866025 -p 1 -1 0 -p 0 1 0 -p -0.5 -1 -0.866026 -p 0.5 -1 -0.866025 -p 0 1 0 -p -1 -1 -1.5885e-007 -p -0.5 -1 -0.866026 -p 0 1 0 -p -0.5 -1 0.866025 -p -1 -1 -1.5885e-007 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n R_L_PV_Ctrl;
+        pointConstraint R_Knee R_L_PV_Ctrl;
+        delete R_L_PV_Ctrl_pointConstraint1;
+        move -r -os -wd 0 0 5 R_L_PV_Ctrl;
+	  setAttr "R_L_PV_Ctrl.rotateX" -90;
+        FreezeTransformations R_L_PV_Ctrl;
+        rename "curveShape1" "R_L_PV_CtrlShape";
+        poleVectorConstraint R_L_PV_Ctrl R_Ankel_ik;
+
+	  curve -d 1 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -n "R_Leg_Ctrl" ;
+        pointConstraint R_Ankel R_Leg_Ctrl;
+        delete R_Leg_Ctrl_pointConstraint1;
+        rename "curveShape1" "R_Leg_CtrlShape";
+        FreezeTransformations R_Leg_Ctrl;
+        parent R_Leg_Grp R_Leg_Ctrl ;
+
+	select -r R_L_PV_Ctrl ;
+	group -n R_L_PV_CtrlGrp;
+	pointConstraint -mo -weight 1 R_Leg_Ctrl R_L_PV_CtrlGrp;
+	addAttr -ln "follow"  -at double  -min 0 -max 1 -dv 0 R_L_PV_Ctrl;
+	setAttr -e-keyable true R_L_PV_Ctrl.follow;
+	connectAttr -f R_L_PV_Ctrl.follow R_L_PV_CtrlGrp_pointConstraint1.R_Leg_CtrlW0;
+
+	  addAttr -ln "FOOT_CONTROLS"  -at double R_Leg_Ctrl;
+        setAttr -e-keyable true R_Leg_Ctrl.FOOT_CONTROLS;
+        setAttr -lock true "R_Leg_Ctrl.FOOT_CONTROLS";
+        addAttr -ln "FOOT_ROLL"  -at double R_Leg_Ctrl;
+        setAttr -e-keyable true R_Leg_Ctrl.FOOT_ROLL;
+        addAttr -ln "TOE_ROLL"  -at double R_Leg_Ctrl;
+        setAttr -e-keyable true R_Leg_Ctrl.TOE_ROLL;
+        addAttr -ln "TOE_SIDE"  -at double R_Leg_Ctrl;
+        setAttr -e-keyable true R_Leg_Ctrl.TOE_SIDE;
+        addAttr -ln "TOE_LIFT"  -at double R_Leg_Ctrl;
+        setAttr -e-keyable true R_Leg_Ctrl.TOE_LIFT;
+        addAttr -ln "TOE_TAP"  -at double R_Leg_Ctrl;
+        setAttr -e-keyable true R_Leg_Ctrl.TOE_TAP;
+        
+        connectAttr -f R_Leg_Ctrl.FOOT_ROLL R_Foot_Roll.rotateX;
+        connectAttr -f R_Leg_Ctrl.TOE_ROLL R_Toe_Side.rotateX;
+        connectAttr -f R_Leg_Ctrl.TOE_SIDE R_Toe_Side.rotateY;
+        connectAttr -f R_Leg_Ctrl.TOE_LIFT R_Toe_Lift.rotateX;
+        connectAttr -f R_Leg_Ctrl.TOE_TAP R_Heel_Grp.rotateX;
+
+        circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "R_L_Switch_Ctrl" ;
+        pointConstraint R_Ankel R_L_Switch_Ctrl;
+        delete R_L_Switch_Ctrl_pointConstraint1;
+        rotate -r -os 90 0 0 R_L_Switch_Ctrl ;
+        FreezeTransformations R_L_Switch_Ctrl;
+        select R_Ankel;
+        float $RAnkelpos[] = `xform -query -worldSpace -rotatePivot`;
+	  select -r R_L_Switch_Ctrl.cv[0] R_L_Switch_Ctrl.cv[2] R_L_Switch_Ctrl.cv[6] R_L_Switch_Ctrl.cv[4] ;
+        scale -r -p $RAnkelpos[0] $RAnkelpos[1] $RAnkelpos[2] 0.06 0.06 0.06 ;
+        select -cl  ;
+        select -r R_L_Switch_CtrlShape.cv[0:7] ;
+        move -r -os -wd -2.2 1.5 0 ;
+        select -cl  ;
+        
+        addAttr -ln "SWITCH"  -at "enum" -en "FK:IK:" R_L_Switch_Ctrl;
+        setAttr -e-keyable true R_L_Switch_Ctrl.SWITCH;
+          
+        connectAttr -f R_L_Switch_Ctrl.SWITCH R_Leg_Ctrl.visibility;
+        connectAttr -f R_L_Switch_Ctrl.SWITCH R_L_PV_Ctrl.visibility;
+        connectAttr -f R_L_Switch_Ctrl.SWITCH R_Ankel_ik.ikBlend;
+        connectAttr -f R_L_Switch_Ctrl.SWITCH R_Ball_ik.ikBlend;
+        connectAttr -f R_L_Switch_Ctrl.SWITCH R_Toe_ik.ikBlend;
+        //setAttr "R_L_Switch_Ctrl.SWITCH" 0;
+        //setAttr "R_Thi.visibility" 1;
+        //setDrivenKeyframe -currentDriver R_L_Switch_Ctrl.SWITCH R_Thi.visibility;
+        setAttr "R_L_Switch_Ctrl.SWITCH" 1;
+        //setAttr "R_Thi.visibility" 0;
+        //setDrivenKeyframe -currentDriver R_L_Switch_Ctrl.SWITCH R_Thi.visibility;
+        parentConstraint -mo -weight 1 R_Ankel R_L_Switch_Ctrl;
+
+///R_Foot bank creation///
+	select -r R_Heel_Grp ;
+	group -n RL_Bank_Grp;
+	select -r RL_Bank_Grp;
+	group -n RR_Bank_Grp;
+
+	move 0 0 0 RL_Bank_Grp.scalePivot RL_Bank_Grp.rotatePivot ;
+	move -1 0 0 RR_Bank_Grp.scalePivot RR_Bank_Grp.rotatePivot ;
+
+	select -r R_Leg_Ctrl ;
+	addAttr -ln "FOOTBANK"  -at double  R_Leg_Ctrl;
+	setAttr -e-keyable true R_Leg_Ctrl.FOOTBANK;
+
+	createNode clamp -n RF_BankClamp;
+	setAttr "RF_BankClamp.maxR" 100;
+	setAttr "RF_BankClamp.minG" -100;
+
+	connectAttr -f R_Leg_Ctrl.FOOTBANK RF_BankClamp.inputR;
+	connectAttr -f R_Leg_Ctrl.FOOTBANK RF_BankClamp.inputG;
+	connectAttr -f RF_BankClamp.outputR RR_Bank_Grp.rotateZ;
+	connectAttr -f RF_BankClamp.outputG RL_Bank_Grp.rotateZ;
+
+///R_Leg scale////////
+    	addAttr -ln "Scale"  -at "enum" -en "**********:"  R_L_Switch_Ctrl;
+    	setAttr -e-keyable true R_L_Switch_Ctrl.Scale;
+      addAttr -ln "HipScale"  -at double  -min 0 -max 2 -dv 1 R_L_Switch_Ctrl;
+    	setAttr -e-keyable true R_L_Switch_Ctrl.HipScale;
+
+    	addAttr -ln "KneeScale"  -at double  -min 0 -max 2 -dv 1 R_L_Switch_Ctrl;
+    	setAttr -e-keyable true R_L_Switch_Ctrl.KneeScale;
+    	setAttr -lock true "R_L_Switch_Ctrl.Scale";
+    	connectAttr -f R_L_Switch_Ctrl.HipScale R_Thi.scaleX;
+    	connectAttr -f R_L_Switch_Ctrl.KneeScale R_Knee.scaleX;
+//end//
+////////////////////////////////////////////////Hand_Creation/////////////////////////////////////////////
+//L_Hand_Creation
+//Switch ctrl Creation//    L
+        circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "L_H_Switch_Ctrl" ;
+        pointConstraint L_Wrist L_H_Switch_Ctrl;
+        delete L_H_Switch_Ctrl_pointConstraint1 ;
+        rotate -r -os 90 0 0 L_H_Switch_Ctrl ;
+        FreezeTransformations L_H_Switch_Ctrl;
+        select -r L_H_Switch_Ctrl.cv[2] L_H_Switch_Ctrl.cv[0] L_H_Switch_Ctrl.cv[6] L_H_Switch_Ctrl.cv[4] ;
+        scale -r 0.15 0.15 0.15 ;
+        select -cl  ;
+        move -r -os -wd 0 2.2 0 L_H_Switch_CtrlShape.cv[0:7] ;
+        addAttr -ln "SWITCH"  -at "enum" -en "FK:IK:" L_H_Switch_Ctrl;
+        setAttr -e-keyable true L_H_Switch_Ctrl.SWITCH;
+  	  setAttr "L_H_Switch_Ctrl.SWITCH" 1;
+        parentConstraint -mo -weight 1 L_Forearm L_H_Switch_Ctrl;
+
+// ctrl joint creation//    L
+       select -r L_Scapula ;
+       duplicate -rc;
+       Unparent;
+       delete L_Index_N1 L_Mid_N1 L_Ring_N1 L_Thumb_Tp3 L_Pinky_Tp5 L_Elb_Xtra2 L_Bic_Xtra2 L_Scap_Xtra3 ;
+       parent L_Elbow1 L_Arm1 ;
+       delete L_Bicep1;
+       rename "L_Scapula1" "L_Scapula_Ctrl";
+       rename "L_Arm1" "L_Arm_Ctrl";
+       rename "L_Elbow1" "L_Elbow_Ctrl";
+       rename "L_Forearm1" "L_Forearm_Ctrl";
+       rename "L_Wrist1" "L_Wrist_Ctrl";
+       rename "L_Palm1" "L_Palm_Ctrl";
+       select -cl  ;
+          
+//constraining//    L
+        orientConstraint -mo -skip x -weight 1 L_Arm_Ctrl L_Arm;
+        orientConstraint -mo -weight 1 L_Elbow_Ctrl L_Elbow;
+        orientConstraint -mo -weight 1 L_Forearm_Ctrl L_Forearm ;
+        orientConstraint -mo -weight 1 L_Wrist_Ctrl L_Wrist;
+        rotate -r -os 0 -50 0 L_Elbow_Ctrl;
+        joint -e -spa -ch L_Elbow_Ctrl;
+        setAttr "L_Elbow_Ctrl.rotateY" 0;
+
+//ik creation//    L
+       ikHandle -n L_Wrist_ik  -sol ikRPsolver -sj L_Arm_Ctrl -ee L_Forearm_Ctrl;
+       ikHandle -n L_Palm_ik  -sol ikRPsolver -sj L_Wrist_Ctrl -ee L_Palm_Ctrl;
+       rename "effector1" "L_Wrist_Eff";
+       rename "effector2" "L_Palm_Eff";
+
+//pv creation//    L
+      curve -d 1 -p 0.5 -1 0.866025 -p -0.5 -1 0.866025 -p 0 1 0 -p 0.5 -1 0.866025 -p 1 -1 0 -p 0 1 0 -p 0.5 -1 -0.866025 -p 1 -1 0 -p 0 1 0 -p -0.5 -1 -0.866026 -p 0.5 -1 -0.866025 -p 0 1 0 -p -1 -1 -1.5885e-007 -p -0.5 -1 -0.866026 -p 0 1 0 -p -0.5 -1 0.866025 -p -1 -1 -1.5885e-007 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n L_H_PV_Ctrl;
+      rename "curveShape1" "L_H_PV_CtrlShape";
+      pointConstraint L_Elbow_Ctrl L_H_PV_Ctrl ;
+      delete L_H_PV_Ctrl_pointConstraint1;
+      move -r 0 0 -3 L_H_PV_Ctrl;   
+      setAttr "L_H_PV_Ctrl.rotateX" 90 L_H_PV_Ctrl;
+      FreezeTransformations L_H_PV_Ctrl;
+      poleVectorConstraint -weight 1 L_H_PV_Ctrl L_Wrist_ik;
+
+//hand controller//
+      curve -d 1 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -n "L_Hand_Ctrl" ;
+      rename "curveShape1" "L_Hand_CtrlShape";
+      pointConstraint L_Wrist L_Hand_Ctrl;
+      delete L_Hand_Ctrl_pointConstraint1;
+      FreezeTransformations L_Hand_Ctrl;
+
+//connections//    L
+      connectAttr -f L_H_Switch_Ctrl.SWITCH L_Hand_Ctrl.visibility;
+      connectAttr -f L_H_Switch_Ctrl.SWITCH L_H_PV_Ctrl.visibility;
+      connectAttr -f L_H_Switch_Ctrl.SWITCH L_Wrist_ik.ikBlend;
+      connectAttr -f L_H_Switch_Ctrl.SWITCH L_Palm_ik.ikBlend;
+	               
+//add attribute//    L
+
+      addAttr -ln "FINGER_CONTROLS"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.FINGER_CONTROLS;
+      addAttr -ln "FIST"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.FIST;
+      setAttr -lock true "L_H_Switch_Ctrl.FINGER_CONTROLS";
+      addAttr -ln "SPREAD"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.SPREAD;
+      addAttr -ln "INDEX"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.INDEX;
+      addAttr -ln "MID"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.MID;
+      addAttr -ln "RING"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.RING;
+      addAttr -ln "PINKY"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.PINKY;
+      addAttr -ln "THUMB"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.THUMB;
+      addAttr -ln "THUMB_CURL"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.THUMB_CURL;
+      addAttr -ln "ADD_CONTROLS"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.ADD_CONTROLS;
+      setAttr -lock true "L_H_Switch_Ctrl.ADD_CONTROLS";
+      addAttr -ln "FOREARM"  -at "enum" -en "MANUAL:AUTO:" L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.FOREARM;
+      addAttr -ln "TWIST"  -at double L_H_Switch_Ctrl;
+      setAttr -e-keyable true L_H_Switch_Ctrl.TWIST;
+      select -cl  ;
+
+      setAttr "L_H_Switch_Ctrl.SWITCH" 1;
+      setAttr "L_Arm_Ctrl.visibility" 0;
+      setDrivenKeyframe -currentDriver L_H_Switch_Ctrl.SWITCH L_Arm_Ctrl.visibility;
+      setDrivenKeyframe -currentDriver L_H_Switch_Ctrl.SWITCH L_Arm_Ctrl.visibility;
+
+      setAttr "L_H_Switch_Ctrl.SWITCH" 0;
+      setAttr "L_Arm_Ctrl.visibility" 1;
+      setDrivenKeyframe -currentDriver L_H_Switch_Ctrl.SWITCH L_Arm_Ctrl.visibility;
+      setDrivenKeyframe -currentDriver L_H_Switch_Ctrl.SWITCH L_Arm_Ctrl.visibility;
+      
+      createNode plusMinusAverage -n L_Fin_Plus1;
+
+      connectAttr -f L_H_Switch_Ctrl.FIST L_Fin_Plus1.input3D[0].input3Dx;
+      connectAttr -f L_H_Switch_Ctrl.FIST L_Fin_Plus1.input3D[0].input3Dy;
+      connectAttr -f L_H_Switch_Ctrl.FIST L_Fin_Plus1.input3D[0].input3Dz;
+      connectAttr -f L_H_Switch_Ctrl.INDEX L_Fin_Plus1.input3D[1].input3Dx;
+      connectAttr -f L_H_Switch_Ctrl.MID L_Fin_Plus1.input3D[1].input3Dy;
+      connectAttr -f L_H_Switch_Ctrl.RING L_Fin_Plus1.input3D[1].input3Dz;
+      
+      connectAttr -f L_Fin_Plus1.output3Dx L_Index_Tp1.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dx L_Index_Tp2.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dx L_Index_Tp3.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dy L_Mid_Tp1.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dy L_Mid_Tp2.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dy L_Mid_Tp3.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dz L_Ring_Tp1.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dz L_Ring_Tp2.rotateZ;
+      connectAttr -f L_Fin_Plus1.output3Dz L_Ring_Tp3.rotateZ;
+
+      createNode plusMinusAverage -n L_Fin_Plus2;
+
+      connectAttr -f L_H_Switch_Ctrl.FIST L_Fin_Plus2.input3D[0].input3Dx;
+      connectAttr -f L_H_Switch_Ctrl.FIST L_Fin_Plus2.input3D[0].input3Dy;
+      connectAttr -f L_H_Switch_Ctrl.PINKY L_Fin_Plus2.input3D[1].input3Dx;
+      connectAttr -f L_H_Switch_Ctrl.THUMB L_Fin_Plus2.input3D[1].input3Dy;
+
+      connectAttr -f L_Fin_Plus2.output3Dx L_Pinky_Tp2.rotateZ;
+      connectAttr -f L_Fin_Plus2.output3Dx L_Pinky_Tp3.rotateZ;
+      connectAttr -f L_Fin_Plus2.output3Dx L_Pinky_Tp4.rotateZ;
+      connectAttr -f L_H_Switch_Ctrl.THUMB_CURL L_Thumb_Tp.rotateX;
+      connectAttr -f L_H_Switch_Ctrl.THUMB_CURL L_Thumb_Tp1.rotateX;
+      connectAttr -f L_H_Switch_Ctrl.THUMB_CURL L_Thumb_Tp2.rotateX;
+
+      createNode multiplyDivide -n L_Fin_Div;
+      connectAttr -f L_Fin_Plus2.output3Dy L_Fin_Div.input1X;
+      setAttr L_Fin_Div.operation 2;
+      setAttr "L_Fin_Div.input2X" 3.5;
+                     
+      connectAttr -f L_Fin_Div.outputX L_Thumb_Tp.rotateZ;
+      connectAttr -f L_Fin_Div.outputX L_Thumb_Tp1.rotateZ;
+      connectAttr -f L_Fin_Div.outputX L_Thumb_Tp2.rotateZ;
+
+//LH spread finger//
+      connectAttr -f L_H_Switch_Ctrl.SPREAD L_Fin_Div.input1Y;
+      connectAttr -f L_H_Switch_Ctrl.SPREAD L_Fin_Div.input1Z;
+      connectAttr -f L_Fin_Div.outputY L_Index_Tp1.rotateY;
+      connectAttr -f L_Fin_Div.outputZ L_Pinky_Tp2.rotateY;
+      connectAttr -f L_H_Switch_Ctrl.SPREAD L_Ring_Tp1.rotateY;
+      setAttr "L_Fin_Div.input2Z" 0.5;
+      setAttr "L_Fin_Div.input2Y" -0.8;
+
+////L_HandPV Follow//////
+	group -em -n L_H_PV_CtrlGrp;
+      pointConstraint L_H_PV_Ctrl L_H_PV_CtrlGrp;
+	delete L_H_PV_CtrlGrp_pointConstraint1;
+	parent L_H_PV_Ctrl L_H_PV_CtrlGrp;
+	FreezeTransformations L_H_PV_Ctrl;
+      pointConstraint -mo -weight 1 L_Hand_Ctrl L_H_PV_CtrlGrp;
+      addAttr -ln "follow"  -at double  -min 0 -max 1 -dv 0 L_H_PV_Ctrl;
+      setAttr -e-keyable true L_H_PV_Ctrl.follow;
+      connectAttr -f L_H_PV_Ctrl.follow L_H_PV_CtrlGrp_pointConstraint1.L_Hand_CtrlW0;
+	  
+//forearm joint creation
+
+        select -r L_Forearm ;
+    	  duplicate -rr -po - n L_Wrist_Tw;
+    	  move -r -os -wd 0.3 0 0 L_Wrist_Tw ;
+
+    	  select -r L_Forearm ;
+    	  duplicate -rr -po -n L_Forearm_Tw;
+    	  move -r -os -wd -0.3 0 0 L_Forearm_Tw ; ;
+
+        select -r L_Forearm ;
+    	  duplicate -rr -po -n L_Forearm1_Tw ;
+
+//forearm twist connection
+        createNode condition -n L_Twist_Con;
+        setAttr "L_Twist_Con.secondTerm" 1;
+	  connectAttr -f L_H_Switch_Ctrl.FOREARM L_Twist_Con.firstTerm;
+        connectAttr -f L_H_Switch_Ctrl.FOREARM L_Twist_Con.colorIfFalseR;
+        connectAttr -f L_Wrist.rotateX L_Twist_Con.colorIfTrueR;
+
+	  createNode plusMinusAverage -n L_Twist_Plus;
+        connectAttr -f L_H_Switch_Ctrl.TWIST L_Twist_Plus.input3D[1].input3Dx;
+
+	  createNode multiplyDivide -n L_Twist_Div;
+        setAttr L_Twist_Div.operation 1;
+	  setAttr "L_Twist_Div.input2X" 1;
+        connectAttr -f L_Twist_Con.outColorR L_Twist_Div.input1X;
+        connectAttr -f L_Twist_Div.outputX L_Twist_Plus.input3D[0].input3Dx;
+
+        connectAttr -f L_Twist_Plus.output3Dx L_Wrist_Tw.rotateX;
+	  createNode multiplyDivide -n L_ForearmTwistMD;
+	  setAttr "L_ForearmTwistMD.input2X" 0.6;
+	  setAttr "L_ForearmTwistMD.input2Y" 0.3;
+	  connectAttr -f L_Wrist_Tw.rotateX L_ForearmTwistMD.input1X;
+	  connectAttr -f L_Wrist_Tw.rotateX L_ForearmTwistMD.input1Y;
+
+	  connectAttr -f L_ForearmTwistMD.outputX L_Forearm1_Tw.rotateX;
+	  connectAttr -f L_ForearmTwistMD.outputY L_Forearm_Tw.rotateX;
+
+//L_arm twist connection
+          createNode multiplyDivide -n L_Arm_Twist;
+          setAttr L_Arm_Twist.operation 2;
+          setAttr "L_Arm_Twist.input2X" 4;
+          setAttr "L_Arm_Twist.input2Y" 3;
+          connectAttr -f L_Arm_Ctrl.rotateX L_Arm_Twist.input1X;
+          connectAttr -f L_Arm_Ctrl.rotateX L_Arm_Twist.input1Y;
+          connectAttr -f L_Arm_Twist.outputY L_Arm.rotateX;
+          connectAttr -f L_Arm_Twist.outputX L_Bicep.rotateX;
+//end//
+/////////////////////R_Hand Creation//
+//Switch ctrl Creation//    R
+          circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "R_H_Switch_Ctrl" ;
+          pointConstraint R_Wrist R_H_Switch_Ctrl;
+          delete R_H_Switch_Ctrl_pointConstraint1 ;
+          rotate -r -os 90 0 0 R_H_Switch_Ctrl ;
+          FreezeTransformations R_H_Switch_Ctrl;
+          select -r R_H_Switch_Ctrl.cv[2] R_H_Switch_Ctrl.cv[0] R_H_Switch_Ctrl.cv[6] R_H_Switch_Ctrl.cv[4] ;
+          scale -r 0.15 0.15 0.15 ;
+          select -cl  ;
+          move -r -os -wd 0 2.2 0 R_H_Switch_CtrlShape.cv[0:7] ;
+          addAttr -ln "SWITCH"  -at "enum" -en "FK:IK:" R_H_Switch_Ctrl;
+          setAttr -e-keyable true R_H_Switch_Ctrl.SWITCH;
+          setAttr "R_H_Switch_Ctrl.SWITCH" 1;
+          parentConstraint -mo -weight 1 R_Forearm R_H_Switch_Ctrl;
+
+// ctrl joint creation//    R
+          select -r R_Scapula ;
+          duplicate -rc;
+          Unparent;
+          delete R_Index_N1 R_Mid_N1 R_Ring_N1 R_Thumb_Tp3 R_Pinky_Tp5 R_Elb_Xtra2 R_Bic_Xtra2 R_Scap_Xtra3 ;
+          parent R_Elbow1 R_Arm1 ;
+  	    delete R_Bicep1;
+          rename "R_Scapula1" "R_Scapula_Ctrl";
+          rename "R_Arm1" "R_Arm_Ctrl";
+          rename "R_Elbow1" "R_Elbow_Ctrl";
+          rename "R_Forearm1" "R_Forearm_Ctrl";
+          rename "R_Wrist1" "R_Wrist_Ctrl";
+          rename "R_Palm1" "R_Palm_Ctrl";
+  	    select -cl  ;
+
+//constraining//    R
+          orientConstraint -mo -skip x -weight 1 R_Arm_Ctrl R_Arm;
+          orientConstraint -mo -weight 1 R_Elbow_Ctrl R_Elbow;
+          orientConstraint -mo -weight 1 R_Forearm_Ctrl R_Forearm ;
+          orientConstraint -mo -weight 1 R_Wrist_Ctrl R_Wrist;
+          rotate -r -os 0 -50 0 R_Elbow_Ctrl;
+          joint -e -spa -ch R_Elbow_Ctrl;
+          setAttr "R_Elbow_Ctrl.rotateY" 0;
+
+//ik creation//    R
+        ikHandle -n R_Wrist_ik  -sol ikRPsolver -sj R_Arm_Ctrl -ee R_Forearm_Ctrl;
+  	  ikHandle -n R_Palm_ik  -sol ikRPsolver -sj R_Wrist_Ctrl -ee R_Palm_Ctrl;
+  	  rename "effector1" "R_Wrist_Eff";
+  	  rename "effector2" "R_Palm_Eff";
+
+//pv creation//    R
+          curve -d 1 -p 0.5 -1 0.866025 -p -0.5 -1 0.866025 -p 0 1 0 -p 0.5 -1 0.866025 -p 1 -1 0 -p 0 1 0 -p 0.5 -1 -0.866025 -p 1 -1 0 -p 0 1 0 -p -0.5 -1 -0.866026 -p 0.5 -1 -0.866025 -p 0 1 0 -p -1 -1 -1.5885e-007 -p -0.5 -1 -0.866026 -p 0 1 0 -p -0.5 -1 0.866025 -p -1 -1 -1.5885e-007 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n R_H_PV_Ctrl;
+          rename "curveShape1" "R_H_PV_CtrlShape";
+          pointConstraint R_Elbow_Ctrl R_H_PV_Ctrl ;
+          delete R_H_PV_Ctrl_pointConstraint1;
+          move -r 0 0 -3 R_H_PV_Ctrl;   
+  	    setAttr "R_H_PV_Ctrl.rotateX" 90 R_H_PV_Ctrl;
+          FreezeTransformations R_H_PV_Ctrl;
+          poleVectorConstraint -weight 1 R_H_PV_Ctrl R_Wrist_ik;
+
+//hand controller//
+            curve -d 1 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -n "R_Hand_Ctrl" ;
+            rename "curveShape1" "R_Hand_CtrlShape";
+            pointConstraint R_Wrist R_Hand_Ctrl;
+            delete R_Hand_Ctrl_pointConstraint1;
+            FreezeTransformations R_Hand_Ctrl;
+
+//connections//    R
+            connectAttr -f R_H_Switch_Ctrl.SWITCH R_Hand_Ctrl.visibility;
+            connectAttr -f R_H_Switch_Ctrl.SWITCH R_H_PV_Ctrl.visibility;
+            connectAttr -f R_H_Switch_Ctrl.SWITCH R_Wrist_ik.ikBlend;
+            connectAttr -f R_H_Switch_Ctrl.SWITCH R_Palm_ik.ikBlend;
+ 
+ //add attribute//    R
+            addAttr -ln "FINGER_CONTROLS"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.FINGER_CONTROLS;
+            addAttr -ln "FIST"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.FIST;
+            setAttr -lock true "R_H_Switch_Ctrl.FINGER_CONTROLS";
+            addAttr -ln "SPREAD"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.SPREAD;
+            addAttr -ln "INDEX"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.INDEX;
+            addAttr -ln "MID"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.MID;
+            addAttr -ln "RING"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.RING;
+            addAttr -ln "PINKY"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.PINKY;
+            addAttr -ln "THUMB"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.THUMB;
+            addAttr -ln "THUMB_CURL"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.THUMB_CURL;
+            addAttr -ln "ADD_CONTROLS"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.ADD_CONTROLS;
+            setAttr -lock true "R_H_Switch_Ctrl.ADD_CONTROLS";
+            addAttr -ln "FOREARM"  -at "enum" -en "MANUAL:AUTO:" R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.FOREARM;
+            addAttr -ln "TWIST"  -at double R_H_Switch_Ctrl;
+            setAttr -e-keyable true R_H_Switch_Ctrl.TWIST;
+            select -cl  ;
+
+            setAttr "R_H_Switch_Ctrl.SWITCH" 1;
+            setAttr "R_Arm_Ctrl.visibility" 0;
+            setDrivenKeyframe -currentDriver R_H_Switch_Ctrl.SWITCH R_Arm_Ctrl.visibility;
+            setDrivenKeyframe -currentDriver R_H_Switch_Ctrl.SWITCH R_Arm_Ctrl.visibility;
+
+            setAttr "R_H_Switch_Ctrl.SWITCH" 0;
+            setAttr "R_Arm_Ctrl.visibility" 1;
+            setDrivenKeyframe -currentDriver R_H_Switch_Ctrl.SWITCH R_Arm_Ctrl.visibility;
+            setDrivenKeyframe -currentDriver R_H_Switch_Ctrl.SWITCH R_Arm_Ctrl.visibility;
+            
+            createNode plusMinusAverage -n R_Fin_Plus1;
+                            
+            connectAttr -f R_H_Switch_Ctrl.FIST R_Fin_Plus1.input3D[0].input3Dx;
+            connectAttr -f R_H_Switch_Ctrl.FIST R_Fin_Plus1.input3D[0].input3Dy;
+            connectAttr -f R_H_Switch_Ctrl.FIST R_Fin_Plus1.input3D[0].input3Dz;
+            connectAttr -f R_H_Switch_Ctrl.INDEX R_Fin_Plus1.input3D[1].input3Dx;
+            connectAttr -f R_H_Switch_Ctrl.MID R_Fin_Plus1.input3D[1].input3Dy;
+            connectAttr -f R_H_Switch_Ctrl.RING R_Fin_Plus1.input3D[1].input3Dz;
+            
+            connectAttr -f R_Fin_Plus1.output3Dx R_Index_Tp1.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dx R_Index_Tp2.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dx R_Index_Tp3.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dy R_Mid_Tp1.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dy R_Mid_Tp2.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dy R_Mid_Tp3.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dz R_Ring_Tp1.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dz R_Ring_Tp2.rotateZ;
+            connectAttr -f R_Fin_Plus1.output3Dz R_Ring_Tp3.rotateZ;
+
+	      createNode plusMinusAverage -n R_Fin_Plus2;
+
+            connectAttr -f R_H_Switch_Ctrl.FIST R_Fin_Plus2.input3D[0].input3Dx;
+            connectAttr -f R_H_Switch_Ctrl.FIST R_Fin_Plus2.input3D[0].input3Dy;
+            connectAttr -f R_H_Switch_Ctrl.PINKY R_Fin_Plus2.input3D[1].input3Dx;
+            connectAttr -f R_H_Switch_Ctrl.THUMB R_Fin_Plus2.input3D[1].input3Dy;
+
+            connectAttr -f R_Fin_Plus2.output3Dx R_Pinky_Tp2.rotateZ;
+            connectAttr -f R_Fin_Plus2.output3Dx R_Pinky_Tp3.rotateZ;
+            connectAttr -f R_Fin_Plus2.output3Dx R_Pinky_Tp4.rotateZ;
+            connectAttr -f R_H_Switch_Ctrl.THUMB_CURL R_Thumb_Tp.rotateX;
+            connectAttr -f R_H_Switch_Ctrl.THUMB_CURL R_Thumb_Tp1.rotateX;
+            connectAttr -f R_H_Switch_Ctrl.THUMB_CURL R_Thumb_Tp2.rotateX;
+
+            createNode multiplyDivide -n R_Fin_Div;
+            connectAttr -f R_Fin_Plus2.output3Dy R_Fin_Div.input1X;
+	      setAttr R_Fin_Div.operation 2;
+            setAttr "R_Fin_Div.input2X" 3.5;
+                           
+            connectAttr -f R_Fin_Div.outputX R_Thumb_Tp.rotateZ;
+            connectAttr -f R_Fin_Div.outputX R_Thumb_Tp1.rotateZ;
+            connectAttr -f R_Fin_Div.outputX R_Thumb_Tp2.rotateZ;
+  
+//RH_ Fingers Spread
+	        connectAttr -f R_H_Switch_Ctrl.SPREAD R_Fin_Div.input1Y;
+              connectAttr -f R_H_Switch_Ctrl.SPREAD R_Fin_Div.input1Z;
+              connectAttr -f R_Fin_Div.outputY R_Index_Tp1.rotateY;
+              connectAttr -f R_Fin_Div.outputZ R_Pinky_Tp2.rotateY;
+              connectAttr -f R_H_Switch_Ctrl.SPREAD R_Ring_Tp1.rotateY;
+              setAttr "R_Fin_Div.input2Z" 0.5;
+              setAttr "R_Fin_Div.input2Y" -0.8;
+
+////R_HandPV Follow//////////
+    	     	group -em -n R_H_PV_CtrlGrp;
+      	pointConstraint R_H_PV_Ctrl R_H_PV_CtrlGrp;
+		delete R_H_PV_CtrlGrp_pointConstraint1;
+		parent R_H_PV_Ctrl R_H_PV_CtrlGrp;
+		FreezeTransformations R_H_PV_Ctrl;
+     	     	pointConstraint -mo -weight 1 R_Hand_Ctrl R_H_PV_CtrlGrp;
+    	     	addAttr -ln "follow"  -at double  -min 0 -max 1 -dv 0 R_H_PV_Ctrl;
+    	     	setAttr -e-keyable true R_H_PV_Ctrl.follow;
+    	     	connectAttr -f R_H_PV_Ctrl.follow R_H_PV_CtrlGrp_pointConstraint1.R_Hand_CtrlW0;
+
+//forearm joint creation
+          select -r R_Forearm ;
+    	    duplicate -rr -po - n R_Wrist_Tw;
+    	    move -r -os -wd -0.3 0 0 R_Wrist_Tw ;
+          
+          select -r R_Forearm ;
+    	    duplicate -rr -po -n R_Forearm_Tw;
+    	    move -r -os -wd 0.3 0 0 R_Forearm_Tw ; ;
+
+          select -r R_Forearm ;
+    	    duplicate -rr -po -n R_Forearm1_Tw ;
+
+//forearm twist connection
+          createNode condition -n R_Twist_Con;
+          setAttr "R_Twist_Con.secondTerm" 1;
+	    connectAttr -f R_H_Switch_Ctrl.FOREARM R_Twist_Con.firstTerm;
+          connectAttr -f R_H_Switch_Ctrl.FOREARM R_Twist_Con.colorIfFalseR;
+          connectAttr -f R_Wrist.rotateX R_Twist_Con.colorIfTrueR;
+
+	    createNode plusMinusAverage -n R_Twist_Plus;
+          connectAttr -f R_H_Switch_Ctrl.TWIST R_Twist_Plus.input3D[1].input3Dx;
+
+	    createNode multiplyDivide -n R_Twist_Div;
+          setAttr R_Twist_Div.operation 1;
+	    setAttr "R_Twist_Div.input2X" 1;
+          connectAttr -f R_Twist_Con.outColorR R_Twist_Div.input1X;
+          connectAttr -f R_Twist_Div.outputX R_Twist_Plus.input3D[0].input3Dx;
+
+        connectAttr -f R_Twist_Plus.output3Dx R_Wrist_Tw.rotateX;
+	  createNode multiplyDivide -n R_ForearmTwistMD;
+	  setAttr "R_ForearmTwistMD.input2X" 0.6;
+	  setAttr "R_ForearmTwistMD.input2Y" 0.3;
+	  connectAttr -f R_Wrist_Tw.rotateX R_ForearmTwistMD.input1X;
+	  connectAttr -f R_Wrist_Tw.rotateX R_ForearmTwistMD.input1Y;
+
+	  connectAttr -f R_ForearmTwistMD.outputX R_Forearm1_Tw.rotateX;
+	  connectAttr -f R_ForearmTwistMD.outputY R_Forearm_Tw.rotateX;
+
+//R_arm twist connection
+          createNode multiplyDivide -n R_Arm_Twist;
+          setAttr R_Arm_Twist.operation 2;
+          setAttr "R_Arm_Twist.input2X" 4;
+          setAttr "R_Arm_Twist.input2Y" 3;
+          connectAttr -f R_Arm_Ctrl.rotateX R_Arm_Twist.input1X;
+          connectAttr -f R_Arm_Ctrl.rotateX R_Arm_Twist.input1Y;
+          connectAttr -f R_Arm_Twist.outputY R_Arm.rotateX;
+          connectAttr -f R_Arm_Twist.outputX R_Bicep.rotateX;
+//end//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//L_Scapula//
+
+          ikHandle -n L_Scap_ik  -sol ikRPsolver -sj L_Scapula -ee L_Arm;
+	    rename "effector1" "L_Scap_Eff";
+          parentConstraint -weight 1 L_Scapula L_Scapula_Ctrl;
+          curve -d 1 -p -0.923366 0 0 -p -1.128672 0 0 -p -1.042702 0 0.431934 -p -0.798049 0 0.798033 -p -0.560906 0 0.946236 -p -0.975917 0 1.036319 -p -0.124602 0 1.096506 -p -0.537718 0 0.349716 -p -0.440781 0 0.788659 -p -0.652776 0 0.652998 -p -0.853221 0 0.353358 -p -0.923366 0 0 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -n "L_Scap_Ctrl" ;
+          parentConstraint -weight 1 L_Scapula L_Scap_Ctrl;
+          delete L_Scap_Ctrl_parentConstraint1 ;
+          setAttr "L_Scap_Ctrl.rotateX" -90;
+          FreezeTransformations L_Scap_Ctrl;
+          setAttr "L_Scap_Ctrl.rotateY" -180;
+          FreezeTransformations L_Scap_Ctrl;
+          rename "curveShape1" "L_Scap_CtrlShape";
+//end//
+//R_Scapula//
+
+         ikHandle -n R_Scap_ik  -sol ikRPsolver -sj R_Scapula -ee R_Arm;
+         rename "effector1" "R_Scap_Eff";
+         parentConstraint -weight 1 R_Scapula R_Scapula_Ctrl;
+         curve -d 1 -p -0.923366 0 0 -p -1.128672 0 0 -p -1.042702 0 0.431934 -p -0.798049 0 0.798033 -p -0.560906 0 0.946236 -p -0.975917 0 1.036319 -p -0.124602 0 1.096506 -p -0.537718 0 0.349716 -p -0.440781 0 0.788659 -p -0.652776 0 0.652998 -p -0.853221 0 0.353358 -p -0.923366 0 0 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -n "R_Scap_Ctrl" ;
+         parentConstraint -weight 1 R_Scapula R_Scap_Ctrl;
+         delete R_Scap_Ctrl_parentConstraint1 ;
+         setAttr "R_Scap_Ctrl.rotateX" -90;
+         FreezeTransformations R_Scap_Ctrl;
+         rename "curveShape1" "R_Scap_CtrlShape";
+         group -n R_Scap_Ctrl_Grp R_Scap_Ctrl;
+         parent -w R_Scap_Ctrl;
+         pointConstraint -offset 0 0 0 -weight 1 R_Scap_Ctrl R_Scap_Ctrl_Grp ;
+         delete R_Scap_Ctrl_Grp_pointConstraint1 ;
+         FreezeTransformations R_Scap_Ctrl_Grp ;
+         setAttr "R_Scap_Ctrl_Grp.rotateY" -180;
+         parent R_Scap_Ctrl R_Scap_Ctrl_Grp ;
+         FreezeTransformations R_Scap_Ctrl;
+//end//
+//hirearchy//
+
+        select -r Spine_ik SpineCurve ;
+        group -n Xtra_Node -p Rig ; xform -os -piv 0 0 0;
+        parent Local_Ctrl Global_Ctrl ;
+        select -r Main_Ctrl L_H_Switch_Ctrl L_Scapula_Ctrl L_Hand_Ctrl R_H_Switch_Ctrl R_Scapula_Ctrl R_Hand_Ctrl L_H_PV_CtrlGrp R_H_PV_CtrlGrp ;
+        group -n Controllers -p Local_Ctrl ; xform -os -piv 0 0 0;
+        parent Global_Ctrl Rig ;
+        scaleConstraint -offset 1 1 1 -weight 1 Local_Ctrl Skeleton;
+        setAttr "Xtra_Node.visibility" 0;
+        setAttr "Spine_ik.visibility" 0;
+        setAttr "L_Palm_ik.visibility" 0;
+        setAttr "L_Wrist_ik.visibility" 0;
+        setAttr "R_Palm_ik.visibility" 0;
+        setAttr "R_Wrist_ik.visibility" 0;
+        setAttr "L_Ankel_ik.visibility" 0;
+        setAttr "L_Ball_ik.visibility" 0;
+        setAttr "L_Scap_ik.visibility" 0;
+        setAttr "L_Toe_ik.visibility" 0;
+        setAttr "R_Ankel_ik.visibility" 0;
+        setAttr "R_Ball_ik.visibility" 0;
+        setAttr "R_Scap_ik.visibility" 0;
+        setAttr "R_Toe_ik.visibility" 0;
+        setAttr -lock true "Spine_ik.v";
+        setAttr -lock true "L_Ankel_ik.v";
+        setAttr -lock true "L_Ball_ik.v";
+        setAttr -lock true "L_Palm_ik.v";
+        setAttr -lock true "L_Scap_ik.v";
+        setAttr -lock true "L_Toe_ik.v";
+        setAttr -lock true "L_Wrist_ik.v";
+        setAttr -lock true "R_Ankel_ik.v";
+        setAttr -lock true "R_Ball_ik.v";
+        setAttr -lock true "R_Palm_ik.v";
+        setAttr -lock true "R_Scap_ik.v";
+        setAttr -lock true "R_Toe_ik.v";
+        setAttr -lock true "R_Wrist_ik.v";
+        group -em -n Scap_Ctrl_Grp;
+        pointConstraint -offset 0 0 0 -weight 1 Spine6 Scap_Ctrl_Grp;
+        delete Scap_Ctrl_Grp_pointConstraint1 ;
+        FreezeTransformations Scap_Ctrl_Grp;
+        parent L_Scap_Ctrl Scap_Ctrl_Grp ;
+        parent R_Scap_Ctrl_Grp Scap_Ctrl_Grp ;
+        select -r L_Scap_Ctrl R_Scap_Ctrl ;
+        FreezeTransformations;
+        parent R_Scap_ik R_Scap_Ctrl ;
+        parent L_Scap_ik L_Scap_Ctrl ;
+        parent Scap_Ctrl_Grp Controllers ;
+        parentConstraint -mo -weight 1 Spine6 Scap_Ctrl_Grp;
+        parent L_L_PV_CtrlGrp Controllers ;
+        parent L_Leg_Ctrl Controllers ;
+        parent L_L_Switch_Ctrl Controllers ;
+        parent R_L_PV_CtrlGrp Controllers ;
+        parent R_Leg_Ctrl Controllers ;
+        parent R_L_Switch_Ctrl Controllers ;
+//end//
+//ik extra options//
+        addAttr -ln "IKOPTIONS"  -at double L_H_Switch_Ctrl;
+        setAttr -e-keyable true L_H_Switch_Ctrl.IKOPTIONS;
+        addAttr -ln "IKOPTIONS"  -at double R_H_Switch_Ctrl;
+        setAttr -e-keyable true R_H_Switch_Ctrl.IKOPTIONS;
+        setAttr -lock true "R_H_Switch_Ctrl.IKOPTIONS";
+        setAttr -lock true "L_H_Switch_Ctrl.IKOPTIONS";
+        addAttr -ln "IK_HAND"  -at "enum" -en "WORLD:BODY:" L_H_Switch_Ctrl;
+        setAttr -e-keyable true L_H_Switch_Ctrl.IK_HAND;
+        addAttr -ln "IK_HAND"  -at "enum" -en "WORLD:BODY:" R_H_Switch_Ctrl;
+        setAttr -e-keyable true R_H_Switch_Ctrl.IK_HAND;
+        addAttr -ln "IK_WRIST"  -at "enum" -en "WORLD:BODY:" L_H_Switch_Ctrl;
+        setAttr -e-keyable true L_H_Switch_Ctrl.IK_WRIST;
+        addAttr -ln "IK_WRIST"  -at "enum" -en "WORLD:BODY:" R_H_Switch_Ctrl;
+        setAttr -e-keyable true R_H_Switch_Ctrl.IK_WRIST;
+        select -cl  ;
+ //end//
+//Body wrist creation////////////////////////
+//R//
+        circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "R_BodyWrist_Ctrl" ;
+        pointConstraint -offset 0 0 0 -weight 1 R_Wrist R_BodyWrist_Ctrl;
+        delete R_BodyWrist_Ctrl_pointConstraint1 ;
+        setAttr "R_BodyWrist_Ctrl.rotateX" 90;
+        FreezeTransformations R_BodyWrist_Ctrl;
+        select -cl  ;
+        parent R_BodyWrist_Ctrl R_Hand_Ctrl ;
+        select -r R_Palm_ik ;
+        parent R_Palm_ik R_BodyWrist_Ctrl ;
+        select -r R_BodyWrist_Ctrl ;
+        group -n R_BodyWrist_Ctrl_Grp; 
+        parentConstraint -mo -weight 1 R_Forearm_Ctrl R_BodyWrist_Ctrl_Grp;
+        
+        connectAttr -f R_H_Switch_Ctrl.IK_WRIST R_BodyWrist_Ctrl_Grp_parentConstraint1.R_Forearm_CtrlW0;
+        group -em -n R_Hand_Ctrl_Grp -p Controllers;
+        pointConstraint R_Wrist R_Hand_Ctrl_Grp;
+	  delete R_Hand_Ctrl_Grp_pointConstraint1;
+	  FreezeTransformations R_Hand_Ctrl_Grp;
+        parent R_Hand_Ctrl R_Hand_Ctrl_Grp ;
+
+	  group -em -n R_Hand_Ctrl_Grp_Bdy -p Controllers;
+	  pointConstraint R_Arm R_Hand_Ctrl_Grp_Bdy;
+	  delete R_Hand_Ctrl_Grp_Bdy_pointConstraint1;
+	  FreezeTransformations R_Hand_Ctrl_Grp_Bdy;
+        parent R_Hand_Ctrl_Grp R_Hand_Ctrl_Grp_Bdy ;
+	               
+        parentConstraint -mo -weight 1 R_Scapula R_Hand_Ctrl_Grp_Bdy ;
+        connectAttr -f R_H_Switch_Ctrl.IK_HAND R_Hand_Ctrl_Grp_Bdy_parentConstraint1.R_ScapulaW0;
+        select -cl  ;
+	  setAttr "R_H_Switch_Ctrl.IK_HAND" 0;
+        setAttr "R_H_Switch_Ctrl.IK_WRIST" 0;
+
+//L//
+        circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "L_BodyWrist_Ctrl" ;
+        pointConstraint -offset 0 0 0 -weight 1 L_Wrist L_BodyWrist_Ctrl;
+        delete L_BodyWrist_Ctrl_pointConstraint1 ;
+        setAttr "L_BodyWrist_Ctrl.rotateX" 90;
+        FreezeTransformations L_BodyWrist_Ctrl;
+        select -cl  ;
+        parent L_BodyWrist_Ctrl L_Hand_Ctrl ;
+        select -r L_Palm_ik ;
+        parent L_Palm_ik L_BodyWrist_Ctrl ;
+        select -r L_BodyWrist_Ctrl ;
+        group -n L_BodyWrist_Ctrl_Grp; 
+        parentConstraint -mo -weight 1 L_Forearm_Ctrl L_BodyWrist_Ctrl_Grp;
+        
+        connectAttr -f L_H_Switch_Ctrl.IK_WRIST L_BodyWrist_Ctrl_Grp_parentConstraint1.L_Forearm_CtrlW0;
+        group -em -n L_Hand_Ctrl_Grp -p Controllers;
+        pointConstraint L_Wrist L_Hand_Ctrl_Grp;
+	  delete L_Hand_Ctrl_Grp_pointConstraint1;
+	  FreezeTransformations L_Hand_Ctrl_Grp;
+        parent L_Hand_Ctrl L_Hand_Ctrl_Grp ;
+                  
+       group -em -n L_Hand_Ctrl_Grp_Bdy -p Controllers;
+       pointConstraint L_Arm L_Hand_Ctrl_Grp_Bdy;
+       delete L_Hand_Ctrl_Grp_Bdy_pointConstraint1;
+       FreezeTransformations L_Hand_Ctrl_Grp_Bdy;
+       parent L_Hand_Ctrl_Grp L_Hand_Ctrl_Grp_Bdy ;
+	               
+      parentConstraint -mo -weight 1 L_Scapula L_Hand_Ctrl_Grp_Bdy ;
+      connectAttr -f L_H_Switch_Ctrl.IK_HAND L_Hand_Ctrl_Grp_Bdy_parentConstraint1.L_ScapulaW0;
+      select -cl  ;
+      setAttr "L_H_Switch_Ctrl.IK_HAND" 0;
+      setAttr "L_H_Switch_Ctrl.IK_WRIST" 0;
+
+//Body_Wrist_Con attributes//
+
+        addAttr -ln "BodyWristRotate"  -at double  L_Hand_Ctrl;
+        setAttr -e-keyable true L_Hand_Ctrl.BodyWristRotate;
+        addAttr -ln "BodyWristRotate"  -at double R_Hand_Ctrl;
+        setAttr -e-keyable true R_Hand_Ctrl.BodyWristRotate;
+        setAttr -lock true "R_Hand_Ctrl.BodyWristRotate";
+        setAttr -lock true "L_Hand_Ctrl.BodyWristRotate";
+      
+        addAttr -ln "WristX"  -at double L_Hand_Ctrl;
+        setAttr -e-keyable true L_Hand_Ctrl.WristX;
+        addAttr -ln "WristX"  -at double R_Hand_Ctrl;
+        setAttr -e-keyable true R_Hand_Ctrl.WristX;
+        addAttr -ln "WristY"  -at double L_Hand_Ctrl;
+        setAttr -e-keyable true L_Hand_Ctrl.WristY;
+        addAttr -ln "WristY"  -at double R_Hand_Ctrl;
+        setAttr -e-keyable true R_Hand_Ctrl.WristY;
+        addAttr -ln "WristZ"  -at double L_Hand_Ctrl;
+        setAttr -e-keyable true L_Hand_Ctrl.WristZ;
+        addAttr -ln "WristZ"  -at double R_Hand_Ctrl;
+        setAttr -e-keyable true R_Hand_Ctrl.WristZ;
+        select -cl  ;
+
+//L_WRIST_BODY_CON//
+      connectAttr -f L_Hand_Ctrl.WristX L_BodyWrist_Ctrl.rotateX;
+      connectAttr -f L_Hand_Ctrl.WristY L_BodyWrist_Ctrl.rotateY;
+      connectAttr -f L_Hand_Ctrl.WristZ L_BodyWrist_Ctrl.rotateZ;
+
+      setAttr "L_BodyWrist_Ctrl.visibility" 0;
+      setAttr -lock true "L_BodyWrist_Ctrl.v";
+      setAttr -lock true "L_BodyWrist_Ctrl.tx";
+      setAttr -lock true "L_BodyWrist_Ctrl.ty";
+      setAttr -lock true "L_BodyWrist_Ctrl.tz";
+      setAttr -lock true "L_BodyWrist_Ctrl.rx";
+      setAttr -lock true "L_BodyWrist_Ctrl.ry";
+      setAttr -lock true "L_BodyWrist_Ctrl.rz";
+      setAttr -lock true "L_BodyWrist_Ctrl.sx";
+      setAttr -lock true "L_BodyWrist_Ctrl.sy";
+      setAttr -lock true "L_BodyWrist_Ctrl.sz";
+
+//R_WRIST_BODY_CON//
+
+      connectAttr -f R_Hand_Ctrl.WristX R_BodyWrist_Ctrl.rotateX;
+      connectAttr -f R_Hand_Ctrl.WristY R_BodyWrist_Ctrl.rotateY;
+      connectAttr -f R_Hand_Ctrl.WristZ R_BodyWrist_Ctrl.rotateZ;
+      
+      setAttr "R_BodyWrist_Ctrl.visibility" 0;
+      setAttr -lock true "R_BodyWrist_Ctrl.v";
+      setAttr -lock true "R_BodyWrist_Ctrl.tx";
+      setAttr -lock true "R_BodyWrist_Ctrl.ty";
+      setAttr -lock true "R_BodyWrist_Ctrl.tz";
+      setAttr -lock true "R_BodyWrist_Ctrl.rx";
+      setAttr -lock true "R_BodyWrist_Ctrl.ry";
+      setAttr -lock true "R_BodyWrist_Ctrl.rz";
+      setAttr -lock true "R_BodyWrist_Ctrl.sx";
+      setAttr -lock true "R_BodyWrist_Ctrl.sy";
+      setAttr -lock true "R_BodyWrist_Ctrl.sz";
+
+//End//
+
+//elbow + knee xtra connections//
+      createNode multiplyDivide -n L_Xtra_Mul;
+      connectAttr -f L_Elbow.rotateY L_Xtra_Mul.input1X;
+      connectAttr -f L_Elbow.rotateY L_Xtra_Mul.input1Y;
+      connectAttr -f L_Xtra_Mul.outputX L_Elb_Xtra.rotateY;
+      connectAttr -f L_Xtra_Mul.outputY L_Bic_Xtra.rotateY;
+      
+      setAttr "L_Xtra_Mul.input2X" 0.4;
+      setAttr "L_Xtra_Mul.input2Y" 0.1;
+      
+      select -r L_Xtra_Mul ;
+      duplicate -rr -n R_Xtra_Mul;
+      connectAttr -f R_Elbow.rotateY R_Xtra_Mul.input1X;
+      connectAttr -f R_Elbow.rotateY R_Xtra_Mul.input1Y;
+      connectAttr -f R_Xtra_Mul.outputX R_Elb_Xtra.rotateY;
+      connectAttr -f R_Xtra_Mul.outputY R_Bic_Xtra.rotateY;
+      select -cl  ;
+      createNode multiplyDivide -n L_nee_mul;
+      connectAttr -f L_nee_mul.outputX L_KneeFold_Xtra.rotateZ;
+      connectAttr -f L_nee_mul.outputY L_Knee_Xtra.rotateZ;
+      select -cl  ;
+      connectAttr -f L_Knee.rotateY L_nee_mul.input1X;
+      connectAttr -f L_Knee.rotateY L_nee_mul.input1Y;
+      setAttr "L_nee_mul.input2X" 0.4;
+      setAttr "L_nee_mul.input2Y" -0.5;
+      select -r L_nee_mul ;
+      duplicate -rr -n R_nee_mul;
+      connectAttr -f R_Knee.rotateY R_nee_mul.input1X;
+      connectAttr -f R_Knee.rotateY R_nee_mul.input1Y;
+      connectAttr -f R_nee_mul.outputX R_KneeFold_Xtra.rotateZ;
+      connectAttr -f R_nee_mul.outputY R_Knee_Xtra.rotateZ;
+      select -cl  ;
+
+//end/////////////////
+//Hand IK Effector placement and parenting////////////////////
+      select L_Wrist;
+      float $Lwristpos[] = `xform -query -worldSpace -rotatePivot`;
+      select -r L_Wrist_Eff ;
+      move -absolute $Lwristpos[0] $Lwristpos[1] $Lwristpos[2] L_Wrist_Eff.scalePivot L_Wrist_Eff.rotatePivot ;
+      parent L_Wrist_ik L_Hand_Ctrl ;
+      
+      select R_Wrist;
+      float $Rwristpos[] = `xform -query -worldSpace -rotatePivot`;
+      select -r R_Wrist_Eff ;
+      move -absolute $Rwristpos[0] $Rwristpos[1] $Rwristpos[2] R_Wrist_Eff.scalePivot R_Wrist_Eff.rotatePivot ;
+      parent R_Wrist_ik R_Hand_Ctrl ;
+////end
+
+//Head_Ctrl_Creation//
+
+      curve -d 1 -p 0 9.185004 0.367918 -p 0 9.785651 0.444415 -k 0 -k 1 -n Neck_Curve  ;
+      select -r Neck_Curve.cv[1] ;
+      CreateCluster;
+      select -r Neck_Curve.cv[0] ;
+      CreateCluster;
+                      
+      pointConstraint -offset 0 0 0 -weight 1 Head cluster4Handle;
+      pointConstraint -offset 0 0 0 -weight 1 Neck1 cluster5Handle;
+      delete cluster4Handle_pointConstraint1 cluster5Handle_pointConstraint1;
+      delete -ch Neck_Curve;
+
+      parent -w Forehead L_Lwr_Brow R_Lwr_Brow L_Cheek R_Cheek Nose L_Nose R_Nose L_Up_Lip R_Up_Lip Lwr_Jaw Up_Lip L_S_Lip R_S_Lip Tounge;
+      ikHandle -n Neck_Ik -sol ikSplineSolver -ccv false -pcv false -sj Neck1 -ee Head -c Neck_Curve ;
+      rename "effector1" "NeckIK_Eff";
+      parent Forehead L_Lwr_Brow R_Lwr_Brow L_Cheek R_Cheek Nose L_Nose R_Nose L_Up_Lip R_Up_Lip Lwr_Jaw Up_Lip L_S_Lip R_S_Lip Tounge Head;
+      select -cl  ;
+
+      joint -p 0 9.526521 -0.591401 -n NeckBaseJnt ;
+      select -cl;
+      joint -p 0 10.214107 -0.698512 -n HeadBaseJnt ;
+
+      pointConstraint -offset 0 0 0 -weight 1 Neck1 NeckBaseJnt;
+      delete NeckBaseJnt_pointConstraint1 ;
+      pointConstraint -offset 0 0 0 -weight 1 Head HeadBaseJnt ;
+      delete HeadBaseJnt_pointConstraint1 ;
+
+      select -r Neck_Curve NeckBaseJnt HeadBaseJnt ;
+      SmoothBindSkin;
+      
+      curve -d 1 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 0.5 -0.5 -p -0.5 0.5 -0.5 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -n "Head_Ctrl" ;
+      rename "curveShape1" "Head_CtrlShape";
+      pointConstraint -offset 0 0 0 -weight 1 Head Head_Ctrl;
+      delete Head_Ctrl_pointConstraint1 ;
+      FreezeTransformations  Head_Ctrl;
+      
+      circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "Neck_Ctrl" ;
+      pointConstraint -offset 0 0 0 -weight 1 Neck1 Neck_Ctrl;
+      delete Neck_Ctrl_pointConstraint1 ;
+      FreezeTransformations Neck_Ctrl;
+      
+      select -r Neck_Ctrl ;
+      group -n Neck_Ctrl_Grp -p Controllers;
+      FreezeTransformations Neck_Ctrl_Grp;
+      parentConstraint -mo -weight 1 Chest Neck_Ctrl_Grp;
+
+      group -em -n Head_Ctrl_Grp -p Controllers;
+      pointConstraint -offset 0 0 0 -weight 1 Head Head_Ctrl_Grp;
+      delete Head_Ctrl_Grp_pointConstraint1 ;
+      FreezeTransformations Head_Ctrl_Grp;
+      select -r Head_Ctrl_Grp ;
+      duplicate -rr -n NeckWorldGrp ;
+      parent Head_Ctrl Head_Ctrl_Grp ;
+      parent HeadBaseJnt Head_Ctrl ;
+      parent NeckBaseJnt Neck_Ctrl ;
+      parent NeckWorldGrp Neck_Ctrl ;
+                
+      pointConstraint -offset 0 0 0 -weight 1 NeckWorldGrp Head_Ctrl_Grp;
+      orientConstraint -mo -weight 1 NeckWorldGrp Head_Ctrl_Grp;
+      addAttr -ln "Head"  -at "enum" -en "World:Local:"  Head_Ctrl;
+      setAttr -e-keyable true Head_Ctrl.Head;
+      connectAttr -f Head_Ctrl.Head Head_Ctrl_Grp_orientConstraint1.NeckWorldGrpW0;
+      orientConstraint -mo -weight 1 Head_Ctrl Head ;
+
+      select -r Neck_Ik ;
+      setAttr "Neck_Ik.dTwistControlEnable" 1;
+      setAttr Neck_Ik.dWorldUpType 4;
+      setAttr Neck_Ik.dWorldUpAxis 3;
+      setAttr "Neck_Ik.dWorldUpVectorX" 1;
+      setAttr "Neck_Ik.dWorldUpVectorY" 0;
+      setAttr "Neck_Ik.dWorldUpVectorZ" 0;
+      setAttr "Neck_Ik.dWorldUpVectorEndX" 1;
+      setAttr "Neck_Ik.dWorldUpVectorEndY" 0;
+      setAttr "Neck_Ik.dWorldUpVectorEndZ" 0;
+      connectAttr -f Neck_Ctrl.worldMatrix[0] Neck_Ik.dWorldUpMatrix;
+      connectAttr -f Head_Ctrl.worldMatrix[0] Neck_Ik.dWorldUpMatrixEnd;
+      
+      parent Neck_Curve Xtra_Node ;
+      parent Neck_Ik Xtra_Node ;
+
+//eye_Controller creator//
+
+      ikHandle -n L_Eye_ik  -sol ikRPsolver -sj L_Eye_jnt -ee L_Eye_jnt1;
+      rename "effector1" "L_Eye_Eff";
+      ikHandle -n R_Eye_ik  -sol ikRPsolver -sj R_Eye_jnt -ee R_Eye_jnt1;
+      rename "effector1" "R_Eye_Eff";
+      
+      circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "L_Eye_Ctrl" ;
+      pointConstraint -offset 0 0 0 -weight 1 L_Eye_jnt1 L_Eye_Ctrl;
+      delete L_Eye_Ctrl_pointConstraint1 ;
+      setAttr "L_Eye_Ctrl.rotateX" 90;
+      FreezeTransformations L_Eye_Ctrl;
+      
+      circle -c 0 0 0 -nr 0 1 0 -sw 360 -r 1 -d 3 -ut 0 -tol 0.01 -s 8 -ch 0 -n "R_Eye_Ctrl" ;
+      pointConstraint -offset 0 0 0 -weight 1 R_Eye_jnt1 R_Eye_Ctrl;
+      delete R_Eye_Ctrl_pointConstraint1 ;
+      setAttr "R_Eye_Ctrl.rotateX" 90;
+      FreezeTransformations R_Eye_Ctrl;
+
+      curve -d 1 -p 1 0 -1 -p -1 0 -1 -p -1 0 1 -p 1 0 1 -p 1 0 -1 -k 0 -k 1 -k 2 -k 3 -k 4 -n "Eye_Ctrl" ;
+      select -r L_Eye_Ctrl R_Eye_Ctrl Eye_Ctrl;
+      pointConstraint -offset 0 0 0 -weight 1;
+      delete Eye_Ctrl_pointConstraint1 ;
+      setAttr "Eye_Ctrl.rotateX" 90;
+      FreezeTransformations Eye_Ctrl;
+      parent L_Eye_ik L_Eye_Ctrl ;
+      parent R_Eye_ik R_Eye_Ctrl ;
+      parent L_Eye_Ctrl Eye_Ctrl ;
+      parent R_Eye_Ctrl Eye_Ctrl ;
+      select -r Eye_Ctrl ;
+      group -em -n Eye_Ctrl_Grp -p Controllers; xform -os -piv 0 0 0;
+      parentConstraint -weight 1 Head Eye_Ctrl_Grp;
+      delete Eye_Ctrl_Grp_parentConstraint1 ;
+      FreezeTransformations Eye_Ctrl ;
+      parent Eye_Ctrl Eye_Ctrl_Grp;
+      parentConstraint -mo -weight 1 Head Eye_Ctrl_Grp;
+      setAttr "R_Eye_ik.visibility" 0;
+      setAttr "L_Eye_ik.visibility" 0;
+      setAttr -lock true "R_Eye_ik.v";
+      setAttr -lock true "L_Eye_ik.v";
+
+     addAttr -ln "Eye" -at "enum" -en "World:Local:" Eye_Ctrl;
+     setAttr -e-keyable true Eye_Ctrl.Eye;
+     parentConstraint -mo -weight 1 Local_Ctrl Eye_Ctrl_Grp;
+     createNode reverse -n EyeReverse;
+     connectAttr -f Eye_Ctrl.Eye Eye_Ctrl_Grp_parentConstraint1.HeadW0;
+     connectAttr -f Eye_Ctrl.Eye EyeReverse.inputX;
+     connectAttr -f EyeReverse.outputX Eye_Ctrl_Grp_parentConstraint1.Local_CtrlW1;
+              
+//end///////////
+///////////////////////////////Shoulder chest extra joint rot connections///////////////////
+
+      createNode multiplyDivide -n L_Scapula_Div;
+      setAttr "L_Scapula_Div.input2X" -0.5;
+      setAttr "L_Scapula_Div.input2Y" .5;
+      setAttr "L_Scapula_Div.input2Z" .5;
+      connectAttr -f L_Scapula.rotateY L_Scapula_Div.input1Y;
+      connectAttr -f L_Scapula.rotateZ L_Scapula_Div.input1Z;
+      connectAttr -f L_Scapula.rotateY L_Scapula_Div.input1X;
+      connectAttr -f L_Scapula_Div.outputY L_Ches_Xtra.rotateY;
+      connectAttr -f L_Scapula_Div.outputZ L_Ches_Xtra.rotateZ;
+      connectAttr -f L_Scapula_Div.outputY L_UArm_Xtra.rotateY;
+      connectAttr -f L_Scapula_Div.outputZ L_UArm_Xtra.rotateZ;
+      connectAttr -f L_Scapula_Div.outputX L_Blade_Xtra.rotateY;
+      connectAttr -f L_Scapula_Div.outputZ L_Blade_Xtra.rotateZ;
+
+      createNode multiplyDivide -n R_Scapula_Div;
+      setAttr "R_Scapula_Div.input2X" -.5;
+      setAttr "R_Scapula_Div.input2Y" .5;
+      setAttr "R_Scapula_Div.input2Z" .5;
+      connectAttr -f R_Scapula.rotateY R_Scapula_Div.input1Y;
+      connectAttr -f R_Scapula.rotateZ R_Scapula_Div.input1Z;
+      connectAttr -f R_Scapula.rotateY R_Scapula_Div.input1X;
+      connectAttr -f R_Scapula_Div.outputY R_Ches_Xtra.rotateY;
+      connectAttr -f R_Scapula_Div.outputZ R_Ches_Xtra.rotateZ;
+      connectAttr -f R_Scapula_Div.outputY R_UArm_Xtra.rotateY;
+      connectAttr -f R_Scapula_Div.outputZ R_UArm_Xtra.rotateZ;
+      connectAttr -f R_Scapula_Div.outputX R_Blade_Xtra.rotateY;
+      connectAttr -f R_Scapula_Div.outputZ R_Blade_Xtra.rotateZ;
+      
+      createNode multiplyDivide -n LButt_Mul;
+      createNode condition -n LButt_Con;
+      connectAttr -f L_Thi.rotateY LButt_Mul.input1X;
+      connectAttr -f L_Thi.rotateY LButt_Mul.input1Y;
+      setAttr "LButt_Mul.input2X" .5;
+      setAttr "LButt_Mul.input2Y" 1.2;
+      connectAttr -f LButt_Mul.outputX LButt_Con.firstTerm;
+      connectAttr -f LButt_Mul.outputX LButt_Con.colorIfTrueR;
+      connectAttr -f LButt_Mul.outputY LButt_Con.colorIfFalseR;
+      setAttr LButt_Con.operation 4;
+      connectAttr -f LButt_Con.outColorR L_Butt.rotateZ;
+      
+      createNode multiplyDivide -n RButt_Mul;
+      createNode condition -n RButt_Con;
+      connectAttr -f R_Thi.rotateY RButt_Mul.input1X;
+      connectAttr -f R_Thi.rotateY RButt_Mul.input1Y;
+      setAttr "RButt_Mul.input2X" .5;
+      setAttr "RButt_Mul.input2Y" 1.2;
+      connectAttr -f RButt_Mul.outputX RButt_Con.firstTerm;
+      connectAttr -f RButt_Mul.outputX RButt_Con.colorIfTrueR;
+      connectAttr -f RButt_Mul.outputY RButt_Con.colorIfFalseR;
+      setAttr RButt_Con.operation 4;
+      connectAttr -f RButt_Con.outColorR R_Butt.rotateZ;
+//////end///////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Hand and leg FK_Controls Creator//////////////////////////////////////// //////////////////////////////////////////////
+
+      string   $Jselection[60]={"L_Arm_Ctrl","L_Elbow_Ctrl","L_Wrist_Ctrl","R_Arm_Ctrl","R_Elbow_Ctrl","R_Wrist_Ctrl","L_Thi","L_Knee","L_Ankel","L_Ball","R_Thi","R_Knee","R_Ankel","R_Ball","L_Thumb","L_Thumb1","L_Thumb2","L_Index_N","L_Index1","L_Index2","L_Index3","L_Mid_N","L_Mid1","L_Mid2","L_Mid3","L_Ring_N","L_Ring1","L_Ring2","L_Ring3","L_Pinky1","L_Pinky2","L_Pinky3","L_Pinky4","R_Thumb","R_Thumb1","R_Thumb2","R_Index_N","R_Index1","R_Index2","R_Index3","R_Mid_N","R_Mid1","R_Mid2","R_Mid3","R_Ring_N","R_Ring1","R_Ring2","R_Ring3","R_Pinky1","R_Pinky2","R_Pinky3","R_Pinky4"};
+      for($i=0; $i<52; $i++)
+      {
+      	circle -nr 1 0 0;
+      	DeleteHistory;
+      	select -r nurbsCircle1 ;
+      	string $sel[]=`ls -sl`;
+      	string $shapes[] = `listRelatives -s $sel`;
+      	for($each in $shapes)
+      	{
+      	          parent -r -shape $shapes $Jselection[$i];
+      	          rename $shapes[0] ($Jselection[$i] + "Shape");
+      	}
+      	delete nurbsCircle1;
+      }
+///////////////////////////////////////////////////////////////
+createNode reverse -n Leg_FKCtrlsVis_RevN;
+	connectAttr -f L_L_Switch_Ctrl.SWITCH Leg_FKCtrlsVis_RevN.inputY;
+	connectAttr -f R_L_Switch_Ctrl.SWITCH Leg_FKCtrlsVis_RevN.inputX;
+	
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputY L_ThiShape.overrideVisibility;
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputY L_KneeShape.overrideVisibility;
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputY L_AnkelShape.overrideVisibility;
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputY L_BallShape.overrideVisibility;
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputX R_ThiShape.overrideVisibility;
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputX R_KneeShape.overrideVisibility;
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputX R_AnkelShape.overrideVisibility;
+	connectAttr -f Leg_FKCtrlsVis_RevN.outputX R_BallShape.overrideVisibility;
+//////RotateOrder attribute/////////add///////////////////////////
+        setAttr -k on L_Wrist_Ctrl.rotateOrder;
+        setAttr -k on L_Elbow_Ctrl.rotateOrder;
+        setAttr -k on L_Arm_Ctrl.rotateOrder;
+        setAttr -k on L_Hand_Ctrl.rotateOrder;
+        setAttr -k on R_Wrist_Ctrl.rotateOrder;
+        setAttr -k on R_Elbow_Ctrl.rotateOrder;
+        setAttr -k on R_Arm_Ctrl.rotateOrder;
+        setAttr -k on R_Hand_Ctrl.rotateOrder;
+////////////////////////////////////////////////////////////////
+///L_Controls (Color override)////////////////////
+
+      select -r L_H_Switch_Ctrl L_Scap_Ctrl L_L_Switch_Ctrl L_Leg_Ctrl L_L_PV_Ctrl L_Eye_Ctrl L_Hand_Ctrl L_H_PV_Ctrl  L_BodyWrist_Ctrl  L_Arm_Ctrl L_Elbow_Ctrl L_Wrist_Ctrl L_Thi L_Knee L_Ankel L_Ball L_Thumb L_Thumb1 L_Thumb2 L_Index_N  L_Index1 L_Index2 L_Index3  L_Mid_N L_Mid1 L_Mid2 L_Mid3 L_Ring_N L_Ring1 L_Ring2 L_Ring3 L_Pinky1 L_Pinky2 L_Pinky3  L_Pinky4 ;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 13;
+      	}
+      }
+//L_Controls (Color override)///////////////////////   
+
+    select -r R_H_Switch_Ctrl R_Scap_Ctrl R_L_Switch_Ctrl R_Leg_Ctrl R_L_PV_Ctrl R_Eye_Ctrl R_Hand_Ctrl R_H_PV_Ctrl  R_BodyWrist_Ctrl  R_Arm_Ctrl R_Elbow_Ctrl R_Wrist_Ctrl R_Thi R_Knee R_Ankel R_Ball R_Thumb R_Thumb1 R_Thumb2 R_Index_N  R_Index1 R_Index2 R_Index3  R_Mid_N R_Mid1 R_Mid2 R_Mid3 R_Ring_N R_Ring1 R_Ring2 R_Ring3 R_Pinky1 R_Pinky2 R_Pinky3  R_Pinky4 ;
+    string $selection[]=`ls -sl`;
+    for($i=0; $i<size($selection); $i++)
+    {
+    	string $shapes[] = `listRelatives -s $selection[$i]`;
+    	for($each in $shapes)
+    	{
+    		setAttr ($each+".overrideEnabled") 1;
+    		setAttr ($each+".overrideColor") 6;
+    	}
+    }
+//(Main_Ctrl)//////////////////////////////////
+
+      select -r Main_Ctrl Eye_Ctrl;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 17;
+      	}
+      }
+//Mid_Ctrls///////////////////////////////////
+
+      select -r Waist_Ctrl Spine_Ctrl Mid_Spine_Ctrl Chest_Ctrl Neck_Ctrl Head_Ctrl;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 18;
+      	}
+      }
+// Import Visibility Ctrl curve////////
+
+      file -import -type "mayaAscii" -rpr "Visibility_CTRL" -options "v=0;p=17"  -pr -loadReferenceDepth "all"  "//anil/SHARING/Anil_Sk/AUTOMATION/LIBRARY/Visibility_CTRL.ma";
+      parent Visibility_Ctrl_Grp Local_Ctrl ;
+
+//Add Additional Attrs///////////////////////////////////
+      addAttr -ln "EyeOverlay"  -at bool  Visibility_Ctrl;
+      setAttr -e -channelBox  true Visibility_Ctrl.EyeOverlay;
+      addAttr -ln "EyeLash"  -at bool Visibility_Ctrl;
+      setAttr -e -channelBox  true Visibility_Ctrl.EyeLash;
+      addAttr -ln "SecCtrls"  -at bool  Visibility_Ctrl;
+      setAttr -e -channelBox true Visibility_Ctrl.SecCtrls;
+
+///////////////////////////////////////////////////////////////////
+//Facial Controls Creator////////////////////////////////////////
+      string $FJselection[30]={"L_Brow","L_L1_Brow","L_L_Brow","L_M_Brow","L_R_Brow","L_R1_Brow","R_Brow","R_L1_Brow","R_L_Brow","R_M_Brow","R_R_Brow","R_R1_Brow","L_Nose","Nose","R_Nose","L_Lwr_Brow","R_Lwr_Brow","L_Cheek","R_Cheek","Lwr_Jaw1","L_S_Lip","R_S_Lip","L_Up_Lip","Up_Lip","R_Up_Lip","R_Lw_Lip","Lw_Lip","L_Lw_Lip" };
+      for($i=0; $i<28; $i++)
+      {
+      	circle -nr 1 0 0;
+      	DeleteHistory;
+      	select -r nurbsCircle1 ;
+      	string $sel[]=`ls -sl`;
+      	string $shapes[] = `listRelatives -s $sel`;
+      	for($each in $shapes)
+      	{
+      		parent -r -shape $shapes $FJselection[$i];
+      		rename $shapes[0] ($FJselection[$i] + "Shape");
+      	}
+      	delete nurbsCircle1;
+      }
+
+//FC Color manager - L//////////////////////////////////////////////
+
+      select -r L_L1_Brow L_L_Brow L_M_Brow L_R_Brow L_R1_Brow L_Lwr_Brow L_Cheek;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 13;
+      	}
+      }
+//Right////////////////////////
+
+      select -r R_L1_Brow R_L_Brow R_M_Brow R_R_Brow R_R1_Brow R_Lwr_Brow R_Cheek L_Up_Lip Up_Lip R_Up_Lip;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 6;
+      	}
+      }
+
+///Mid ctrls///////////////
+      select -r L_Nose Nose R_Nose L_S_Lip R_S_Lip;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 18;
+      	}
+      }
+/////////////////////////////////////////////////////////
+      select -r Lwr_Jaw1 L_Brow R_Brow ;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 17;
+      	}
+      }
+///////////////////////////////////////////////////
+      select -r R_Lw_Lip Lw_Lip L_Lw_Lip;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		setAttr ($each+".overrideEnabled") 1;
+      		setAttr ($each+".overrideColor") 4;
+      	}
+      }
+////Visibility connection creator////////
+//Visibility_Ctrl.L_Hand//////////////////////////////////////////////////
+      select  L_Scap_Ctrl L_H_PV_Ctrl L_Hand_Ctrl L_H_Switch_Ctrl L_Arm_Ctrl L_Elbow_Ctrl  L_Wrist_Ctrl;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.L_Hand($each+".visibility");
+
+        	}
+      }
+ //Visibility_Ctrl.R_Hand////////////////////////////////////////////////////
+      select  R_H_Switch_Ctrl R_Scap_Ctrl R_H_PV_Ctrl R_Hand_Ctrl R_H_Switch_Ctrl R_Arm_Ctrl R_Elbow_Ctrl R_Wrist_Ctrl;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.R_Hand($each+".visibility");
+      
+        	}
+      }
+///Visibility_Ctrl.LH_Fingers////////////////////////////////////////////////////////
+      select  L_Ring3 L_Ring2 L_Ring1 L_Ring_N L_Mid3 L_Mid2 L_Mid1 L_Mid_N L_Index3 L_Index2 L_Index1 L_Index_N L_Thumb2  L_Thumb1 L_Thumb L_Pinky4 L_Pinky3 L_Pinky2 L_Pinky1 ;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.LH_Fingers($each+".visibility");
+      
+        	}
+      }
+//Visibility_Ctrl.RH_Fingers////////////////////////////////////////////////////////
+      select   R_Ring3 R_Ring2 R_Ring1 R_Ring_N R_Index3 R_Index2 R_Index1 R_Index_N R_Mid3 R_Mid2 R_Mid1 R_Mid_N R_Thumb2  R_Thumb1 R_Thumb R_Pinky4 R_Pinky3 R_Pinky2 R_Pinky1 ;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.RH_Fingers($each+".visibility");
+
+          	}
+
+      }
+ //Visibility_Ctrl.L_Leg//////////////////////////////////////////////
+      select  L_Leg_Ctrl L_L_Switch_Ctrl L_L_PV_Ctrl L_Thi L_Knee L_Ankel L_Ball;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.L_Leg($each+".visibility");
+      
+         	}
+
+      }
+//Visibility_Ctrl.R_Leg/////////////////////////////////////////
+
+      select  R_Leg_Ctrl R_L_Switch_Ctrl R_L_PV_Ctrl R_Thi R_Knee R_Ankel R_Ball;
+      string $selection[]=`ls -sl`;
+        for($i=0; $i<size($selection); $i++)
+        {
+        	string $shapes[] = `listRelatives -s $selection[$i]`;
+        	for($each in $shapes)
+        	{
+        		connectAttr -f Visibility_Ctrl.R_Leg($each+".visibility");
+        
+               	}
+
+        }
+  ///Visibility_Ctrl.HeadVis//////////////////////////////////////////////
+      select Head_Ctrl Neck_Ctrl;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.HeadVis($each+".visibility");
+      
+       	}
+
+      }
+//Visibility_Ctrl.EyeVis//////////////////////////////////////////////////////
+      select  Eye_Ctrl R_Eye_Ctrl L_Eye_Ctrl;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.EyeVis($each+".visibility");
+      
+         	}
+
+      }
+
+//Visibility_Ctrl.SpineVis//////////////////////////////////////////////
+      select  Chest_Ctrl Mid_Spine_Ctrl Spine_Ctrl Main_Ctrl Waist_Ctrl ;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.SpineVis($each+".visibility");
+      
+       	}
+
+      }
+//Visibility_Ctrl.FacialVis//////////////////////////////////////////////
+      select L_Brow R_Brow L_M_Brow L_L_Brow L_L1_Brow L_R_Brow L_R1_Brow L_Brow R_M_Brow R_R_Brow R_R1_Brow R_L_Brow R_L1_Brow  L_Lw_Lip Lw_Lip R_Lw_Lip Lwr_Jaw1 Nose L_Cheek L_Nose L_Lwr_Brow R_Nose L_S_Lip L_Up_Lip Up_Lip R_S_Lip R_Up_Lip R_Cheek  R_Lwr_Brow;
+      string $selection[]=`ls -sl`;
+      for($i=0; $i<size($selection); $i++)
+      {
+      	string $shapes[] = `listRelatives -s $selection[$i]`;
+      	for($each in $shapes)
+      	{
+      		connectAttr -f Visibility_Ctrl.FacialVis($each+".visibility");
+
+
+      	}
+      
+      }
+/*///////////////Mesh.Selection ///////////////
+
+      setAttr "Surfaces.overrideEnabled" 1;
+      connectAttr -f Visibility_Ctrl.MeshSelection Surfaces.overrideDisplayType;
+      setAttr -l true "Surfaces.overrideEnabled";
+/////////////////////////// */
+///LOCK AND  HIDE//////////////////////////////////////////////
+
+//FK ctrls LockNHide//////////////////////////////
+      select -r L_M_Brow L_L_Brow L_L1_Brow L_R_Brow L_R1_Brow L_Brow R_M_Brow R_R_Brow R_R1_Brow R_L_Brow R_L1_Brow R_Brow  L_Lw_Lip Lw_Lip R_Lw_Lip Lwr_Jaw1 Nose L_Cheek R_Cheek Up_Lip L_Up_Lip R_Up_Lip L_S_Lip R_S_Lip L_Nose R_Nose L_Lwr_Brow  R_Lwr_Brow L_Arm_Ctrl L_Elbow_Ctrl L_Wrist_Ctrl R_Arm_Ctrl R_Elbow_Ctrl R_Wrist_Ctrl L_Thi L_Knee L_Ankel L_Ball R_Thi  R_Knee R_Ankel R_Ball;
+      string $ssel[]=`ls -sl`;
+      	for ($i=0;$i<`size($ssel)`;$i++)
+      	{
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".tx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".ty");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".tz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sy");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".v");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".radi");
+      
+      	}
+//Finger ctrls LockNHide//////////////////////////////
+      select -r L_Index3 L_Index2 L_Index1 L_Index_N L_Ring3 L_Ring2 L_Ring1 L_Ring_N L_Mid3 L_Mid2 L_Mid1 L_Mid_N L_Thumb2  L_Thumb1 L_Thumb L_Pinky4 L_Pinky3 L_Pinky2 L_Pinky1 L_Wrist_Ctrl R_Index3 R_Index2 R_Index1 R_Index_N R_Ring3 R_Ring2  R_Ring1 R_Ring_N R_Mid3 R_Mid2 R_Mid1 R_Mid_N R_Thumb2 R_Thumb1 R_Thumb R_Pinky4 R_Pinky3 R_Pinky2 R_Pinky1 R_Wrist_Ctrl  ;string $ssel[]=`ls -sl`;
+      	for ($i=0;$i<`size($ssel)`;$i++)
+      	{
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".tx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".ty");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".tz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".v");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".radi");
+      
+      	}
+//Switch ctrls LNH///////////////////////////////////
+      select L_H_Switch_Ctrl R_H_Switch_Ctrl L_L_Switch_Ctrl R_L_Switch_Ctrl;
+      string $ssel[]=`ls -sl`;
+      	for ($i=0;$i<`size($ssel)`;$i++)
+      	{
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".tx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".ty");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".tz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".rx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".ry");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".rz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sy");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".v");
+      		
+      	}
+//Mid_For scale///////////////////////////////////
+    select L_Scap_Ctrl R_Scap_Ctrl Waist_Ctrl Main_Ctrl Spine_Ctrl Mid_Spine_Ctrl Chest_Ctrl Neck_Ctrl Head_Ctrl L_Hand_Ctrl  R_Hand_Ctrl L_Leg_Ctrl R_Leg_Ctrl ;
+    string $ssel[]=`ls -sl`;
+    	for ($i=0;$i<`size($ssel)`;$i++)
+    	{
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sx");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sy");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sz");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".v");
+    		
+    	}
+//Polevector ctrls LNH///////////////////////////////////
+    select L_H_PV_Ctrl R_H_PV_Ctrl L_L_PV_Ctrl R_L_PV_Ctrl;
+    string $ssel[]=`ls -sl`;
+    	for ($i=0;$i<`size($ssel)`;$i++)
+    	{
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".rx");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".ry");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".rz");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sx");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sy");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sz");
+    		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".v");
+    		
+    	}
+///EYE ctrls LNH///////////////////////////////////
+      select Eye_Ctrl L_Eye_Ctrl R_Eye_Ctrl;
+      string $ssel[]=`ls -sl`;
+      	for ($i=0;$i<`size($ssel)`;$i++)
+      	{
+      		//setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".tz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".rx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".ry");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".rz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sx");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sy");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".sz");
+      		setAttr -lock 1 -keyable 0 -channelBox 0 ($ssel[$i]+".v");
+      		
+      	}
+
+//Lock the finger top joints////////////////////////////////////////
+    select -r L_Index_Tp1 L_Index_Tp2 L_Index_Tp3 L_Ring_Tp1 L_Ring_Tp2 L_Ring_Tp3 L_Mid_Tp1 L_Mid_Tp2 L_Mid_Tp3 L_Thumb_Tp  L_Thumb_Tp1 L_Thumb_Tp2 L_Pinky_Tp1 L_Pinky_Tp2 L_Pinky_Tp3 L_Pinky_Tp4 R_Index_Tp1 R_Index_Tp2 R_Index_Tp3 R_Ring_Tp1  R_Ring_Tp2 R_Ring_Tp3 R_Mid_Tp1 R_Mid_Tp2 R_Mid_Tp3 R_Thumb_Tp R_Thumb_Tp1 R_Thumb_Tp2 R_Pinky_Tp1 R_Pinky_Tp2 R_Pinky_Tp3  R_Pinky_Tp4;
+    string $ssel[]=`ls -sl`;
+    	for ($i=0;$i<`size($ssel)`;$i++)
+    	{
+    		setAttr -lock 1  ($ssel[$i]+".tx");
+    		setAttr -lock 1  ($ssel[$i]+".ty");
+    		setAttr -lock 1  ($ssel[$i]+".tz");
+    		setAttr -lock 1  ($ssel[$i]+".rx");
+    		setAttr -lock 1  ($ssel[$i]+".ry");
+    		setAttr -lock 1  ($ssel[$i]+".rz");
+    		setAttr -lock 1  ($ssel[$i]+".sx");
+    		setAttr -lock 1  ($ssel[$i]+".sy");
+    		setAttr -lock 1  ($ssel[$i]+".sz");
+    		setAttr -lock 1  ($ssel[$i]+".v");
+    		setAttr -lock 1  ($ssel[$i]+".radi");
+    	}
+
+/////////////////////////////////////////////////////////////ctrls ScaleDOWN//////////////////////////////
+      select -r L_Index3 L_Index2 L_Index1 L_Index_N L_Ring3 L_Ring2 L_Ring1 L_Ring_N L_Mid3 L_Mid2 L_Mid1 L_Mid_N L_Thumb2  L_Thumb1 L_Thumb L_Pinky4  L_Pinky3 L_Pinky2 L_Pinky1 R_Index3 R_Index2 R_Index1 R_Index_N R_Ring3 R_Ring2 R_Ring1 R_Ring_N  R_Mid3 R_Mid2 R_Mid1 R_Mid_N R_Thumb2 R_Thumb1 R_Thumb R_Pinky4 R_Pinky3 R_Pinky2 R_Pinky1;
+      string $objs[] = `ls -sl`;
+      string $objshapes[] = `listRelatives -s $objs`;
+      for ($ob in $objshapes)
+      {
+      int $numSpans = `getAttr ( $ob + ".spans" )`;
+      int $degree   = `getAttr ( $ob + ".degree" )`;
+      int $numCVs   = $numSpans + $degree;
+      select ( $ob + ".cv[0:" + ($numCVs-1) + "]");
+      scale -a 0.2 0.2 0.2;
+      select -r $objs;
+      }
+//L_FacialCtrls (SCALE N MOVE)/////////////////////
+      select -r L_M_Brow L_L_Brow L_L1_Brow  L_R_Brow L_R1_Brow L_Brow L_Lw_Lip Lw_Lip Lwr_Jaw1 Nose L_Cheek Up_Lip L_Up_Lip L_S_Lip L_Nose L_Lwr_Brow;
+      string $objs[] = `ls -sl`;
+      string $objshapes[] = `listRelatives -s $objs`;
+      for ($ob in $objshapes)
+      {
+      int $numSpans = `getAttr ( $ob + ".spans" )`;
+      int $degree   = `getAttr ( $ob + ".degree" )`;
+      int $numCVs   = $numSpans + $degree;
+      select ( $ob + ".cv[0:" + ($numCVs-1) + "]");
+      scale -a 0.05 0.05 0.05;
+      move -r -os -wd 0.3 0 0 ;
+      select -r $objs;
+      }
+
+//R_FacialCtrls (SCALE N MOVE)/////////////////////
+      select -r R_M_Brow R_R_Brow R_R1_Brow R_L_Brow R_L1_Brow R_Brow R_Lw_Lip R_Cheek R_Up_Lip R_S_Lip R_Nose R_Lwr_Brow;
+      string $objs[] = `ls -sl`;
+      string $objshapes[] = `listRelatives -s $objs`;
+      for ($ob in $objshapes)
+      {
+      int $numSpans = `getAttr ( $ob + ".spans" )`;
+      int $degree   = `getAttr ( $ob + ".degree" )`;
+      int $numCVs   = $numSpans + $degree;
+      select ( $ob + ".cv[0:" + ($numCVs-1) + "]");
+      scale -a 0.05 0.05 0.05;
+      move -r -os -wd -0.3 0 0 ;
+      select -r $objs;
+      }
+//scale Extra large//////////////////////////////////////
+      select -r L_H_Switch_Ctrl R_H_Switch_Ctrl R_H_PV_Ctrl L_H_PV_Ctrl L_L_PV_Ctrl R_L_PV_Ctrl R_L_Switch_Ctrl L_L_Switch_Ctrl L_Scap_Ctrl R_Scap_Ctrl;
+      string $objs[] = `ls -sl`;
+      string $objshapes[] = `listRelatives -s $objs`;
+      for ($ob in $objshapes)
+      {
+      int $numSpans = `getAttr ( $ob + ".spans" )`;
+      int $degree   = `getAttr ( $ob + ".degree" )`;
+      int $numCVs   = $numSpans + $degree;
+      select ( $ob + ".cv[0:" + ($numCVs-1) + "]");
+      scale -a 0.5 0.5 0.5;
+      select -r $objs;
+      }
+/////////////////////////
+      select -r L_Eye_Ctrl R_Eye_Ctrl;
+      string $objs[] = `ls -sl`;
+      string $objshapes[] = `listRelatives -s $objs`;
+      for ($ob in $objshapes)
+      {
+      int $numSpans = `getAttr ( $ob + ".spans" )`;
+      int $degree   = `getAttr ( $ob + ".degree" )`;
+      int $numCVs   = $numSpans + $degree;
+      select ( $ob + ".cv[0:" + ($numCVs-1) + "]");
+      scale -a 0.2 0.2 0.2;
+      select -r $objs;
+      }
+/////////////////////////////
+      select -r Eye_Ctrl;
+      string $objs[] = `ls -sl`;
+      string $objshapes[] = `listRelatives -s $objs`;
+      for ($ob in $objshapes)
+      {
+      int $numSpans = `getAttr ( $ob + ".spans" )`;
+      int $degree   = `getAttr ( $ob + ".degree" )`;
+      int $numCVs   = $numSpans + $degree;
+      select ( $ob + ".cv[0:" + ($numCVs-1) + "]");
+      scale -a 0.5 0.2 0.2;
+      select -r $objs;
+      }
+///////////////////////////////
+      select -cl;
+	setAttr "R_H_Switch_Ctrl.SWITCH" 1;
+	setAttr "L_H_Switch_Ctrl.SWITCH" 1;
+	setAttr "L_H_Switch_Ctrl.FOREARM" 1;
+	setAttr "R_H_Switch_Ctrl.FOREARM" 1;
+
+/////////////Selection sets Creation//////////////////////////////
+	select -r -ne skellee ;
+	delete;
+	sets -name ControlSet	;
+	sets -name DeformSet;
+	sets -name "Sets";
+	sets -add "Sets" ControlSet DeformSet;
+
+//////////////////////////////////////////////////////////////////////////////////
+	select -r Waist L_Thi L_Knee L_Ankel L_Ball L_Knee_Xtra1 L_KneeFold_Xtra1 R_Thi R_Knee R_Ankel R_Ball R_Knee_Xtra1 R_KneeFold_Xtra1 L_Butt R_Butt Spine Spine1 Spine2 Spine3 Spine4 Spine5 Spine6 Chest Neck1 Neck2 Neck3 Head Forehead Lwr_Jaw Lwr_Jaw1 L_Scapula L_Arm L_Bicep L_Elbow L_Forearm L_Wrist L_Palm L_Elb_Xtra L_Bic_Xtra L_Ches_Xtra1 L_UArm_Xtra1 L_Blade_Xtra1 R_Ches_Xtra1 R_Blade_Xtra1 R_UArm_Xtra1 L_Thumb L_Thumb1 L_Thumb2 L_Index1 L_Index2 L_Index3 L_Mid1 L_Mid2 L_Mid3 L_Ring1 L_Ring2 L_Ring3 L_Pinky1 L_Pinky2 L_Pinky3 L_Pinky4 L_Scap_Xtra1 R_Scapula R_Arm R_Bicep R_Elbow R_Forearm R_Wrist R_Palm R_Index1 R_Index2 R_Index3 R_Ring1 R_Ring2 R_Ring3 R_Mid1 R_Mid2 R_Mid3 R_Thumb R_Thumb1 R_Thumb2 R_Pinky1 R_Pinky2 R_Pinky3 R_Pinky4 R_Elb_Xtra R_Bic_Xtra R_Scap_Xtra1 L_Eye_jnt R_Eye_jnt L_L1_Brow1 L_L_Brow1 L_M_Brow1 L_R_Brow1 L_R1_Brow R_L1_Brow1 R_L_Brow1 R_M_Brow1 R_R_Brow1 R_R1_Brow1 L_Nose1 Nose1 R_Nose1 L_Lwr_Brow1 R_Lwr_Brow1 L_Cheek1 R_Cheek1 R_S_Lip1 L_Up_Lip L_Up_Lip1 R_Up_Lip1 L_Lw_Lip1 R_Lw_Lip1 Up_Lip1 Lw_Lip1 Head Lwr_Jaw Lwr_Jaw1 Tounge Tounge1 Tounge2 Tounge3 Tounge4 Tounge5
+	Tounge6 Tounge7 Tounge8 Tounge9 L_Wrist_Tw L_Forearm_Tw L_Forearm1_Tw R_Wrist_Tw R_Forearm_Tw R_Forearm1_Tw;
+
+	string $js[] = `ls -sl`;
+	string $j;
+	for($j in $js)
+	{
+		sets -add ("DeformSet") ($j);
+
+	}
+	select -cl  ;
+////////////////////////////////////////////////////////////////////////
+	select -r L_Scap_Ctrl L_H_PV_Ctrl L_Hand_Ctrl L_H_Switch_Ctrl L_Arm_Ctrl L_Elbow_Ctrl L_Wrist_Ctrl R_H_Switch_Ctrl R_Scap_Ctrl R_H_PV_Ctrl R_Hand_Ctrl R_H_Switch_Ctrl R_Arm_Ctrl R_Elbow_Ctrl R_Wrist_Ctrl L_Ring3 L_Ring2 L_Ring1 L_Ring_N L_Mid3 L_Mid2 L_Mid1 L_Mid_N L_Index3 L_Index2 L_Index1 L_Index_N L_Thumb2 L_Thumb1 L_Thumb L_Pinky4 L_Pinky3 L_Pinky2 L_Pinky1 R_Ring3 R_Ring2 R_Ring1 R_Ring_N R_Index3 R_Index2 R_Index1 R_Index_N R_Mid3 R_Mid2 R_Mid1 R_Mid_N R_Thumb2 R_Thumb1 R_Thumb R_Pinky4 R_Pinky3 R_Pinky2 R_Pinky1 L_Leg_Ctrl L_L_Switch_Ctrl L_L_PV_Ctrl L_Thi L_Knee L_Ankel L_Ball R_Leg_Ctrl R_L_Switch_Ctrl R_L_PV_Ctrl R_Thi R_Knee R_Ankel R_Ball Head_Ctrl Neck_Ctrl Eye_Ctrl R_Eye_Ctrl L_Eye_Ctrl Chest_Ctrl Mid_Spine_Ctrl Spine_Ctrl Main_Ctrl Waist_Ctrl L_Brow R_Brow L_M_Brow L_L_Brow L_L1_Brow L_R_Brow L_R1_Brow L_Brow R_M_Brow R_R_Brow R_R1_Brow R_L_Brow R_L1_Brow L_Lw_Lip Lw_Lip R_Lw_Lip Lwr_Jaw1 Nose L_Cheek L_Nose L_Lwr_Brow R_Nose L_S_Lip L_Up_Lip Up_Lip R_S_Lip R_Up_Lip R_Cheek R_Lwr_Brow Global_Ctrl Visibility_Ctrl Local_Ctrl;
+
+	string $selection[] = `ls -sl`;
+	string $Csel;
+	for($Csel in $selection)
+	{
+		sets -add ("ControlSet") ($Csel);
+
+	}
+	select -cl  ;
+//End//;
+};

@@ -1,0 +1,189 @@
+global proc IBN_lighting () {
+string $window = `window -title "LIGHTING"
+       -iconName "Short Name"
+       -widthHeight 200 55`;
+columnLayout -adjustableColumn true;
+	text -label "1. Set Correct Frames";
+	text -label "2. Load IBN resolution settings from presets";
+	button -label "3. Create Left Light" -c "IBcreateLit(\"left\")" LightBut_L;
+	button -label "Create Right Light" -c "IBcreateLit(\"right\")" LightBut_R;
+    	button -label "4. Pick Characters" -c "myCharacters" charBut;
+	textField charField;
+    	button -label "Select Characters" -c "selCharacters" selCBut;
+	text -label "No of Objects = " charNo;
+	button -label "5. Create Col Layer" -c "createColLayer" colBut;
+	button -label "6. Create SHD Layer" -c "createShdLayer" shdBut;
+	button -label "Cast SHADOW (Optional)" -c "shdLitAdj" cstshdBut;
+	button -label "REMOVE SHADOW" -ann "if you didnt like it" -c "remShad" remShadBut;
+	button -label "7. Create TOON Layer" -c "createToonLayer" toonBut;
+	button -label "8. Add Surface Shader" -c "surfaceShd" surfaceShdBut;
+	text -label "Create blackhole manually if surfaceShader doesnt work" -al "left" blackBut;
+	button -label "9. Add TOON Line" -c "AddtoonLine" AddtoonBut;
+	button -label "Clear Selection Info" -c "myClear" clearBut;
+setParent ..;
+showWindow $window;
+window -edit -widthHeight 250 400 $window;
+}
+
+global proc IBcreateLit (string $direction) {
+string $whichObj[] = `ls -sl`;
+string $myCam = $whichObj[0];
+//string $myCam = `textField -q -text camField`;
+if( `objExists targetLoc` ) delete "targetLoc";
+$targetLoc = "targetLoc";
+spaceLocator -n $targetLoc;
+setAttr ($targetLoc+".scaleX") 10;
+setAttr  ($targetLoc+".scaleY") 10;
+setAttr  ($targetLoc+".scaleZ") 10;
+parentConstraint $myCam $targetLoc;
+setKeyframe $targetLoc;
+delete ($targetLoc+"_parentConstraint1");
+move -r -os -wd 0 0 -20 ;
+
+if( `objExists CHAR_KEY_LIT` ) delete "CHAR_KEY_LIT";
+string $mylight = "CHAR_KEY_LIT";
+spotLight -n $mylight;
+parentConstraint $myCam $mylight;
+setKeyframe $mylight;
+delete ($mylight+"_parentConstraint1");
+
+aimConstraint -offset 0 0 0 -weight 1 -aimVector 0 0 -1 -upVector 0 1 0 -worldUpType "scene" $targetLoc $mylight;
+
+switch ($direction) { 
+    case "left": 
+	print ("left");
+	move -r -os -wd -5 5 0 ;
+       break; 
+    case "right":
+	print ("right"); 
+	move -r -os -wd 5 5 0 ;
+       break; 
+} 
+setKeyframe $mylight;
+delete ($mylight+"_aimConstraint1");
+delete $targetLoc;
+catch(`lookThroughModelPanelClipped CHAR_KEY_LIT modelPanel5 0.001 1000`);
+}
+
+global proc string mycamera (){
+string $cam[] = `ls -sl`;
+print ($cam[0]);
+textField -e -text $cam[0] camField;
+return $cam[0];
+}
+
+global proc myCharacters(){
+string $chars[] = `ls -sl`;
+print ($chars[0]);
+$newText = "";
+	int $i = 0;
+	while ($i < `size($chars)`) {
+	$newText = ($newText + $chars[$i]+">");
+	textField -e -text $newText charField;
+	$i++;	
+	}
+text -e -label ("No of Objects = "+`size($chars)`) charNo;
+select -cl;
+}
+
+
+global proc selCharacters (){
+string $buffer[];
+string $allchars=`textField -q -text charField`;
+tokenize ($allchars, ">", $buffer);
+select -r $buffer;
+}
+
+global proc myClear() {
+textField -e -text "" charField;
+}
+
+
+global proc createColLayer () {
+string $buffer[];
+string $allchars=`textField -q -text charField`;
+tokenize ($allchars, ">", $buffer);
+select -r $buffer CHAR_KEY_LIT ;
+
+string $path = `file -q -loc`;
+string $fileName = (`basenameEx $path`);
+string $buffer[];
+tokenize ($fileName, "_", $buffer);
+
+string $layerNameCLR = $buffer[0]+"_"+$buffer[1]+"_"+$buffer[2]+"_"+$buffer[3]+"_"+$buffer[4]+"_"+$buffer[5]+"_CLR";
+createRenderLayer -n $layerNameCLR;
+layerEditorLayerButtonSelect 0 $layerNameCLR;
+}
+
+
+global proc createShdLayer () {
+string $buffer[];
+string $allchars=`textField -q -text charField`;
+tokenize ($allchars, ">", $buffer);
+select -r $buffer CHAR_KEY_LIT ;
+
+string $path = `file -q -loc`;
+string $fileName = (`basenameEx $path`);
+string $buffer[];
+tokenize ($fileName, "_", $buffer);
+
+string $layerNameSHD = $buffer[0]+"_"+$buffer[1]+"_"+$buffer[2]+"_"+$buffer[3]+"_"+$buffer[4]+"_"+$buffer[5]+"_SHD";
+createRenderLayer -n $layerNameSHD;
+
+}
+
+global proc shdLitAdj () {
+string $path = `file -q -loc`;
+string $fileName = (`basenameEx $path`);
+string $buffer[];
+tokenize ($fileName, "_", $buffer);
+string $layerNameSHD = $buffer[0]+"_"+$buffer[1]+"_"+$buffer[2]+"_"+$buffer[3]+"_"+$buffer[4]+"_"+$buffer[5]+"_SHD";
+
+layerEditorLayerButtonSelect 0 $layerNameSHD;
+editRenderLayerAdjustment "CHAR_KEY_LITShape.useDepthMapShadows";
+setAttr "CHAR_KEY_LITShape.useDepthMapShadows" 1;
+setAttr "CHAR_KEY_LITShape.dmapResolution" 4092;
+selCharacters;
+assignToonShader "lightAngle";
+//connectAttr -f rampShader1.outColor rampShader1SG.surfaceShader;
+//sets -e -forceElement rampShader1SG;
+setAttr "lightAngleShader.color[1].color_Position" 0.433;
+setAttr "lightAngleShader.color[0].color_Color" -type double3 0 0 0 ;
+
+}
+
+global proc remShad(){
+setAttr "CHAR_KEY_LITShape.useDepthMapShadows" 0;
+}
+
+global proc createToonLayer () {
+selCharacters;
+select -add CHAR_KEY_LIT ;
+
+string $path = `file -q -loc`;
+string $fileName = (`basenameEx $path`);
+string $buffer[];
+tokenize ($fileName, "_", $buffer);
+
+string $layerNameTOON = $buffer[0]+"_"+$buffer[1]+"_"+$buffer[2]+"_"+$buffer[3]+"_"+$buffer[4]+"_"+$buffer[5]+"_TOON";
+createRenderLayer -n $layerNameTOON;
+}
+
+global proc surfaceShd(){
+string $path = `file -q -loc`;
+string $fileName = (`basenameEx $path`);
+string $buffer[];
+tokenize ($fileName, "_", $buffer);
+string $layerNameTOON = $buffer[0]+"_"+$buffer[1]+"_"+$buffer[2]+"_"+$buffer[3]+"_"+$buffer[4]+"_"+$buffer[5]+"_TOON";
+
+layerEditorLayerButtonSelect 0 $layerNameTOON;
+selCharacters;
+createAndAssignShader surfaceShader "";
+setAttr "surfaceShader1.outColor" -type double3 1 1 1 ;
+}
+
+global proc AddtoonLine () {
+selCharacters;
+assignNewPfxToon;
+setAttr "pfxToonShape1.lineWidth" .007;
+}

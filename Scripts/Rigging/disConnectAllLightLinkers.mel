@@ -1,0 +1,45 @@
+global proc disConnectAllLightLinkers()
+{	
+	//Deletes Light Linkers.
+	string $xt_dos[] = `listConnections -s 1 -p 1 defaultObjectSet.message`;
+	for ( $invalue in $xt_dos )
+	{
+		disconnectAttr defaultObjectSet.message $invalue;
+	}
+	print ("--------------------------------------\n");
+	print ("defaultObjectSets Disconnected"+"\n");	
+	
+	string $xt_dls[] = `listConnections -s 1 -p 1 defaultLightSet.message`;
+	for ( $invalue in $xt_dls )
+	{
+		disconnectAttr defaultLightSet.message $invalue;
+	}
+	print ("defaultLightSet Disconnected"+"\n");
+
+	string $xt_isg[] = `listConnections -s 1 -p 1 initialShadingGroup.message`;
+	for ( $invalue in $xt_isg )
+	{
+		if($invalue != "initialMaterialInfo.shadingGroup")
+		{
+			disconnectAttr initialShadingGroup.message $invalue;
+		}
+	}
+	print ("initialShadingGroup Disconnected"+"\n");
+	
+	string $xt_ipse[] = `listConnections -s 1 -p 1 initialParticleSE.message`;
+	for ( $invalue in $xt_ipse )
+	{
+		disconnectAttr initialParticleSE.message $invalue;
+	}
+	print ("initialParticleSE Disconnected"+"\n");
+	
+  	string $destinations[] = `connectionInfo -dfs hyperGraphLayout.msg`;
+ 	string $dst;
+ 	for ( $dst in $destinations ) 
+	{
+ 		disconnectAttr hyperGraphLayout.msg $dst;
+ 	}
+	print ("hyperGraphLayout Disconnected"+"\n");
+	print ("\n--------------------------------------\n");
+}
+disConnectAllLightLinkers;

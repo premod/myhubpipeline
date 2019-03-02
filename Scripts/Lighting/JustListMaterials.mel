@@ -1,0 +1,78 @@
+// Internal Use
+// Developed by Sanraa Media
+
+global proc string[] collectMaterials(){
+    string $sceneMaterials[] = `ls -mat`;
+    return $sceneMaterials;
+}
+global proc addItems(){
+    textScrollList -edit -ra myScrollList;
+    int $materialNumber = size(collectMaterials());
+    int $counter = 0;
+    string $allMat[] = collectMaterials();
+  	while ($counter<$materialNumber) {
+       	textScrollList -edit -append $allMat[$counter] myScrollList;
+        	$counter +=1 ;     
+      	}
+}
+global proc whenSelected() 
+{
+	string $selection[] = `textScrollList -q -si myScrollList`;
+   	select -cl;
+   	select -add $selection[0];
+   	if (`isUIComponentVisible("Attribute Editor")`) {
+		updateMainWindowComponentState();
+        	findNewCurrentModelView;
+        	restoreLastPanelWithFocus();updatePrefsMenu();
+        	autoUpdateAttrEd;
+  	} else {
+       	toggleUIComponentVisibility("Attribute Editor");
+        	updateMainWindowComponentState();
+        	findNewCurrentModelView;
+        	restoreLastPanelWithFocus();updatePrefsMenu();
+        	autoUpdateAttrEd;
+	}
+}
+global proc assignMaterial() 
+{
+ 	string $selection[] = `textScrollList -q -si myScrollList`; 
+   	string $sceneSelection[] = `ls -sl`;
+ 	for($i=0;$i<size($sceneSelection);$i++) {
+    		hyperShade -assign $selection[0];
+     	}
+}
+global proc JustListMaterials() { 
+	if ((`window -ex JustListWindow`) == true) deleteUI JustListWindow;
+	window -t "JustListMaterials" -s true -mnb true -mxb true -mb true JustListWindow;
+	columnLayout;
+	   frameLayout -label "Materials";
+	    columnLayout;
+	    textScrollList -allowMultiSelection false -w 150 -h 200 -sc "whenSelected()" myScrollList;
+	    setParent ..;
+	    setParent ..;
+	columnLayout -rs 3;
+	button -label "Reload" -c "addItems()";
+	button -label "Assign Material To Selection" -c "assignMaterial()";
+     	frameLayout -label "Select Material from Objects";
+	columnLayout;
+	    textScrollList -allowMultiSelection false -w 150 -h 200 showMaterialList;
+	    setParent ..;
+	    setParent ..;
+	columnLayout -rs 3;
+	button -label "Show Material" -c "showAssignedMaterial()";
+	setParent ..;
+	addItems();
+    	window -e -width 357 -height 547 JustListWindow;
+    	showWindow JustListWindow;
+}
+global proc showAssignedMaterial() {
+	textScrollList -edit -ra showMaterialList;
+	string $selList[] = `ls -sl`;
+	hyperShade -smn "";
+	string $list[] = `ls -sl`;
+	int $i;
+	while ($i<size($list)) {
+       	textScrollList -edit -append $list[$i] showMaterialList;
+        	$i +=1 ;     
+      	}
+}

@@ -1,0 +1,1 @@
+global proc Camera_Rig (){pv_performAction "Q:/pipelineScripts/Camera_Rig.ma" "Best Guess";file -import -type "mayaAscii" -rpr "Camera_Rig" -options "v=0;p=17" "Q:/pipelineScripts/Camera_Rig.ma";fileCmdCallback;}

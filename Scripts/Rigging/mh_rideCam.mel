@@ -1,0 +1,121 @@
+/*  This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: mh_rideCam.mel v0.1
+''    Author: Mike Harris
+''    Last Updated: February 10, 2005
+''    Update/Change this file at:
+''    http://www.highend3d.com/maya/mel/?section=animation#3275
+''  
+''  History:
+''     v on December 5, 2004 by Mike Harris
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+
+
+
+///////////////////////////////////////////////////////////////////////
+//                     Created by: Mike Harris
+//                     Date: 02/10/2005
+//                     Tested for Maya v.5 & 6
+//
+//             Update 0.1: Added spring controls to parent cube.
+//
+// Description:
+//        This is a Ride Camera Rig utility that generates
+//        a dynamic camera rig. You can animate the "rideCam#MotionRig"
+//        cube and the camera will react dynamically.
+//
+//        This is a spin-off of the rig that Alex Alvarez builds
+//        in the Gnomon Dynamics 11 - Spring Effects DVD. Available
+//        for purchase at: http://www.thegnomonworkshop.com
+//
+//        If you have any comments or suggestions
+//        you can contact me at: mikeh@dezfx.com
+///////////////////////////////////////////////////////////////////////
+
+global proc mh_rideCam()
+{
+	// Create a camera for the rig
+	string $camName[] = `camera -cp 1`;
+	cameraMakeNode 3 "";
+	string $camGrp[] = `listRelatives -p $camName[0]`;
+	string $rigNum[];
+		tokenize $camName[0] "a" $rigNum; // $rigNum[2] will be the rig number
+	
+	// Create cubes to use as Motion Controls
+	string $camCube[] = `polyCube -w 2 -h 2 -d 5 -sx 2 -sy 2 -sz 2 -ax 0 1 0 -ch 0 -n ("rideCam" + $rigNum[2] + "RigHousing")`;
+	string $motionCube[] = `polyCube -w 3 -h 3 -d 6 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -ch 0 -n ("rideCam" + $rigNum[2] + "MotionRig")`;
+			setAttr -lock true -keyable false ($motionCube[0] + ".sx");
+			setAttr -lock true -keyable false ($motionCube[0] + ".sy");
+			setAttr -lock true -keyable false ($motionCube[0] + ".sz");
+			setAttr -lock true -keyable false ($motionCube[0] + ".v");
+			addAttr -ln springStiff -min 0 -smx 20 -dv 1 -at "float" -keyable true $motionCube[0];
+			addAttr -ln springDamp -min 0 -smx 20 -dv 0.2 -at "float" -keyable true $motionCube[0];
+	string $camCubeParticles[] = `soft -c $camCube[0]`;
+	
+	// Create Springs for the secondary camera motion
+	string $motionSpring[] = `spring -name ("motionSpring" + $rigNum[2]) -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[0]") ($camCube[0] + "Particle.pt[0]")`;
+		spring -add -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[1]") ($camCube[0] + "Particle.pt[2]") $motionSpring[0];
+		spring -add -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[2]") ($camCube[0] + "Particle.pt[6]") $motionSpring[0];
+		spring -add -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[3]") ($camCube[0] + "Particle.pt[8]") $motionSpring[0];
+		spring -add -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[4]") ($camCube[0] + "Particle.pt[12]") $motionSpring[0];
+		spring -add -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[5]") ($camCube[0] + "Particle.pt[14]") $motionSpring[0];
+		spring -add -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[6]") ($camCube[0] + "Particle.pt[18]") $motionSpring[0];
+		spring -add -noDuplicate false -exclusive true -all true -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 ($motionCube[0] + ".vtx[7]") ($camCube[0] + "Particle.pt[20]") $motionSpring[0];
+	string $motionSpringShape[] = `listRelatives -s $motionSpring[0]`;
+
+     connectAttr -f ($motionCube[0] + ".springStiff") ($motionSpringShape[0] + ".stiffness");
+     connectAttr -f ($motionCube[0] + ".springDamp") ($motionSpringShape[0] + ".damping");
+
+	string $steadySpring[] = `spring -name ("steadySpring" + $rigNum[2]) -noDuplicate false -wireframe true -wl 2 -useRestLengthPS true -s 100 -d 1 -sfw 1 -efw 1 $camCubeParticles[0]`;
+	setAttr ($steadySpring[0] + ".visibility") 0;
+
+	// Create locators for camera constraints
+	string $locator1[] = `spaceLocator -p 0 0 0`;
+	string $locator7[] = `spaceLocator -p 0 0 0`;
+	string $locator19[] = `spaceLocator -p 0 0 0`;
+	
+	string $loc1 = `rename $locator1[0] ("rideCam" + $rigNum[2] + "Locator1")`;
+	string $loc7 = `rename $locator7[0] ("rideCam" + $rigNum[2] + "Locator7")`;
+	string $loc19 = `rename $locator19[0] ("rideCam" + $rigNum[2] + "Locator19")`;
+	
+	string $exprString = "float $position1[] = `getParticleAttr -at worldPosition " + $camCube[0] + "Particle.pt[1]`;\r\n" +
+								$loc1 + ".tx = $position1[0];\r\n" +
+								$loc1 + ".ty = $position1[1];\r\n" +
+								$loc1 + ".tz = $position1[2];\r\n\r\n" +
+								"float $position7[] = `getParticleAttr -at worldPosition " + $camCube[0] + "Particle.pt[7]`;\r\n" +
+								$loc7 + ".tx = $position7[0];\r\n" +
+								$loc7 + ".ty = $position7[1];\r\n" +
+								$loc7 + ".tz = $position7[2];\r\n\r\n" +
+								"float $position19[] = `getParticleAttr -at worldPosition " + $camCube[0] + "Particle.pt[19]`;\r\n" +
+								$loc19 + ".tx = $position19[0];\r\n" +
+								$loc19 + ".ty = $position19[1];\r\n" +
+								$loc19 + ".tz = $position19[2];";
+	
+	expression -s $exprString -o "" -ae 1 -uc all -n ("cam" + $rigNum[2] + "Expr");
+	
+	// Position & constrain the camera, aim, and up vectors
+	float $pos1[] = `getParticleAttr -at worldPosition ($camCube[0] + "Particle.pt[1]")`;
+	float $pos7[] = `getParticleAttr -at worldPosition ($camCube[0] + "Particle.pt[7]")`;
+	float $pos19[] = `getParticleAttr -at worldPosition ($camCube[0] + "Particle.pt[19]")`;
+
+	move -a $pos1[0] $pos1[1] $pos1[2] $camName[0];
+	move -a $pos7[0] $pos7[1] $pos7[2] ($camName[0] + "_up");
+	move -a $pos19[0] $pos19[1] $pos19[2] ($camName[0] + "_aim");
+	
+	pointConstraint -mo -weight 1 $loc1 $camName[0];
+	pointConstraint -mo -weight 1 $loc7 ($camName[0] + "_up");
+	pointConstraint -mo -weight 1 $loc19 ($camName[0] + "_aim");
+	
+	// Clean up rig into groups
+	string $springGrp = `group -w -n ("rideCam" + $rigNum[2] + "Springs") $motionSpring[0] $steadySpring[0]`;
+	string $locatorGrp = `group -w -n ("rideCam" + $rigNum[2] + "Locators") $loc1 $loc7 $loc19`;
+	string $rigGrp = `group -w -n ("rideCam" + $rigNum[2] + "Rig") $camGrp[0] $camCube[0] $springGrp $locatorGrp`;
+	
+	select -cl;
+}

@@ -1,0 +1,98 @@
+global proc DLS_noteDisplay()
+
+{
+if (!`headsUpDisplay -exists HUDframeDisplay10`)
+wkunit;
+else
+	headsUpDisplay -rem HUDframeDisplay10;
+
+//-----------------PROJECT NAME -----------------------------
+if (!`headsUpDisplay -exists HUDframeDisplay2`)
+
+headsUpDisplay 
+	-section 7 -block 1 -blockSize "small" 
+	-dfs "small"
+	-ao 1
+	-ba "center"
+	-label "Project Location :" 
+	-labelFontSize "small" 
+	-command "workspace -q -rd" -atr
+	HUDframeDisplay2;
+else
+	headsUpDisplay -rem HUDframeDisplay2;
+
+//---------------FRAME COUNTER ----------------------------
+if (!`headsUpDisplay -exists HUDframeDisplay3`)
+
+headsUpDisplay 
+	-section 2 -block 2 -blockSize "small" 
+	-dfs "small"
+       -ao 1
+	-ba "center"
+	-label "Frame :" 
+	-labelFontSize "small" 
+	-command "currentTime -q;" -atr
+	HUDframeDisplay3;
+else
+	headsUpDisplay -rem HUDframeDisplay3; 
+
+//----------------SCENE NAME --------------------------------
+if (!`headsUpDisplay -exists HUDframeDisplay4`)
+
+headsUpDisplay 
+	-section 7 -block 2 -blockSize "small" 
+	-dfs "small"
+       -ao 1
+	-ba "center"
+	-label "Scene Name :" 
+	-labelFontSize "small" 
+	-command "file -q -ns;" -atr
+	HUDframeDisplay4;
+else
+	headsUpDisplay -rem HUDframeDisplay4;
+
+//----------------USER NAME --------------------------------
+string $usrname = `getenv "USER"`;
+if (!`headsUpDisplay -exists HUDframeDisplay8`)
+
+headsUpDisplay 
+	-section 1 -block 1 -blockSize "small" 
+	-dfs "small"
+       -ao 1
+	-ba "center"
+	-label ("User : "+$usrname)
+	-labelFontSize "small" 
+	HUDframeDisplay8;
+else
+	headsUpDisplay -rem HUDframeDisplay8;
+
+//----------------DATE & TIME --------------------------------
+if (!`headsUpDisplay -exists HUDframeDisplay5`)
+
+headsUpDisplay 
+	-dfs "small"
+       -ao 1
+	-ba "left"
+	-section 5 -block 2 -blockSize "small" 
+	-label "Date :" 
+	-labelFontSize "small" 
+	-command "about -cd;" -atr 
+	HUDframeDisplay5;
+else
+	headsUpDisplay -rem HUDframeDisplay5;
+
+if (!`headsUpDisplay -exists HUDframeDisplay6`)
+
+headsUpDisplay 
+	-section 5 -block 3 -blockSize "small" 
+	-dfs "small"
+       -ao 1
+	-ba "left"
+	-label "Time :" 
+	-labelFontSize "small" 
+	-command "about -ct;" -atr 
+	HUDframeDisplay6;
+else
+	headsUpDisplay -rem HUDframeDisplay6;
+
+}

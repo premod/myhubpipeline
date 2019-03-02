@@ -1,0 +1,77 @@
+global proc createCharRenderLayers()
+{
+	createRenderLayer -name "OCC" -number 1 -noRecurse `ls -selection`;
+	createRenderLayer -name "MATT" -number 1 -noRecurse `ls -selection`;
+	createRenderLayer -name "DEPTH" -number 1 -noRecurse `ls -selection`;
+	
+	select -cl;
+	AssignPolyMeshToOccLayers();
+	assignOcclusionToMesh();
+	AssignPolyMeshToDepthLayers();
+	AssignPolyMeshToMattLayers();
+	//AssignLightsToMattLayers();
+	createCustomDepthPass();
+
+	renderLayerEditorRenderable RenderLayerTab "defaultRenderLayer" 0;
+	updateEditorFeedbackRenderLayer RenderLayerTab defaultRenderLayer;
+}
+
+global proc AssignPolyMeshToOccLayers()
+{
+	string $mesh[] = `ls -typ "mesh"`;
+	{
+		select -tgl $mesh;
+	}
+	editRenderLayerMembers -noRecurse OCC $mesh;
+	select -cl;
+}
+
+global proc assignOcclusionToMesh()
+{
+	editRenderLayerGlobals -currentRenderLayer OCC;
+	shadingNode -asShader lambert -n "CustLambert";
+	mrCreateCustomNode -asTexture "" mib_amb_occlusion;
+	connectAttr -force mib_amb_occlusion1.outValue CustLambert.color;
+	setAttr "mib_amb_occlusion1.samples" 64;
+	setAttr "mib_amb_occlusion1.spread" 1;
+	setAttr "mib_amb_occlusion1.max_distance" 3;
+	string $mesh[] = `ls -typ "mesh"`;
+	{
+		select -tgl $mesh;
+	}
+	hypergraphAssignTextureToSelection  mib_amb_occlusion1;
+	select -cl;
+}
+
+global proc AssignPolyMeshToDepthLayers()
+{
+	string $mesh[] = `ls -typ "mesh"`;
+	{
+		select -tgl $mesh;
+	}
+	editRenderLayerMembers -noRecurse DEPTH $mesh;
+	select -cl;
+}
+
+global proc AssignPolyMeshToMattLayers()
+{
+	editRenderLayerGlobals -currentRenderLayer MATT;
+	string $mesh[] = `ls -typ "mesh"`;
+	{
+		select -tgl $mesh;
+	}
+	sets -e -forceElement initialShadingGroup;
+	editRenderLayerMembers -noRecurse MATT $mesh;
+	select -cl;
+}
+
+global proc createCustomDepthPass()
+{
+	setCurrentRenderer("mentalRay");
+	editRenderLayerGlobals -currentRenderLayer DEPTH;
+	createNode renderPass;
+	applyAttrPreset "renderPass1" "C:/Program Files (x86)/Autodesk/Maya2009/presets/attrPresets/renderPass/cameraDepth.mel" 1;
+	rename "renderPass1" "depth";
+	connectAttr -nextAvailable DEPTH.renderPass depth.owner;
+}
+

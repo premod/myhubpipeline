@@ -1,0 +1,4 @@
+global proc rimLightImport()
+{
+	file -i "//sanstoo/Projects/CustomScripts/Scripts/Lighting/Rim_Light.ma";
+}

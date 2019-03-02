@@ -1,0 +1,667 @@
+// SCRIPTS WRITTEN BY FJ PRABHU
+global proc AutoWalk(){
+string $AutoWalkwindow = `window -title "Auto Walk System"`;
+string $form = `formLayout -numberOfDivisions 100`;
+
+floatSliderGrp -label "Chest Roll" -field true -pre 2
+    -minValue 0 -maxValue 15.0
+    -fieldMinValue 0 -fieldMaxValue 12
+    -value 6 b1;
+
+floatSliderGrp -label "Chest Tilt" -field true -pre 2
+    -minValue 0 -maxValue 10
+    -fieldMinValue 0 -fieldMaxValue 10
+    -value 3 b2;
+
+floatSliderGrp -label "PelvisHeight" -field true -pre 2
+    -minValue 0 -maxValue 100
+    -fieldMinValue 0 -fieldMaxValue 100
+    -value 95 b3;
+
+floatSliderGrp -label "Pelvis Tilt L" -field true -pre 2
+    -minValue -10 -maxValue 10
+    -fieldMinValue 0 -fieldMaxValue 10
+    -value 1 b4;
+
+floatSliderGrp -label "Pelvis Tilt R" -field true -pre 2
+    -minValue -10 -maxValue 10
+    -fieldMinValue 0 -fieldMaxValue 10
+    -value 1 b5;
+
+floatSliderGrp -label "Arm Length" -field true -pre 2
+    -minValue 0 -maxValue 100
+    -fieldMinValue 0 -fieldMaxValue 100
+    -value 80 b6;
+
+floatSliderGrp -label "Arm Swing" -field true -pre 2
+    -minValue 0 -maxValue 100
+    -fieldMinValue 0 -fieldMaxValue 100
+    -value 90 b7;
+
+floatSliderGrp -label "Arm Pole Vector: Male" -field true -pre 2
+    -minValue -1 -maxValue 1
+    -fieldMinValue -1 -fieldMaxValue 1
+    -value 0.5 -el "Female" b8;
+
+floatSliderGrp -label "Hand Delays" -field true -pre 2
+    -minValue 0 -maxValue 10
+    -fieldMinValue 0 -fieldMaxValue 10
+    -value 0 b9;
+
+floatSliderGrp -label "Leg Lift" -field true -pre 2
+    -minValue 0 -maxValue 2
+    -fieldMinValue 0 -fieldMaxValue 2
+    -value 0.5 b10;
+
+floatSliderGrp -label "Legs Spread Front" -field true -pre 2
+    -minValue 0 -maxValue 2
+    -fieldMinValue 0 -fieldMaxValue 2
+    -value 1 b11;
+
+floatSliderGrp -label "Legs Spread Side" -field true -pre 2
+    -minValue -0.25 -maxValue 2.00
+    -fieldMinValue -0.25 -fieldMaxValue 2.00
+    -value 0 b12;
+
+floatSliderGrp -label "Feet Straight" -field true -pre 2
+    -minValue -0 -maxValue 30
+    -fieldMinValue -0 -fieldMaxValue 30
+    -value 10 b13;
+
+radioButtonGrp -numberOfRadioButtons 2
+    -label "" -labelArray2 "Male" "Female" -on1("setMale") -on2("setFemale") b14;
+
+checkBox -label "Progressive" -v 1 -align "left" CHK_B;
+
+button -label "Save Presets" -c "saveWalk" SAVE_B;
+button -label "Load Presets" -c "loadWalk" LOAD_B;
+button -label "WALK" -c "walkCycle" GO_B;
+
+//************************************************************************************************************************************************************************************************************
+
+string $column = `columnLayout -adjustableColumn true`;
+
+formLayout -edit
+    -attachForm     b1     "top"    5
+    -attachForm     b1     "left"   5
+
+    -ac		b2     "top"    5 b1
+    -aoc	b2     "left"   0 b1
+
+    -ac		b3     "top"    5 b2
+    -aoc	b3     "left"   0 b2
+
+    -ac		b4     "top"    5 b3
+    -aoc	b4     "left"   0 b3
+
+    -ac		b5     "top"    5 b4
+    -aoc	b5     "left"   0 b4
+
+    -ac		b6     "top"    5 b5
+    -aoc	b6     "left"   0 b5
+
+    -ac		b7     "top"    5 b6
+    -aoc	b7     "left"   0 b6
+
+    -ac		b8     "top"    5 b7
+    -aoc	b8     "left"   0 b7
+
+    -ac		b9     "top"    5 b8
+    -aoc	b9     "left"   0 b8
+
+    -ac	b10     "top"    5 b9
+    -aoc	b10     "left"   0 b9
+
+    -ac	b11     "top"    5 b10
+    -aoc	b11     "left"   0 b10
+
+    -ac	b12     "top"    5 b11
+    -aoc	b12     "left"   0 b11
+
+    -ac	b13     "top"    5 b12
+    -aoc	b13     "left"   0 b12
+
+    -ac	b14     "top"    5 b13
+    -aoc	b14     "left"   0 b13
+
+    -ac	CHK_B	"top"    5 b14
+    -aoc	CHK_B	"left"   0 b14
+
+
+    -attachNone     SAVE_B	"top"
+    -attachForm     SAVE_B   "left"   5
+    -attachForm     SAVE_B   "bottom" 5
+
+    -attachNone    LOAD_B  "top"
+    -ac     	     LOAD_B  "left"   5  SAVE_B
+    -attachForm    LOAD_B  "bottom" 5
+
+    -attachNone     GO_B     "top"
+    -ac     	  GO_B   "left"   5  LOAD_B
+    -attachForm     GO_B     "bottom" 5
+    -attachForm     GO_B     "right"  5
+
+    -attachForm     $column "top"    5
+    -attachPosition $column "left"   0 75
+    -attachControl  $column "bottom" 5 GO_B
+    -attachForm     $column "right"  5
+$form;
+showWindow $AutoWalkwindow;
+//************************************************************************************************************************************************************************************************************
+
+}
+
+global proc saveWalk () {
+print "Save Walk";
+}
+
+global proc loadWalk () {
+print "load Walk";
+}
+
+global proc setMale() {
+print "Male";
+floatSliderGrp -e -v 6 b1; //chest roll
+floatSliderGrp -e -v 3 b2; //chest tilt
+floatSliderGrp -e -v 1 b4; //pelvis tilt
+floatSliderGrp -e -v 1 b5; //pelvis tilt
+floatSliderGrp -e -v 80 b6; //arm length
+floatSliderGrp -e -v 0 b12; //leg spread side
+floatSliderGrp -e -v 0.5 b8; //hand pole vector
+}
+
+global proc setFemale() {
+print "Female";
+floatSliderGrp -e -v 1 b1; //chest roll
+floatSliderGrp -e -v 1 b2; //chest tilt
+floatSliderGrp -e -v 6 b4; //pelvis tilt
+floatSliderGrp -e -v 6 b5; //pelvis tilt
+floatSliderGrp -e -v 95 b6; //arm length
+floatSliderGrp -e -v -0.05 b12; //leg spread side
+floatSliderGrp -e -v -0.5 b8; //hand pole vector
+}
+
+global proc walkCycle () {
+global string $WalkChar;
+$WalkChar = whichChar();
+
+float $chestRot = `floatSliderGrp -q -v b1`;
+float $chestTilt = `floatSliderGrp -q -v b2`;
+//3 pelvis height
+float $PelvisTiltL = `floatSliderGrp -q -v b4`;
+float $PelvisTiltR = `floatSliderGrp -q -v b5`;
+//6 armlength
+float $ArmSwing = `floatSliderGrp -q -v b7`;
+//8 arm polevector
+float $HandDelays = `floatSliderGrp -q -v b9`;
+//
+float $LegLift = `floatSliderGrp -q -v b10`;
+float $LegSpreadFront = `floatSliderGrp -q -v b11`;
+float $LegSpreadSide = `floatSliderGrp -q -v b12`;
+//13 feet straight
+
+currentTime 1;
+startPose ();
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") -0.15;
+//-----
+setAttr ($WalkChar+":FKCurveChest_M.rx") (-$chestRot);
+setAttr ($WalkChar+":FKCurveChest_M.ry") ($chestTilt);
+setAttr ($WalkChar+":HipSwingerRoot_M.rx") 5;
+setAttr ($WalkChar+":HipSwingerRoot_M.ry") (-$PelvisTiltL);
+// Leg
+
+setAttr ($WalkChar+":IKCurveLeg_L.translateX")($LegSpreadSide);
+setAttr ($WalkChar+":IKCurveLeg_R.translateX")(-$LegSpreadSide);
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") $LegSpreadFront;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") (-$LegSpreadFront - 0.2);
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 17;
+
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+	//hand
+//setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -1.998;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.545;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -33.201;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -11.271;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -73.37;
+//setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.098;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") -0.171;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70;
+dist_Sethand; 
+//heightSetR;
+//heightSethand_R(0);heightSethand_L(5);
+setKeyF;
+
+currentTime 6;
+	//leg
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateX") ($LegSpreadSide-0.2);
+setAttr ($WalkChar+":IKCurveLeg_R.translateX")(-$LegSpreadSide);
+setAttr ($WalkChar+":IKCurveLeg_L.translateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateY") ($LegLift);
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.roll") -0.8;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 14;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 17;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") 0;
+	//hand
+//setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -2.072;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.058;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -20.429;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -7.036;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -71.744;
+//setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.057;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") 0.241;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") -4.387;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 1.54;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70.201;
+//heightSetR;
+//heightSethand_R(0);heightSethand_L(15);
+
+setKeyF;
+
+currentTime 11;
+setAttr ($WalkChar+":IKCurveLeg_R.translateX")(-$LegSpreadSide);
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") (0.1 - $LegSpreadFront);
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateX") $LegSpreadSide;
+setAttr ($WalkChar+":IKCurveLeg_L.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") ($LegSpreadFront + 0.3);
+setAttr ($WalkChar+":IKCurveLeg_L.roll") -2;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") -12;
+//heightSetR;
+//heightSethand_R(0);heightSethand_L(5);
+
+setKeyF;
+
+currentTime 13;
+setAttr ($WalkChar+":FKCurveChest_M.rx") $chestRot;
+setAttr ($WalkChar+":FKCurveChest_M.ry") (-$chestTilt);
+setAttr ($WalkChar+":HipSwingerRoot_M.rx") -5;
+setAttr ($WalkChar+":HipSwingerRoot_M.ry") ($PelvisTiltR);
+//leg
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") -0.15;
+setAttr ($WalkChar+":IKCurveLeg_R.translateX")(-$LegSpreadSide);
+setAttr ($WalkChar+":IKCurveLeg_L.translateX") $LegSpreadSide;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") $LegSpreadFront;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") (-$LegSpreadFront - 0.2);
+setAttr ($WalkChar+":IKCurveLeg_L.roll") 0;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 17;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+//hand
+//setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -1.996;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") -0.408; 
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -8.542;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -3.094;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -70.231;
+//setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -1.982;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") 0.621;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") -20.131;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 7.14;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 71.269;
+//heightSetL;
+//heightSethand_R(5);heightSethand_L(0);
+setKeyF;
+
+//---2---
+currentTime 18;
+//leg
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateX") ($LegSpreadSide-0.2);
+setAttr ($WalkChar+":IKCurveLeg_L.translateX") $LegSpreadSide;
+setAttr ($WalkChar+":IKCurveLeg_R.translateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") ($LegLift);
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") -0.8;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 14;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") 17;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+//hand
+//setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.057;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") 0.241;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") -20.278;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 7.095;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 71.406;
+//setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -2.072;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.058;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") 1.817;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") 0.664;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -70.489;
+//heightSetL;
+//heightSethand_R(15);heightSethand_L(0);
+setKeyF;
+
+currentTime 23;
+setAttr ($WalkChar+":IKCurveLeg_L.translateX") $LegSpreadSide;
+setAttr ($WalkChar+":IKCurveLeg_R.translateX") (-$LegSpreadSide);
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") ($LegSpreadFront + 0.3);
+setAttr ($WalkChar+":IKCurveLeg_R.roll") -2;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") (0.1 - $LegSpreadFront);
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") -12;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+//heightSetL;
+//heightSethand_R(5);heightSethand_L(0);
+setKeyF;
+
+currentTime 25;
+setAttr ($WalkChar+":FKCurveChest_M.rx") (-$chestRot);
+setAttr ($WalkChar+":FKCurveChest_M.ry") ($chestTilt);
+setAttr ($WalkChar+":HipSwingerRoot_M.rx") 5;
+setAttr ($WalkChar+":HipSwingerRoot_M.ry") (-$PelvisTiltL);
+//leg
+setAttr ($WalkChar+":IKCurveLeg_L.translateX") $LegSpreadSide;
+setAttr ($WalkChar+":IKCurveLeg_R.translateX")(-$LegSpreadSide);
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") $LegSpreadFront;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") (-$LegSpreadFront - 0.2);
+
+setAttr ($WalkChar+":IKCurveLeg_R.roll") 0;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 17;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+//hand
+//setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -1.998;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.545;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -33.201;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -11.271;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -73.37;
+//setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.098;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") -0.171;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70;
+//heightSetR;
+//heightSethand_R(0);heightSethand_L(5);
+setKeyF;
+DynamicPos;
+Atprog;
+}
+
+global proc Atprog () {
+global string $WalkChar;
+currentTime 1;
+setKeyframe ($WalkChar+":All.tz");
+$startLegDis = `getAttr($WalkChar+":IKCurveLeg_R.tz")`;
+$masterstartPos=`getAttr ($WalkChar+":All.tz")`;
+print ("\nF1 master = "+$masterstartPos+", STARTLEG = "+$startLegDis+"\n");
+currentTime 6;
+$endLegDis = `getAttr($WalkChar+":IKCurveLeg_R.tz")`;
+$legDiff = $masterstartPos-($endLegDis - $startLegDis);
+setAttr ($WalkChar+":All.tz") $legDiff;
+print ("\nF6 master = "+$masterstartPos+", STARTLEG = "+$startLegDis+",endLegDis = "+ $endLegDis+"\n");
+currentTime 11;
+$endLegDis = `getAttr($WalkChar+":IKCurveLeg_R.tz")`;
+$legDiff = $masterstartPos-($endLegDis - $startLegDis);
+setAttr ($WalkChar+":All.tz") $legDiff;
+print ("\nF11 master = "+$masterstartPos+", STARTLEG = "+$startLegDis+",endLegDis = "+ $endLegDis+"\n");
+currentTime 13;
+$endLegDis = `getAttr($WalkChar+":IKCurveLeg_R.tz")`;
+$legDiff = $masterstartPos-($endLegDis - $startLegDis);
+setAttr ($WalkChar+":All.tz") $legDiff;
+print ("\nF13 master = "+$masterstartPos+", STARTLEG = "+$startLegDis+",endLegDis = "+ $endLegDis+"\n");
+//************************************************************************************************************************************************************************************************************
+setInfinity -poi cycle {$WalkChar+":FKCurveChest_M", $WalkChar+":IKCurveArm_R", $WalkChar+":IKCurveArm_L", $WalkChar+":RootCurveRoot_M.translateY", $WalkChar+":FKCurveMiddleToe1_R", $WalkChar+":FKCurveMiddleToe1_L", $WalkChar+":IKCurveLegBall_R", $WalkChar+":IKCurveLeg_L", $WalkChar+":IKCurveLeg_R", $WalkChar+":IKCurveLegBall_L"};
+setInfinity -poi cycleRelative graphEditor1FromOutliner ($WalkChar+":All.tz");
+
+//********************************************************************************************************
+}
+
+global proc DynamicPos(){
+currentTime 1; 
+dist_Sethand;
+		 heightSetR;heightSethand_R(0);heightSethand_L(5);
+currentTime 2; heightSetR;heightSethand_R(0);heightSethand_L(10);
+currentTime 3; heightSetR;heightSethand_R(0);heightSethand_L(15);
+currentTime 4; heightSetR;heightSethand_R(0);heightSethand_L(15);
+currentTime 5; heightSetR;heightSethand_R(0);heightSethand_L(15);
+currentTime 6; heightSetR;heightSethand_R(0);heightSethand_L(15);
+currentTime 7; heightSetR;heightSethand_R(0);heightSethand_L(15);
+currentTime 8; heightSetR;heightSethand_R(0);heightSethand_L(15);
+currentTime 9; heightSetR;heightSethand_R(0);heightSethand_L(15);
+currentTime 10; heightSetR;heightSethand_R(0);heightSethand_L(10);
+currentTime 11; heightSetR;heightSethand_R(0);heightSethand_L(5);
+//
+currentTime 13; heightSetL;heightSethand_R(5);heightSethand_L(0);
+currentTime 14; heightSetL;heightSethand_R(10);heightSethand_L(0);
+currentTime 15; heightSetL;heightSethand_R(15);heightSethand_L(0);
+currentTime 16; heightSetL;heightSethand_R(15);heightSethand_L(0);
+currentTime 17; heightSetL;heightSethand_R(15);heightSethand_L(0);
+currentTime 18; heightSetL;heightSethand_R(15);heightSethand_L(0);
+currentTime 19; heightSetL;heightSethand_R(15);heightSethand_L(0);
+currentTime 20; heightSetL;heightSethand_R(15);heightSethand_L(0);
+currentTime 21; heightSetL;heightSethand_R(15);heightSethand_L(0);
+currentTime 22; heightSetL;heightSethand_R(10);heightSethand_L(0);
+currentTime 23; heightSetL;heightSethand_R(5);heightSethand_L(0);
+//
+currentTime 25; heightSetR;heightSethand_R(0);heightSethand_L(5);
+}
+
+global proc setKeyF() {
+global string $WalkChar;
+setKeyframe {$WalkChar+":RootCurveRoot_M.translateY", $WalkChar+":FKCurveMiddleToe1_R", $WalkChar+":FKCurveMiddleToe1_L", $WalkChar+":IKCurveLegBall_R", $WalkChar+":IKCurveLeg_L", $WalkChar+":IKCurveLeg_R", $WalkChar+":IKCurveLegBall_L"};
+}
+
+global proc startPose (){
+global string $WalkChar;
+print $WalkChar;
+setKeyframe ($WalkChar+":FKCurveChest_M");
+setKeyframe ($WalkChar+":HipSwingerRoot_M");
+setKeyframe ($WalkChar+":RootCurveRoot_M");
+setKeyframe ($WalkChar+":FKCurveAnkle_L.rx");
+setKeyframe ($WalkChar+":FKCurveAnkle_R.rx");
+setKeyframe ($WalkChar+":IKCurveArm_R");
+setKeyframe ($WalkChar+":IKCurveArm_L");
+setKeyframe ($WalkChar+":IKCurveLegBall_L");
+setKeyframe ($WalkChar+":IKCurveLegBall_R");
+setKeyframe ($WalkChar+":IKCurveLeg_L");
+setKeyframe ($WalkChar+":IKCurveLeg_R");
+setKeyframe ($WalkChar+":FKCurveMiddleToe1_L");
+setKeyframe ($WalkChar+":FKCurveMiddleToe1_R");
+setKeyframe ($WalkChar+":FKCurveWrist_L.IndexFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.MiddleFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.RingFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.PinkyFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.ThumbFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.IndexFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.MiddleFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.RingFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.PinkyFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.ThumbFingerCurl");
+setKeyframe ($WalkChar+":IKPoleVectorCurveArm_L.translateX");
+setKeyframe ($WalkChar+":IKPoleVectorCurveArm_R.translateX");
+//
+
+//setAttr ($WalkChar+":RootCurveRoot_M.translateZ") 0.2;
+
+//************************************************************************************************************************************************************************************************************
+float $FeetStraight = `floatSliderGrp -q -v b13`;
+
+float $poleV = `floatSliderGrp -q -v b8`;
+setAttr ($WalkChar+":IKPoleVectorCurveArm_L.translateX") $poleV;
+setAttr ($WalkChar+":IKPoleVectorCurveArm_R.translateX") (-$poleV);
+
+setAttr ($WalkChar+":FKCurveAnkle_R.rx") $FeetStraight;
+setAttr ($WalkChar+":FKCurveAnkle_L.rx") $FeetStraight;
+setAttr ($WalkChar+":IKCurveArm_L.follow") 10;
+setAttr ($WalkChar+":IKCurveArm_R.follow") 10;
+setAttr ($WalkChar+":FKIKControlCurveArm_R.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveArm_L.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveArm_R.FKIKBlend") 10;
+setAttr ($WalkChar+":FKIKControlCurveArm_L.FKIKBlend") 10;
+setAttr ($WalkChar+":FKIKControlCurveLeg_R.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveLeg_L.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveLeg_R.FKIKBlend") 10;
+setAttr ($WalkChar+":FKIKControlCurveLeg_L.FKIKBlend") 10;
+setAttr ($WalkChar+":RootCurveRoot_M.rotateX") 5;
+setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -2.1;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -70;
+setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.1;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70;
+setAttr ($WalkChar+":FKCurveWrist_L.IndexFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.MiddleFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.RingFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.PinkyFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.ThumbFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.IndexFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.MiddleFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.RingFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.PinkyFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.ThumbFingerCurl") 2.2;
+}
+
+global proc heightSetR(){
+global string $WalkChar;
+//**************************************************************************************************************************************
+float $PelvisHeight = `floatSliderGrp -q -v b3`;
+$pelRev = 100-$PelvisHeight;
+$PelvisHeight_Hi = $pelRev + 6.5;
+$PelvisHeight_Low =  $pelRev + 5.5;
+if ((`getAttr($WalkChar+":IKKnee_R.rz")`<$PelvisHeight_Hi) && (`getAttr($WalkChar+":IKKnee_R.rz")`>$PelvisHeight_Low)) {
+	print ("Ok="+`getAttr($WalkChar+":IKKnee_R.rz")`);
+
+} else if (`getAttr($WalkChar+":IKKnee_R.rz")`<$PelvisHeight_Hi) {
+	print ("straight="+`getAttr($WalkChar+":IKKnee_R.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_R.rz")`< $PelvisHeight_Hi){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY - 0.001);
+	} 
+} else {
+	print ("bend="+`getAttr($WalkChar+":IKKnee_R.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_R.rz")`> $PelvisHeight_Low){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY + 0.001);
+	} 
+}
+}
+
+global proc heightSetL(){
+global string $WalkChar;
+//
+float $PelvisHeight = `floatSliderGrp -q -v b3`;
+$pelRev = 100-$PelvisHeight;
+$PelvisHeight_Hi = $pelRev + 6.5;
+$PelvisHeight_Low =  $pelRev + 5.5;
+
+if ((`getAttr($WalkChar+":IKKnee_L.rz")`<$PelvisHeight_Hi) && (`getAttr($WalkChar+":IKKnee_L.rz")`>$PelvisHeight_Low)) {
+	print ("Ok="+`getAttr($WalkChar+":IKKnee_L.rz")`);
+
+} else if (`getAttr($WalkChar+":IKKnee_L.rz")`< $PelvisHeight_Hi) {
+	print ("straight="+`getAttr($WalkChar+":IKKnee_L.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_L.rz")`< $PelvisHeight_Hi){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY - 0.001);
+	} 
+} else {
+	print ("bend="+`getAttr($WalkChar+":IKKnee_L.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_L.rz")`> $PelvisHeight_Low){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY + 0.001);
+	} 
+}
+}
+
+global proc heightSethand_L(float $val){
+global string $WalkChar;
+
+float $ArmLength= `floatSliderGrp -q -v b6`;
+$ArmRev = 100 - $ArmLength + $val;
+$ArmLength_Low =  $ArmRev + 18;
+$ArmLength_Hi = $ArmRev + 20;
+
+if ((`getAttr($WalkChar+":IKElbow_L.ry")`> $ArmLength_Low) && (`getAttr($WalkChar+":IKElbow_L.ry")`< $ArmLength_Hi)) {
+	print ("Ok="+`getAttr($WalkChar+":IKElbow_L.ry")`);
+
+} else if (`getAttr($WalkChar+":IKElbow_L.ry")`> $ArmLength_Low) {
+	print ("bend="+`getAttr($WalkChar+":IKElbow_L.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_L.ry")`> $ArmLength_Low){
+		float $hand_L_TY = `getAttr($WalkChar+":IKCurveArm_L.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_L.translateY") ($hand_L_TY - 0.001);
+	} 
+} else {
+	print ("straight="+`getAttr($WalkChar+":IKElbow_L.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_L.ry")`< $ArmLength_Hi){
+		float $hand_L_TY = `getAttr($WalkChar+":IKCurveArm_L.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_L.translateY") ($hand_L_TY + 0.001);
+	} 
+}
+}
+
+global proc heightSethand_R(float $val){
+global string $WalkChar;
+
+float $ArmLength= `floatSliderGrp -q -v b6`;
+$ArmRev = 100 - $ArmLength + $val;
+$ArmLength_Low =  $ArmRev + 18;
+$ArmLength_Hi = $ArmRev + 20;
+
+if ((`getAttr($WalkChar+":IKElbow_R.ry")`> $ArmLength_Low) && (`getAttr($WalkChar+":IKElbow_R.ry")`< $ArmLength_Hi)) {
+	print ("Ok="+`getAttr($WalkChar+":IKElbow_R.ry")`);
+
+} else if (`getAttr($WalkChar+":IKElbow_R.ry")`> $ArmLength_Low) {
+	print ("bend="+`getAttr($WalkChar+":IKElbow_R.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_R.ry")`> $ArmLength_Low){
+		float $hand_R_TY = `getAttr($WalkChar+":IKCurveArm_R.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_R.translateY") ($hand_R_TY - 0.001);
+	} 
+} else {
+	print ("straight="+`getAttr($WalkChar+":IKElbow_R.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_R.ry")`< $ArmLength_Hi){
+		float $hand_R_TY = `getAttr($WalkChar+":IKCurveArm_R.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_R.translateY") ($hand_R_TY + 0.001);
+	} 
+}
+}
+
+global proc dist_Sethand(){
+global string $WalkChar;
+spaceLocator -name rHandLocate;
+parentConstraint -sr x -sr y -sr z ($WalkChar+":Shoulder_R") rHandLocate ;
+$loctx = `getAttr "rHandLocate.tx"`;
+$locty = `getAttr "rHandLocate.ty"`;
+$loctz = `getAttr "rHandLocate.tz"`;
+delete rHandLocate_parentConstraint1 ;
+parentConstraint -sr x -sr y -sr z ($WalkChar+":IKCurveArm_R") rHandLocate ;
+delete rHandLocate_parentConstraint1 ;
+parentConstraint -sr x -sr y -sr z rHandLocate ($WalkChar+":IKCurveArm_R") ;
+setAttr ("rHandLocate.tx")($loctx-0.3);
+$RhandPos = `getAttr ($WalkChar+":IKCurveArm_R.tx")`;
+delete ($WalkChar+":IKCurveArm_R_parentConstraint1");
+setAttr ($WalkChar+":IKCurveArm_R.tx")$RhandPos;
+setAttr ($WalkChar+":IKCurveArm_L.tx")(-$RhandPos);
+delete rHandLocate;
+};
+
+

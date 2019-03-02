@@ -1,0 +1,732 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+/*
+ * FUNCTION NAME	lG_chooserWin
+ * DESCRIPTION		Creates UI for and implements the Chooser 
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_chooserWin()                                            
+{
+	global int $g_lG_autoUpdate = 1;
+	
+	global int $g_lG_showColor = 1;
+	global int $g_lG_showIntensity = 1;
+	global int $g_lG_showAmbientShade = 0;
+	global int $g_lG_showConeAngle = 1;
+	global int $g_lG_showPenumbraAngle = 0;
+	global int $g_lG_showDropoff = 0;
+	global int $g_lG_showIlluminates = 0;
+	global int $g_lG_showEmitDiffuse = 0;
+	global int $g_lG_showEmitSpecular = 0;
+	global int $g_lG_showVisibility = 0;
+	global int $g_lG_showDecayRate = 0;
+	global int $g_lG_showDepthMap = 1;
+	global int $g_lG_showRayTrace = 1;
+	global int $g_lG_showShadowColorDM = 1;
+	global int $g_lG_showDmapResolution = 1;
+	global int $g_lG_showDmapFilterSize = 1;
+	global int $g_lG_showShadowColorRT = 1;
+	global int $g_lG_showLightRadius = 1;
+	global int $g_lG_showShadowRays = 1;
+	global int $g_lG_showRayDepthLimit = 1;
+
+	// create UI layout - vars for global sizing
+	int $uiLabelWidth = 150;
+	int $uiInputWidth = 30;
+	int $uiWidth = $uiLabelWidth + $uiInputWidth + 5;
+
+	// delete UI function on close/open
+	if ( `window -exists lG_chooserWin` == true )
+		deleteUI lG_chooserWin;
+	window 
+		-title "[lG] Chooser" 
+		-maximizeButton false 
+		-minimizeButton true
+		-sizeable true
+		-resizeToFitChildren false
+		-menuBar true
+		-menuBarVisible true 
+		-wh 222 535
+		lG_chooserWin;
+	menu
+		-label "View"
+		-tearOff false;
+	menuItem
+    		-label "Show All"
+		-command "lG_menuCheckCommand 1"
+		lMenuCheckAll;
+	menuItem
+    		-label "Hide All"
+		-command "lG_menuCheckCommand 0"
+		lMenuUncheckAll;
+	menuItem 
+		-divider 1;
+	menuItem
+		-checkBox $g_lG_autoUpdate
+    		-label "Auto-Update"
+		-command "lG_menuAutoUpdateCommand"
+		lMenuAutoUpdate;
+	menuItem 
+		-divider 1;
+	menuItem
+    		-label "Reset to Default"
+		-command "lG_resetChooserDefaultSettings";
+	
+	// begin actual form content
+	string $lForm = `formLayout -numberOfDivisions 100`;
+	string $lColumn;
+	string $lScroll;
+	$lScroll = `scrollLayout -hst 16 -vst 16 -childResizable true -minChildWidth $uiWidth`;
+		columnLayout -adjustableColumn true -rowSpacing 6;
+			// main editable area (collapsable)
+				columnLayout -adjustableColumn true -rowSpacing 2;
+					// Color
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Color";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showColor
+							lColorCheck;
+						setParent ..;
+					// Intensity
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Intensity";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showIntensity
+							lIntensityCheck;
+						setParent ..;
+					// Ambient Shade
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Ambient Shade";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showAmbientShade
+							lAmbientShadeCheck;
+						setParent ..;
+					// Cone Angle
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Cone Angle";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showConeAngle
+							lConeAngleCheck;
+						setParent ..;
+					// Penumbra Angle
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Penumbra Angle";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showPenumbraAngle
+							lPenumbraAngleCheck;
+						setParent ..;
+					// Dropoff
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Dropoff";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showDropoff
+							lDropoffCheck;
+						setParent ..;
+					// Illuminates by Default
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Illuminates by Default";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showIlluminates
+							lIlluminatesCheck;
+						setParent ..;
+					// Emit Diffuse
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Emit Diffuse";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showEmitDiffuse
+							lEmitDiffuseCheck;
+						setParent ..;
+					// Emit Specular
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Emit Specular";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showEmitSpecular
+							lEmitSpecularCheck;
+						setParent ..;
+					// Visibility
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Visibility";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showVisibility
+							lVisibilityCheck;
+						setParent ..;
+					// Decay Rate
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Decay Rate";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showDecayRate
+							lDecayRateCheck;
+						setParent ..;
+					// Use Depth Map Shadows
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Use Depth Map Shadows";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showDepthMap
+							lDepthMapCheck;
+						setParent ..;
+					// Use Ray Trace Shadows
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Use Ray Trace Shadows";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showRayTrace
+							lRayTraceCheck;
+						setParent ..;
+					// Shadow Color DM
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Shadow Color DM";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showShadowColorDM
+							lShadowColorDMCheck;
+						setParent ..;
+					// Dmap Resolution
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Dmap Resolution";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showDmapResolution
+							lDmapResolutionCheck;
+						setParent ..;
+					// Dmap Filter Size
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Dmap Filter Size";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showDmapFilterSize
+							lDmapFilterSizeCheck;
+						setParent ..;
+					// Shadow Color RT
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Shadow Color RT";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showShadowColorRT
+							lShadowColorRTCheck;
+						setParent ..;
+					// Light Radius
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Light Radius";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showLightRadius
+							lLightRadiusCheck;
+						setParent ..;
+					// Shadow Rays
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Shadow Rays";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showShadowRays
+							lShadowRaysCheck;
+						setParent ..;
+					// Ray Depth Limit
+					rowLayout
+						-numberOfColumns 2
+						-cat 1 "right" 5
+						-columnWidth 1 $uiLabelWidth
+						-columnWidth 2 $uiInputWidth;
+						text -l "Ray Depth Limit";
+						checkBox
+							-h 20
+							-cc lG_chooserMain
+							-label ""
+							-value $g_lG_showRayDepthLimit
+							lRayDepthLimitCheck;
+						setParent ..;
+					setParent ..;
+				setParent ..;
+			setParent ..;
+		//setParent ..;
+	// buttonz...
+	string $lButton = `button
+		-label "Update"
+		-command "lG_updateChooserCmd"`;
+	string $lClose = `button
+		-label "Close"
+		-command "deleteUI "`;
+
+	// set form layouts
+	formLayout -edit
+		-attachForm $lScroll "top" 2
+		-attachForm $lScroll "left" 2
+		-attachControl $lScroll "bottom" 2 $lButton
+		-attachForm $lScroll "right" 2
+
+		-attachNone $lButton "top"
+		-attachForm $lButton "left" 2
+		-attachForm $lButton "bottom" 2
+		-attachPosition $lButton "right" 2 50
+
+		-attachNone $lClose "top"
+		-attachPosition $lClose "left" 2 50
+		-attachForm $lClose "bottom" 2
+		-attachForm $lClose "right" 2
+
+		$lForm;
+
+	showWindow lG_chooserWin;
+}
+
+/*
+ * FUNCTION NAME	lG_chooserMain
+ * DESCRIPTION		The guts of the Chooser
+ * CALLED BY		showChooserWin
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_chooserMain()
+{
+	global int $g_lG_autoUpdate;
+	global int $g_lG_showColor;
+	global int $g_lG_showIntensity;
+	global int $g_lG_showConeAngle;
+	global int $g_lG_showPenumbraAngle;
+	global int $g_lG_showDropoff;
+	global int $g_lG_showIlluminates;
+	global int $g_lG_showEmitDiffuse;
+	global int $g_lG_showEmitSpecular;
+	global int $g_lG_showVisibility;
+	global int $g_lG_showDecayRate;
+	global int $g_lG_showDepthMap;
+	global int $g_lG_showRayTrace;
+	global int $g_lG_showShadowColorDM;
+	global int $g_lG_showDmapResolution;
+	global int $g_lG_showDmapFilterSize;
+	global int $g_lG_showShadowColorRT;
+	global int $g_lG_showLightRadius;
+	global int $g_lG_showShadowRays;
+	global int $g_lG_showRayDepthLimit;
+	global int $g_lG_showAmbientShade;
+	
+	// Color
+	$g_lG_showColor = `checkBox -q -v lColorCheck`;
+	// Intensity
+	$g_lG_showIntensity = `checkBox -q -v lIntensityCheck`;
+	// Cone Angle
+	$g_lG_showConeAngle = `checkBox -q -v lConeAngleCheck`;
+	// Penumbra Angle
+	$g_lG_showPenumbraAngle = `checkBox -q -v lPenumbraAngleCheck`;
+	// Dropoff
+	$g_lG_showDropoff = `checkBox -q -v lDropoffCheck`;
+	// Illuminates by Default
+	$g_lG_showIlluminates = `checkBox -q -v lIlluminatesCheck`;
+	// Emit Diffuse
+	$g_lG_showEmitDiffuse = `checkBox -q -v lEmitDiffuseCheck`;
+	// Emit Specular
+	$g_lG_showEmitSpecular = `checkBox -q -v lEmitSpecularCheck`;
+	// Visibility
+	$g_lG_showVisibility = `checkBox -q -v lVisibilityCheck`;
+	// Decay Rate
+	$g_lG_showDecayRate = `checkBox -q -v lDecayRateCheck`;
+	// Us Depth Map Shadows
+	$g_lG_showDepthMap = `checkBox -q -v lDepthMapCheck`;
+	// Use Ray Trace Shadows
+	$g_lG_showRayTrace = `checkBox -q -v lRayTraceCheck`;
+	// Shadow Color DM
+	$g_lG_showShadowColorDM = `checkBox -q -v lShadowColorDMCheck`;
+	// Dmap Resolution
+	$g_lG_showDmapResolution = `checkBox -q -v lDmapResolutionCheck`;
+	// Dmap Filter Size
+	$g_lG_showDmapFilterSize = `checkBox -q -v lDmapFilterSizeCheck`;
+	// Shadow Color RT
+	$g_lG_showShadowColorRT = `checkBox -q -v lShadowColorRTCheck`;
+	// Light Radius
+	$g_lG_showLightRadius = `checkBox -q -v lLightRadiusCheck`;
+	// Shadow Rays
+	$g_lG_showShadowRays = `checkBox -q -v lShadowRaysCheck`;
+	// Ray Depth Limit
+	$g_lG_showRayDepthLimit = `checkBox -q -v lRayDepthLimitCheck`;
+	// Ambient Shade
+	$g_lG_showAmbientShade = `checkBox -q -v lAmbientShadeCheck`;
+
+	if ($g_lG_autoUpdate == 1) {
+		lG_updateChooserCmd;
+	}
+}
+
+global proc lG_resetChooserDefaultSettings()
+{
+	global int $g_lG_autoUpdate;
+	global int $g_lG_showColor;
+	global int $g_lG_showIntensity;
+	global int $g_lG_showAmbientShade;
+	global int $g_lG_showConeAngle;
+	global int $g_lG_showPenumbraAngle;
+	global int $g_lG_showDropoff;
+	global int $g_lG_showIlluminates;
+	global int $g_lG_showEmitDiffuse;
+	global int $g_lG_showEmitSpecular;
+	global int $g_lG_showVisibility;
+	global int $g_lG_showDecayRate;
+	global int $g_lG_showDepthMap;
+	global int $g_lG_showRayTrace;
+	global int $g_lG_showShadowColorDM;
+	global int $g_lG_showDmapResolution;
+	global int $g_lG_showDmapFilterSize;
+	global int $g_lG_showShadowColorRT;
+	global int $g_lG_showLightRadius;
+	global int $g_lG_showShadowRays;
+	global int $g_lG_showRayDepthLimit;
+	
+	$g_lG_autoUpdate = 1;
+	
+	$g_lG_showColor = 1;
+	$g_lG_showIntensity = 1;
+	$g_lG_showAmbientShade = 0;
+	$g_lG_showConeAngle = 1;
+	$g_lG_showPenumbraAngle = 0;
+	$g_lG_showDropoff = 0;
+	$g_lG_showIlluminates = 0;
+	$g_lG_showEmitDiffuse = 0;
+	$g_lG_showEmitSpecular = 0;
+	$g_lG_showVisibility = 0;
+	$g_lG_showDecayRate = 0;
+	$g_lG_showDepthMap = 1;
+	$g_lG_showRayTrace = 1;
+	$g_lG_showShadowColorDM = 1;
+	$g_lG_showDmapResolution = 1;
+	$g_lG_showDmapFilterSize = 1;
+	$g_lG_showShadowColorRT = 1;
+	$g_lG_showLightRadius = 1;
+	$g_lG_showShadowRays = 1;
+	$g_lG_showRayDepthLimit = 1;
+	
+	checkBox -e -v $g_lG_showColor lColorCheck;
+	checkBox -e -v $g_lG_showIntensity lIntensityCheck;
+	checkBox -e -v $g_lG_showAmbientShade lAmbientShadeCheck;
+	checkBox -e -v $g_lG_showConeAngle lConeAngleCheck;
+	checkBox -e -v $g_lG_showPenumbraAngle lPenumbraAngleCheck;
+	checkBox -e -v $g_lG_showDropoff lDropoffCheck;
+	checkBox -e -v $g_lG_showIlluminates lIlluminatesCheck;
+	checkBox -e -v $g_lG_showEmitDiffuse lEmitDiffuseCheck;
+	checkBox -e -v $g_lG_showEmitSpecular lEmitSpecularCheck;
+	checkBox -e -v $g_lG_showVisibility lVisibilityCheck;
+	checkBox -e -v $g_lG_showDecayRate lDecayRateCheck;
+	checkBox -e -v $g_lG_showDepthMap lDepthMapCheck;
+	checkBox -e -v $g_lG_showRayTrace lRayTraceCheck;
+	checkBox -e -v $g_lG_showShadowColorDM lShadowColorDMCheck;
+	checkBox -e -v $g_lG_showDmapResolution lDmapResolutionCheck;
+	checkBox -e -v $g_lG_showDmapFilterSize lDmapFilterSizeCheck;
+	checkBox -e -v $g_lG_showShadowColorRT lShadowColorRTCheck;
+	checkBox -e -v $g_lG_showLightRadius lLightRadiusCheck;
+	checkBox -e -v $g_lG_showShadowRays lShadowRaysCheck;
+	checkBox -e -v $g_lG_showRayDepthLimit lRayDepthLimitCheck;
+
+	if ($g_lG_autoUpdate == 1) {
+		lG_updateChooserCmd;
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_updateChooserCmd
+ * DESCRIPTION		Updates LightGirl according to the Chooser
+ * CALLED BY		showChooserWin, lG_chooserMain
+ * INPUT		None
+ * RETURN		None
+ */
+ 
+global proc lG_updateChooserCmd()
+{
+	global int $g_lG_showColor;
+	global int $g_lG_showIntensity;
+	global int $g_lG_showConeAngle;
+	global int $g_lG_showPenumbraAngle;
+	global int $g_lG_showDropoff;
+	global int $g_lG_showIlluminates;
+	global int $g_lG_showEmitDiffuse;
+	global int $g_lG_showEmitSpecular;
+	global int $g_lG_showVisibility;
+	global int $g_lG_showDecayRate;
+	global int $g_lG_showDepthMap;
+	global int $g_lG_showRayTrace;
+	global int $g_lG_showShadowColorDM;
+	global int $g_lG_showDmapResolution;
+	global int $g_lG_showDmapFilterSize;
+	global int $g_lG_showShadowColorRT;
+	global int $g_lG_showLightRadius;
+	global int $g_lG_showShadowRays;
+	global int $g_lG_showRayDepthLimit;
+	global int $g_lG_showAmbientShade;
+	
+	global string $g_lG_allLights[];
+	
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		string $lG_currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		
+		//print("Chooser: " + $lG_currentLightUI + "\n");
+		
+		if(`rowLayout -ex ($lG_currentLightUI + "colorVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showColor ($lG_currentLightUI + "colorVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "intensityVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showIntensity ($lG_currentLightUI + "intensityVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "coneAngleVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showConeAngle ($lG_currentLightUI + "coneAngleVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "penumbraAngleVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showPenumbraAngle ($lG_currentLightUI + "penumbraAngleVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "dropoffVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showDropoff ($lG_currentLightUI + "dropoffVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "illuminatesVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showIlluminates ($lG_currentLightUI + "illuminatesVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "emitDiffuseVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showEmitDiffuse ($lG_currentLightUI + "emitDiffuseVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "emitSpecularVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showEmitSpecular ($lG_currentLightUI + "emitSpecularVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "visibilityVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showVisibility ($lG_currentLightUI + "visibilityVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "decayRateVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showDecayRate ($lG_currentLightUI + "decayRateVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "depthMapVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showDepthMap ($lG_currentLightUI + "depthMapVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "rayTraceVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showRayTrace ($lG_currentLightUI + "rayTraceVisCtrl");
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "shadowColorDMVisCtrl")`) {
+			if(`getAttr($g_lG_allLights[$i] + ".useDepthMapShadows")`) {
+				rowLayout -e -vis $g_lG_showShadowColorDM ($lG_currentLightUI + "shadowColorDMVisCtrl");
+			}
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "dmapResolutionVisCtrl")`) {
+			if(`getAttr($g_lG_allLights[$i] + ".useDepthMapShadows")`) {
+				rowLayout -e -vis $g_lG_showDmapResolution ($lG_currentLightUI + "dmapResolutionVisCtrl");
+			}
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "dmapFilterSizeVisCtrl")`) {
+			if(`getAttr($g_lG_allLights[$i] + ".useDepthMapShadows")`) {
+				rowLayout -e -vis $g_lG_showDmapFilterSize ($lG_currentLightUI + "dmapFilterSizeVisCtrl");
+			}
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "shadowColorRTVisCtrl")`) {
+			if(`getAttr($g_lG_allLights[$i] + ".useRayTraceShadows")`) {
+				rowLayout -e -vis $g_lG_showShadowColorRT ($lG_currentLightUI + "shadowColorRTVisCtrl");
+			}
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "lightRadiusVisCtrl")`) {
+			if(`getAttr($g_lG_allLights[$i] + ".useRayTraceShadows")`) {
+				rowLayout -e -vis $g_lG_showLightRadius ($lG_currentLightUI + "lightRadiusVisCtrl");
+			}
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "shadowRaysVisCtrl")`) {
+			if(`getAttr($g_lG_allLights[$i] + ".useRayTraceShadows")`) {
+				rowLayout -e -vis $g_lG_showShadowRays ($lG_currentLightUI + "shadowRaysVisCtrl");
+			}
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "rayDepthLimitVisCtrl")`) {
+			if(`getAttr($g_lG_allLights[$i] + ".useRayTraceShadows")`) {
+				rowLayout -e -vis $g_lG_showRayDepthLimit ($lG_currentLightUI + "rayDepthLimitVisCtrl");
+			}
+		}
+		if(`rowLayout -ex ($lG_currentLightUI + "ambientShadeVisCtrl")`) {
+			rowLayout -e -vis $g_lG_showAmbientShade ($lG_currentLightUI + "ambientShadeVisCtrl");
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_menuAutoUpdateCommand
+ * DESCRIPTION		Sets whether the Chooser automitically updates LightGirl
+ * CALLED BY		showChooserWin
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_menuAutoUpdateCommand()
+{
+	global int $g_lG_autoUpdate;
+	$g_lG_autoUpdate = !$g_lG_autoUpdate;
+}
+
+/*
+ * FUNCTION NAME	lG_menuCheckCommand
+ * DESCRIPTION		Checks/Unchecks all boxes in the Chooser
+ * CALLED BY		showChooserWin
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_menuCheckCommand(int $lGVal)
+{
+	checkBox -e -v $lGVal lColorCheck;
+	checkBox -e -v $lGVal lIntensityCheck;
+	checkBox -e -v $lGVal lConeAngleCheck;
+	checkBox -e -v $lGVal lPenumbraAngleCheck;
+	checkBox -e -v $lGVal lDropoffCheck;
+	checkBox -e -v $lGVal lIlluminatesCheck;
+	checkBox -e -v $lGVal lEmitDiffuseCheck;
+	checkBox -e -v $lGVal lEmitSpecularCheck;
+	checkBox -e -v $lGVal lVisibilityCheck;
+	checkBox -e -v $lGVal lDecayRateCheck;
+	checkBox -e -v $lGVal lDepthMapCheck;
+	checkBox -e -v $lGVal lRayTraceCheck;
+	checkBox -e -v $lGVal lShadowColorDMCheck;
+	checkBox -e -v $lGVal lDmapResolutionCheck;
+	checkBox -e -v $lGVal lDmapFilterSizeCheck;
+	checkBox -e -v $lGVal lShadowColorRTCheck;
+	checkBox -e -v $lGVal lLightRadiusCheck;
+	checkBox -e -v $lGVal lShadowRaysCheck;
+	checkBox -e -v $lGVal lRayDepthLimitCheck;
+	checkBox -e -v $lGVal lAmbientShadeCheck;
+
+	lG_chooserMain;
+}

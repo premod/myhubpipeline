@@ -1,0 +1,562 @@
+proc poseLibInitializeVariables()
+{
+	// --------------------------
+	// Initializing variables.
+	// --------------------------
+	global string $poseLibDefaultPath;
+	global string $assetManagerPath;
+	string $assetManagerPath = $poseLibDefaultPath+"/";
+	global string $poseLibVersion = "1.1 - Sanraa Media Solutions.";
+	global string $poseLibCurrentProject;
+	//$poseLibCurrentProject = `workspace -q -fn`;
+	global string $poseLibCharacterList[];
+	global string $poseLibCategoryList[];
+	global int $poseLibIconsSize[];
+	$poseLibIconsSize = { 75, 75 };
+	//global float $poseLibIconsBGColor[] = { 1.0, 1.0, 1.0 };
+	global float $poseLibCaptureCameraBGColor[];
+	global float $poseLibApplyIncrement;
+	$poseLibApplyIncrement = 0.75;
+	global string $poseLibIconFormat = "";
+	
+	// Check if the default path option var exists and set the poseLib default path accordingly.
+	if ( `optionVar -exists poseLibDefaultPathStatus` )
+		$poseLibDefaultPath = `optionVar -q poseLibDefaultPathStatus`;
+	else
+		$poseLibDefaultPath = $poseLibCurrentProject + "/AssetManager"; //print ("\n$defaultPath=" + $poseLibDefaultPath );
+
+	// Recall the icons size preferences.
+	if ( `optionVar -exists iconsSizeWidthStatus` )
+		$poseLibIconsSize[0] = `optionVar -q iconsSizeWidthStatus`;
+
+	if ( `optionVar -exists iconsSizeHeightStatus` )
+		$poseLibIconsSize[1] = `optionVar -q iconsSizeHeightStatus`;
+
+	// Recall the icons BG color preferences.
+	if ( `optionVar -exists iconsBackgroundColorStatus` )
+	{
+		string $tmp = `optionVar -q iconsBackgroundColorStatus`;
+		$arrayTmp = `stringToStringArray $tmp " "`;
+		$poseLibIconsBGColor[0] = $arrayTmp[0];
+		$poseLibIconsBGColor[1] = $arrayTmp[1];
+		$poseLibIconsBGColor[2] = $arrayTmp[2];
+	}
+}
+
+global proc int stringArrayInsertAtIndex( int $index, string $list[], string $item )
+{
+	int     $i;
+	string  $result[];
+	int     $len = size( $list );
+
+	// Check for a valid index and simple case of appending to end.
+	if ( $index < 0 ) {
+		return( false );
+	} else if ( $index >= $len ) {
+		$list[$len] = $item;
+		return( true );
+	}
+
+	// Copy any entries prior to $index.
+	for ( $i = 0; $i < $index; $i++ ) {
+		$result[$i] = $list[$i];
+	}
+
+	// Add the new item.
+	$result[$i] = $item;
+
+	// Copy any items which come after $index.
+	for ( ; $i < $len; $i++ ) {
+		$result[$i + 1] = $list[$i];
+	}
+
+	// Copy the result to the list argument.
+	$list = $result;
+
+	return( true );
+}
+
+global proc poseLibDoIconPreview ()
+{
+	global int $poseLibIconsSize[];
+	global float $poseLibCaptureCameraBGColor[];
+	global string $poseLibIconFormat;
+	string $iconTmp = "";
+
+	// Get the tmp icon path.
+	string $ws = `workspace -q -fullName`; print ( "\nProject = " + $ws );
+	string $imagesDir = `workspace -q -renderTypeEntry "images"`; 
+	string $currentImagePath = "";
+
+	// This is in the case the "images" directory path is an absolute path (e.g.: C:/blah...).
+	string $buffer[];
+	int $numTokens = `tokenize $imagesDir ":" $buffer`; //print ($buffer[`size $buffer`-1]);
+
+	// The path is absolute...
+	if ( $buffer[1] == "" )
+	{
+		$currentImagePath = $ws + "/" + $imagesDir + "/"; //print ( "\n$currentImagePath = " + $currentImagePath );
+	}
+	else
+	{
+		// The path is relative...
+		$currentImagePath = $imagesDir + "/"; //print ( "\n$currentImagePath = " + $currentImagePath );
+	}
+	
+	// Set the BG color.
+	float $currentBGColor[] = `displayRGBColor -q background`;
+	displayRGBColor "background" $poseLibCaptureCameraBGColor[0] $poseLibCaptureCameraBGColor[1] $poseLibCaptureCameraBGColor[2];
+
+	frameLayout -e -m on -width ($poseLibIconsSize[0] + 4) -height ($poseLibIconsSize[1] + 4) glRenderFrame;
+
+	// Resize the UI to accommodate icon size.
+	rowLayout -e -cw 1 $poseLibIconsSize[0] iconCaptureRL; 
+	frameLayout -e -width ($poseLibIconsSize[0] + 4) - height ($poseLibIconsSize[1] + 4) -cl false -cll false -m on captureCamFrame;
+	rowLayout -e -cw 1 1 iconCaptureRL; 
+	rowLayout -e -cw 2 1 iconCaptureRL; 
+	rowLayout -e -cw 3 ($poseLibIconsSize[0] + 2) iconCaptureRL;
+
+	// Display the temp icon.
+	$iconTmp = $currentImagePath + "iconTmp." + `currentTime -q` + $poseLibIconFormat; 
+	evalDeferred ("image -e -m on -w $poseLibIconsSize[0] -h $poseLibIconsSize[1] -image \"" + $iconTmp + "\" capturedI");
+	
+	// Put back the background color the way it was.
+	displayRGBColor "background" $currentBGColor[0] $currentBGColor[1] $currentBGColor[2];
+	
+	// Finally, resize the capture window.
+	//window -e -w ($poseLibIconsSize[0] + `frameLayout -q -width buttonsFrame` + 10) poseLibCreateNewPoseWindow;
+}
+
+global proc fileArchive()
+{
+	string $originCharacterName = `optionMenu -q -v characterChoiceOM`; 
+	string $originCategoryName = `optionMenu -q -v categoryChoiceOM`;
+	string $filePath = `file -q -loc`;
+	string $fileName1 = basename($filePath,"");
+	string $fileName = `basenameEx($filePath)`;
+	string $baseDir = dirname( $filePath );
+	string $list[] = `listConnections defaultRenderGlobals.resolution`;
+	setAttr ( $list[0]+".width") 75;
+	setAttr ( $list[0]+".height") 75;
+	setAttr "defaultRenderGlobals.imageFormat" 20;
+	setAttr "perspShape.backgroundColor" -type double3 0.831 0.816 0.784 ;
+	setAttr "defaultResolution.deviceAspectRatio" 1;
+	renderIntoNewWindow render;
+	
+	string $fName = tolower($originCategoryName+"_"+$fileName+".bmp");
+	renderWindowSaveImageCallback "renderView" ("Q:/TNN/01_ASSET_LIBRARY/"+$originCharacterName+"/"+$originCategoryName+"/"+$fName) "image";
+	$exampleFileName = "Q:/TNN/01_ASSET_LIBRARY/"+$originCharacterName+"/"+$originCategoryName+"/"+(tolower($originCategoryName))+"_"+$fileName;
+	$fileId=`fopen $exampleFileName "w"`;
+	fclose $fileId;
+	string $srcWindows = `file -q -loc`;
+	string $fileSelection[] = `ls -tex`;
+	for($file in $fileSelection)
+	{
+		string $texName = `getAttr ($file + ".fileTextureName")`;
+		string $fileName2 = basename($texName,"");
+		string $destWindows = "Q:/TNN/01_ASSET_LIBRARY/"+$originCharacterName+"/"+$originCategoryName+"/SourceImages/"+$fileName2;
+		string $srcWindows = $texName;
+		sysFile -copy $destWindows $srcWindows;
+		string $newPath = "Q:/TNN/01_ASSET_LIBRARY/"+$originCharacterName+"/"+$originCategoryName+"/SourceImages/"+$fileName2;
+		catch(`setAttr -type "string" ($file+".fileTextureName") $newPath`);
+	}
+	file -op "" -typ "mayaAscii" -pr -ea ("Q:/TNN/01_ASSET_LIBRARY/"+$originCharacterName+"/"+$originCategoryName+"/"+(tolower($originCategoryName))+"_"+$fileName1);
+}
+
+global proc assetRefresh()
+{
+	deleteUI poseLibWindow;
+	assetMan();
+}
+
+global proc poseLibApplyPose ( int $controlNumber )
+{
+	// Is the ALT or CTRL key pressed?
+	int $altKeyDown = 0;
+	int $getModifiers = `getModifiers`;
+	string $poseNameTmp = `shelfButton -q -l ("poseButton_" + $controlNumber + "_")`;
+	string $poseName = `strip $poseNameTmp`; //print ("\n$poseName=" + $poseName );
+	poseLibDoApplyPose ( $poseName, $altKeyDown );
+}
+
+global proc poseLibDoApplyPose( string $poseName, int $altKeyDown )
+{
+	global string $assetManagerPath;
+	global string $poseLibDefaultPath;
+	string $characterName = `optionMenu -q -v characterChoiceOM`;
+	string $categoryName = `optionMenu -q -v categoryChoiceOM`;
+	string $selection[] = `ls -l -sl`;
+	string $poseFilePath = $poseLibDefaultPath + "/" + $characterName + "/" + $categoryName + "/" + $poseName;  //print ("\n$poseFilePath="+$poseFilePath);
+	string $namespace = "";
+	string $array[] = {};
+	string $sel[] = `ls -sl`;
+
+	// This is here for backward compatibility with previous poseLib versions (where attribute names were saved as "long names" e.g.:|toto|tutu...).
+	string $selectedChannels[] = `channelBox -q -sma "mainChannelBox"`; //print $selectedChannels;
+
+	for ($i=0;$i<`size $selectedChannels`;$i++)
+	{
+		string $defaultObjectPlusAttribute = $selection[0] + "." + $selectedChannels[$i];
+		string $longObjectPlusAttribute = `longNameOf($defaultObjectPlusAttribute)`;// print ( $longObjectPlusAttribute + "\n" );
+		string $buffer[];
+		int $numTokens = `tokenize $longObjectPlusAttribute "." $buffer`; //print $buffer[1];
+		$selectedChannels[$i] = $buffer[1];
+	}
+
+	// Parse through the pose file.
+	if ( `filetest -r $poseFilePath` )
+	{
+		// In order to know what's selected when the user clicks on the button.
+		string $poseLibApplyPoseCommand = "string $poseName = \"" + $poseName + "\"; int $didSomething = 0; ";
+		string $currentSelection[] = `ls -l -sl`;
+
+		string $findImagePath =  $poseFilePath;		
+		string $buffer0[];
+		$numTokens = `tokenize $findImagePath  "/" $buffer0`;
+		string $inputDirectory=$poseLibDefaultPath+$buffer0[3]+"/"+$buffer0[4]+"/";
+		string $files[] = `getFileList -folder $inputDirectory -filespec "*.ma"`;
+		for($i=0; $i<size($files); $i++)
+		{	
+			string $buffer1[];
+			$numTokens = `tokenize $files[$i] "." $buffer1`;
+			if( tolower($poseName) == tolower($buffer1[0]) )
+			{
+				string $propFind=$poseLibDefaultPath+$buffer0[3]+"/"+$buffer0[4]+"/"+$poseName+".ma";
+				file -i $propFind;
+			} 
+			clear $buffer1;
+		}
+		clear $buffer0;
+		clear $files;
+	}
+}
+
+global proc poseLibRefreshPoseList( string $categoryName )
+{
+	global string $poseLibDefaultPath;
+	global string $poseLibCategoryList[];
+	global int $realNumber;
+	global int $poseLibIconsSize[];
+	global float $poseLibIconsBGColor[];
+	global string $poseLibIconFormat;
+	string $characterName = `optionMenu -q -v characterChoiceOM`;
+	if ($categoryName == "" )
+		$categoryName = `optionMenu -q -v categoryChoiceOM`; //print ("poseLib: $categoryName = " + $categoryName +"\n");
+	string $allCategoryDirsTmp[] = `getFileList -folder ($poseLibDefaultPath + "/" + $characterName + "/")`; 
+	string $allCategoryDirs[] = {};
+	
+	// Enforce 50 pixels as the smallest icon size.
+	if ( $poseLibIconsSize[0] < 32 )
+	{
+		$poseLibIconsSize[0] = 50;
+		$poseLibIconsSize[1] = 50;
+	}
+
+	// ---------------------------------
+	// 1- Filter out what can be shown
+	// ---------------------------------
+	int $i;
+	for ($i=0;$i<`size $allCategoryDirsTmp`;$i++)
+	{
+		if ( (`match ".deleted" $allCategoryDirsTmp[$i]` != ".deleted") && (`match ".DS_Store" $allCategoryDirsTmp[$i]` != ".DS_Store") )
+			$allCategoryDirs = stringArrayCatenate ( $allCategoryDirs, { $allCategoryDirsTmp[$i] } );
+	}
+
+	// ---------------------------------------
+	// 2- Update the category option menus
+	// ---------------------------------------
+	for ($i=0;$i<`size $poseLibCategoryList`;$i++)
+	{
+		deleteUI ("categoryMI_" + $i + "_");
+	}
+
+	$poseLibCategoryList = `sort($allCategoryDirs)`;
+
+	optionMenu -e -h 28 -w 180 -label "Sub Category:" -cc "poseLibRefreshPoseList(\"\")" -p optionMenusRow categoryChoiceOM;
+	for ($i=0;$i<`size $poseLibCategoryList`;$i++)
+	{
+		menuItem -label $poseLibCategoryList[$i] -p categoryChoiceOM categoryMI[$i]; //print ("\nlabel = " + $poseLibCategoryList[$i] + " control = categoryMI_" + $i + "_" );
+	}
+
+	string $myIntersector = `stringArrayIntersector`;
+	stringArrayIntersector -edit -intersect $poseLibCategoryList $myIntersector;
+	stringArrayIntersector -edit -intersect $categoryName $myIntersector;
+	string $isItIncluded[] = `stringArrayIntersector -query $myIntersector`;
+
+	if ( $isItIncluded[0] != "" )
+		optionMenu -e -h 28 -w 180 -v $categoryName -cc "poseLibRefreshPoseList(\"\")" -p optionMenusRow categoryChoiceOM;
+	else
+	{
+		if ( $poseLibCategoryList[0] != "" )
+		{
+			optionMenu -e -h 28 -w 180 -v $poseLibCategoryList[0] -cc "poseLibRefreshPoseList(\"\")" -p optionMenusRow categoryChoiceOM; //		print ("poseLib: \"" + $categoryName + "\" category doesn't exist for this character!\n" );
+			$categoryName = $poseLibCategoryList[0]; //print ("poseLib: $poseLibCategoryList[0] = " + $poseLibCategoryList[0] +"\n");
+		}
+	}
+
+	if ( (`optionMenu -q -sl categoryChoiceOM` == 1) && (`optionMenu -q -ni categoryChoiceOM` > 1) )
+	{
+		optionMenu -e -m off -sl 2 -p optionMenusRow categoryChoiceOM; // absolutely absurd: if not, first item is shown as last!
+		optionMenu -e -m on -sl 1 -p optionMenusRow categoryChoiceOM;
+	}
+
+	string $poseFilesPath = $poseLibDefaultPath + "/" + $characterName + "/" + $categoryName + "/"; //print ("\n$poseFilesPath="+$poseFilesPath);
+	string $allPoseFiles[] = `getFileList -folder ($poseFilesPath) `; //print "\n$allPoseFiles:\n"; print $allPoseFiles; print "\n";
+	string $iconsPath = $poseLibDefaultPath + "/" + $characterName + "/" + $categoryName + "/"; //print ("\n$iconsPath="+$iconsPath);
+
+	// ------------------------------
+	// 3- Clear previous poses icons.
+	// ------------------------------
+	frameLayout -e -m off plPosesFL;
+	shelfLayout -e -m off -st "iconAndTextVertical" -cw ($poseLibIconsSize[0] + 5) -ch ($poseLibIconsSize[1] + 23) plPosesSL;
+	string $iconsToDelete[] = `shelfLayout -q -ca plPosesSL`;
+
+	for ($icon in $iconsToDelete)
+		deleteUI $icon;
+
+	// --------------------------------------------
+	// 4- Get the indices for the pose orders
+	// --------------------------------------------
+	$realNumber = 0;
+	string $listOfPoses[] = {};
+	int $listOfIndexes[] = {};
+	int $count = 0;
+
+	for ($i=0;$i<`size $allPoseFiles`;$i++)
+	{
+		string $items[] = { "SourceImages" };
+  		string $diff[] = stringArrayRemove($items, $allPoseFiles);
+		if ( (`match ".bmp" $diff[$i]` != ".bmp") && (`match ".xpm" $diff[$i]` != ".xpm") && (`match ".ma" $diff[$i]` != ".ma") )
+		{
+			$listOfIndexes[`size $listOfIndexes`] = 100 + $count;
+			$listOfPoses[`size $listOfPoses`] = $diff[$i];
+			$count ++;
+		}
+	}
+
+	string $listOfPosesByIndex[] = {};
+	for ($i=0;$i<`size $listOfIndexes`;$i++)
+	{
+		$listOfPosesByIndex[$listOfIndexes[$i]] = $listOfPoses[$i];
+	}
+
+	// ------------------------------
+	// 5- Create new poses buttons.
+	// ------------------------------
+	for ($i=0;$i<`size $listOfPosesByIndex`;$i++)
+	{
+		if ( $listOfPosesByIndex[$i] != "" )
+		{
+			shelfButton
+				//-style "iconOnly"
+				-style "iconAndTextVertical"
+				//-bgc $poseLibIconsBGColor[0] $poseLibIconsBGColor[1] $poseLibIconsBGColor[2]
+				-bgc 0.83 0.81 0.78
+				-parent plPosesSL
+				//-iol $listOfPosesByIndex[$i]
+				-label $listOfPosesByIndex[$i]
+				-c ("poseLibApplyPose (" + $realNumber + ")") poseButton[$realNumber];
+
+			// Assign the icon if it exists.
+			if ( `filetest -r ($iconsPath + $listOfPosesByIndex[$i] + ".xpm")` )
+			{
+				shelfButton -e -image1 ($iconsPath + $listOfPosesByIndex[$i] + ".xpm") ("poseButton_" + $realNumber + "_");
+			}
+			else if ( `filetest -r ($iconsPath + $listOfPosesByIndex[$i] + ".bmp")` )
+			{
+				shelfButton -e -image1 ($iconsPath + $listOfPosesByIndex[$i] + ".bmp") ("poseButton_" + $realNumber + "_");
+			}
+				// If there's no icon for the pose, just display a red background.
+			else
+			{
+				shelfButton -e -bgc .8 .8 .8 ("poseButton_" + $realNumber + "_");
+			}
+
+			$realNumber++;
+		}
+	}
+
+	// --------------------------
+	// 6- Update frame layouts.
+	// --------------------------
+	frameLayout -e -m on plPosesFL;
+	shelfLayout -e -m on plPosesSL;
+	int $tmp = `frameLayout -q -w plPosesFL` / 2.8;
+	frameLayout -e -li $tmp -lw 75 -l ("Assets: " + $realNumber) -fn "smallFixedWidthFont" plPosesFL;
+}
+
+global proc assetMan()
+{
+	global string $poseLibVersion;
+	global string $poseLibDefaultPath = "Q:/TNN/01_ASSET_LIBRARY/";
+	global string $poseLibCharacterList[];
+	global string $poseLibCategoryList[];
+	global string $poseLibCurrentProject = "";
+	global string $poseLibPathsBookmarks[];
+	global int $poseLibIconsSize[];
+	global float $poseLibIconsBGColor[];
+	global float $poseLibCaptureCameraBGColor[];
+	string $c;
+
+	// Run the proc to initialize all the global variable at the start.
+	// This is in case poseLib is launched without being sourced first.
+	poseLibInitializeVariables;
+
+	// -------------------------------
+	// Create characters directories.
+	// -------------------------------
+	string $allCharDirsTmp[] = `getFileList -folder ($poseLibDefaultPath + "/")`; //print ("\n$allCharDirs="+$allCharDirs[0]);
+	string $allCharDirs[];
+
+	for ($i=0;$i<`size $allCharDirsTmp`;$i++)
+	{
+		if ( (`match ".deleted" $allCharDirsTmp[$i]` != ".deleted") && (`match ".DS_Store" $allCharDirsTmp[$i]` != ".DS_Store") )
+			$allCharDirs = stringArrayCatenate ( $allCharDirs, { $allCharDirsTmp[$i] } );
+	}
+
+	if ( $allCharDirs[0] == "" )
+	{
+		string $softPosesPathTmp;
+		for ( $c in $poseLibCharacterList )
+		{
+			$softPosesPathTmp = $poseLibDefaultPath + "/" + $c; //print ( "\ncreated " + $softPosesPathTmp );
+			sysFile -makeDir $softPosesPathTmp;
+		}
+
+		$softPosesPathTmp = $poseLibDefaultPath + "/" + $c;
+
+		string $g;
+		for ( $g in $poseLibCategoryList )
+		{
+			string $softCategoriesPathTmp = $softPosesPathTmp + "/" + $g; //print ( "\ncreated =" + $softCategoriesPathTmp );
+			sysFile -makeDir $softCategoriesPathTmp;
+		}
+	}
+	else
+		$poseLibCharacterList = `sort($allCharDirs)`;
+
+	// Delete any existing poseLib-related window.
+	if (`window -exists poseLibWindow` )
+		deleteUI poseLibWindow;
+
+	// ----------------
+	// Build main UI.
+	// ----------------
+	window -tlb off -rtf off -sizeable true -menuBar true -w 450 -title ("Asset Library v" + $poseLibVersion ) poseLibWindow;
+	int $h = 20;
+
+	// --------------
+	// Poses frame.
+	// --------------
+	string $form = `formLayout -numberOfDivisions 100 plMainFL`;
+	string $posesFrameLayout = `frameLayout -m off -mw 2 -mh 2 -p plMainFL -l "Assets: " -fn "smallFixedWidthFont" -collapsable false -borderStyle "etchedOut" plPosesFL`;
+	string $posesShelfLayout = `shelfLayout -p $posesFrameLayout -st "iconAndTextVertical" plPosesSL`;
+	string $optionsFrameLayout = `frameLayout -lv off -p plMainFL -collapsable false -borderVisible off plOptionsFL`;
+	string $optionsColumn = `columnLayout -p $optionsFrameLayout -adjustableColumn true plOptionsColumn`;
+
+	// ---------------
+	// Options frame.
+	// ---------------
+	frameLayout -mw 5 -bv on -lv off -collapsable false -borderStyle "etchedOut" -w 190 -p plOptionsColumn namespaceFrameLayoutFL;
+		columnLayout -adjustableColumn true -p namespaceFrameLayoutFL ;
+			separator -st none -h 4 -w 150;
+			image -h 45 -image "Q:\\CustomScripts\\2009Scripts\\Modeling\\sanLogo.jpg";
+			separator -st none -h 4 -w 150;
+		setParent ..;
+	setParent ..;
+
+	separator -st none -h 4 -w 150;
+
+	frameLayout -mw 5 -bv on -lv off -collapsable false -borderStyle "etchedOut" -w 190 -p plOptionsColumn characterCategoryFL;
+		columnLayout -adjustableColumn true -p characterCategoryFL;
+			separator -st none -h 2 -w 150;
+			optionMenu -h ($h+2) -label "Main Category: " -cc "poseLibRefreshPoseList(\"\")" characterChoiceOM;
+			for ( $c in $poseLibCharacterList )
+			{
+				menuItem -label $c;
+			}
+
+			separator -st none -h 4 -w 150;
+			text -l "";	
+			optionMenu -h ($h+2) -label "Category:" -cc "poseLibRefreshPoseList(\"\")" categoryChoiceOM;
+			for ($i=0;$i<`size $poseLibCategoryList`;$i++)
+			{
+				menuItem -label $poseLibCategoryList[$i] -p categoryChoiceOM categoryMI[$i];
+			}
+		setParent ..;
+	setParent ..;
+	separator -st "none" -h 4;
+
+	// --------------------
+	// Create pose frame.
+	// --------------------
+	frameLayout -mw 5 -bv on -lv off -collapsable false -borderStyle "etchedOut" -p plOptionsColumn frameCreate;
+		columnLayout -adjustableColumn true -p frameCreate setPosesColumn;
+			separator -st none -h 4;
+			text -l "";
+			button -bgc 0.6 0.7 0.4 -label "Scene Archive" -c "fileArchive";
+			text -l "";
+			button -bgc 0.6 0.7 0.4 -label "Refresh" -c "assetRefresh";
+			text -l "";
+			separator -st none -h 4;
+		setParent ..;
+	setParent ..;
+	separator -st "none" -h 4;
+
+	// --------------------
+	// Settings frame.
+	// --------------------
+	frameLayout -mw 5 -bv on -lv off -collapsable false -borderStyle "etchedOut" -p plOptionsColumn frameSettings;
+		columnLayout -adjustableColumn true -p frameSettings setPosesColumn;
+		setParent ..;
+		setParent ..;
+		text -l "";
+		button -label "Close" -h $h -bgc 0.6 0.7 0.4 -c "deleteUI poseLibWindow" closeButton;
+		setParent ..;
+	setParent ..;
+
+	formLayout 
+		-edit
+		-attachForm     $posesFrameLayout     "top"    2
+		-attachForm     $posesFrameLayout     "left"   2
+		-attachForm     $posesFrameLayout     "bottom" 2
+		-attachControl  $posesFrameLayout     "right"  2 $optionsFrameLayout
+		
+
+		-attachForm     $optionsFrameLayout "top"    2
+		-attachNone     $optionsFrameLayout "left"
+		-attachForm     $optionsFrameLayout "bottom" 2
+		-attachForm     $optionsFrameLayout "right"  2
+	$form;
+
+	// Update poses list to populate the menus and icons.
+	if ( `optionVar -exists characterChoiceStatus` )
+	{
+		string $characterTmp = `optionVar -q characterChoiceStatus`;
+		catchQuiet ( `optionMenu -e -v $characterTmp characterChoiceOM` );
+	}
+
+	if ( `optionVar -exists categoryChoiceStatus` )
+	{
+		string $categoryTmp = `optionVar -q categoryChoiceStatus`;
+		poseLibRefreshPoseList($categoryTmp);
+		catchQuiet( `optionMenu -e -v $categoryTmp categoryChoiceOM` );
+	}
+	
+	// Finally show the window.
+	showWindow poseLibWindow;
+
+	// Update the number of poses readout at the top of the icons shelf layout.
+	string $numberOfIconsTmp[] = `shelfLayout -q -ca plPosesSL`;
+	int $tmp = `frameLayout -q -w plPosesFL` / 2.8;
+	frameLayout -e -m on -li $tmp -lw 75 -l ("Assets: " + `size $numberOfIconsTmp`) -fn "smallFixedWidthFont" plPosesFL;
+
+	// ---------------------
+	// Recall preferences.
+	// ---------------------
+	if ( `optionVar -exists useCurrentCharacterStatus` )
+	{
+		checkBox -e -v `optionVar -q useCurrentCharacterStatus` useCurrentCharacterCB;
+	}
+}
+assetMan();

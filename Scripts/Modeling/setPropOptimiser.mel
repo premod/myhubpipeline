@@ -1,0 +1,117 @@
+global proc setPropOptimiser()
+{
+	/*OptimizeSceneOptions;
+	if (`window -exists OptionBoxWindow`) deleteUI -window OptionBoxWindow;
+	scOpt_performOneCleanup({"nurbsSrfOption","transformOption","setsOption","animationCurveOption","clipOption","nurbsCrvOption","unusedNurbsSrfOption","deformerOption","groupIDnOption","shaderOption","locatorOption","referencedOption","brushOption","unknownNodesOption"});*/
+
+	//Deletes Empty Layers.
+	//// for Display Layers ////
+	string $eachDisplayLayer;
+	string $allLayers[] = `ls -typ "displayLayer"`;
+	for( $eachDisplayLayer in $allLayers )
+	{
+		string $layerSize[] = `editDisplayLayerMembers -q $eachDisplayLayer`;
+		if( `size($layerSize)` == "0" )
+		{
+			delete $eachDisplayLayer;
+		} 
+	}
+	print ("--------------------------------------\n");
+	print ("Empty Display Layers deleted");
+	print ("\n--------------------------------------\n");
+
+	////for Render layers ////
+	string $eachRenderLayer;
+	string $allRenderLayers[] = `ls -typ "renderLayer"`;
+	for( $eachRenderLayer in $allRenderLayers )
+	{
+		string $lSize[] = `editRenderLayerMembers -q $eachRenderLayer`;
+		if(`size($lSize)` == 0 )
+		{
+			delete $eachRenderLayer;
+		}
+	}
+	print ("--------------------------------------\n");
+	print ("Empty Render Layers deleted");
+	print ("\n--------------------------------------\n");
+
+
+	//Delete Orthographic Cameras.
+	string $orthCams[] = {"front","frontShape","side","sideShape","top","topShape"};
+	string $allCams[] = `listCameras -o`;
+	string $rmvCams[] = stringArrayRemove($orthCams, $allCams);
+	for($eachCam in $rmvCams)	
+	{
+		delete $eachCam; 
+	}
+	print ("--------------------------------------\n");
+	print ("OrthoGraphic Cameras deleted");
+	print ("\n--------------------------------------\n");
+
+
+	//Deletes all Editors.
+	string $getFileNamehere=`file -q -loc`;
+	string $getFilenameonly=`basenameEx $getFileNamehere`;
+	catch (`deleteUI -window blendShapePanel1Window`);
+	catch (`deleteUI -window clipEditorPanel1Window`);
+	catch (`deleteUI -window dopeSheetPanel1Window`);
+	catch (`deleteUI -window hyperShadePanel1Window`);
+	catch (`deleteUI -window outlinerPanel1Window`);
+	catch (`deleteUI -window renderViewWindow`);
+	catch (`deleteUI -window graphEditor1Window`);
+	catch (`deleteUI -window multiListerPanel1Window`);
+	catch (`deleteUI -window unifiedRenderGlobalsWindow`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel4`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel2`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel3`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel1`);
+	print ("--------------------------------------\n");
+	print ("All Editors closed");	
+	print ("\n--------------------------------------\n");
+
+
+	//Deletes Light Linkers.
+	string $xt_dos[] = `listConnections -s 1 -p 1 defaultObjectSet.message`;
+	for ( $invalue in $xt_dos )
+	{
+		disconnectAttr defaultObjectSet.message $invalue;
+	}
+	print ("--------------------------------------\n");
+	print ("defaultObjectSets Disconnected"+"\n");	
+	
+	string $xt_dls[] = `listConnections -s 1 -p 1 defaultLightSet.message`;
+	for ( $invalue in $xt_dls )
+	{
+		disconnectAttr defaultLightSet.message $invalue;
+	}
+	print ("defaultLightSet Disconnected"+"\n");
+
+	string $xt_isg[] = `listConnections -s 1 -p 1 initialShadingGroup.message`;
+	for ( $invalue in $xt_isg )
+	{
+		if($invalue != "initialMaterialInfo.shadingGroup")
+		{
+			disconnectAttr initialShadingGroup.message $invalue;
+		}
+	}
+	print ("initialShadingGroup Disconnected"+"\n");
+	
+	string $xt_ipse[] = `listConnections -s 1 -p 1 initialParticleSE.message`;
+	for ( $invalue in $xt_ipse )
+	{
+		disconnectAttr initialParticleSE.message $invalue;
+	}
+	print ("initialParticleSE Disconnected"+"\n");
+	
+  	string $destinations[] = `connectionInfo -dfs hyperGraphLayout.msg`;
+ 	string $dst;
+ 	for ( $dst in $destinations ) 
+	{
+ 		disconnectAttr hyperGraphLayout.msg $dst;
+ 	}
+	print ("hyperGraphLayout Disconnected"+"\n");
+	print ("\n--------------------------------------\n");
+	
+	$gUseSaveScenePanelConfig = false;file -uc false;
+	savePrefsChanges;
+}

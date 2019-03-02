@@ -1,0 +1,168 @@
+global proc unLocken()
+{
+	string $selected[]=`ls-sl`;
+	int $numb= size($selected);
+	for($i=0;$i<$numb;$i++)
+	{
+		string $temp= ($selected[$i]);
+		setAttr -lock false ($temp+".tx");
+		setAttr -lock false ($temp+".ty");
+		setAttr -lock false ($temp+".tz");
+		setAttr -lock false ($temp+".rx");
+		setAttr -lock false ($temp+".ry");
+		setAttr -lock false ($temp+".rz");
+		setAttr -lock false ($temp+".sx");
+		setAttr -lock false ($temp+".sy");
+		setAttr -lock false ($temp+".sz");
+		setAttr -lock false ($temp+".v");
+	
+	}
+}
+
+global proc EJL_BC()
+{
+   	string $sel[] = `ls -sl`;
+      for( $node in $sel)
+   	{
+      	string $connectable[] = `listAttr -c $node`;
+      	for ($c in $connectable)
+      	{
+        		if (!`objExists ($node + "." + $c)`)
+            	continue;
+         		string $source[] = `listConnections -s 1 -d 0 -plugs 1 ($node + "." + $c)`;
+               	if (`size $source` > 0)
+         		{
+            		print ("disconnecting: " + $node + "." + $c + "\n");
+            		disconnectAttr $source[0] ($node + "." + $c);
+         		}
+      	}
+   	}  
+}
+            
+global proc charCleaner()
+{
+	$startTime = `timerX`;
+	int $countNull = 0;
+	int $countPoly = 0;
+	int $countNurbs = 0;
+	int $countCurve = 0;
+	int $countTransform = 0;
+	int $countSubdiv = 0;
+	string $ejl[] = `ls -sl`;
+	string $current;
+	int $ejlsize = size($ejl);
+	string $ejlmessage1 = "EJL says: I cleaned ";
+	string $ejlmessage2 = " object(s) in ";
+	string $ejlmessage3 = " objects(s) in ";
+	string $ejlmessage4 = " seconds. (";
+	string $ejlmessage5 = " poly, ";
+	string $ejlmessage6 = " nurb, ";
+	string $ejlmessage65 = " subdiv, ";
+	string $ejlmessage7 = " curve, ";
+	string $ejlmessage85 = " group... Ignored ";
+	string $ejlmessage8 = ".)\n";
+
+	string $change[] = `ls -type "polySmoothFace"`;
+	for($each in $change)
+	{
+		select $each;
+		setAttr ($each+".divisions") 0;
+		delete $each;
+	}
+
+	for ($current in $ejl)
+	{
+		string $selected_Shape_Node[] = `listRelatives -c $current`;   
+
+		// work on polygons
+		if (`nodeType $selected_Shape_Node[0]` == "mesh")
+		{
+			select -r $current;
+			DeleteHistory;
+			polyMergeVertex  -d 0.0001 -ch 1 $current;
+			hilite -u $current;
+			select -r $current;			
+			unLocken();
+			EJL_BC();			
+			FreezeTransformations;
+			performPolyNormal 0 2 0;
+			performPolySetToFaceNormal 0;
+			//polySoftEdge -a 0;
+			sets -e -forceElement initialShadingGroup $current;
+			polyNormalPerVertex -ufn true $current;
+			DeleteHistory;
+			$countPoly = $countPoly + 1;
+		}
+		
+		// work on nurbs
+		else if (`nodeType $selected_Shape_Node[0]` == "nurbsSurface")
+		{
+			select -r $current;
+			DeleteHistory;
+			//CenterPivot;
+			unLocken();
+			EJL_BC();			
+			FreezeTransformations;
+			sets -e -forceElement initialShadingGroup;
+			DeleteHistory;
+			$countNurbs = $countNurbs + 1;	
+		}
+	
+		// work on curves
+
+		else if (`nodeType $selected_Shape_Node[0]` == "nurbsCurve")
+		{
+			select -r $current;
+			DeleteHistory;
+			//CenterPivot;
+			unLocken();
+			EJL_BC();			
+			FreezeTransformations;
+			DeleteHistory;
+			$countCurve = $countCurve + 1;	
+		}
+		
+		// work on groups
+		else if (`nodeType $selected_Shape_Node[0]` == "transform")
+		{
+			select -r $current;
+			DeleteHistory;
+			//CenterPivot;
+			unLocken();
+			EJL_BC();				
+			FreezeTransformations;
+			DeleteHistory;
+			$countTransform = $countTransform + 1;	
+		}
+	
+		// work on SubDs
+	
+		else if (`nodeType $selected_Shape_Node[0]` == "subdiv")
+		{
+			select -r $current;
+			DeleteHistory;
+			//CenterPivot;
+			unLocken();
+			EJL_BC();			
+			FreezeTransformations;
+			DeleteHistory;
+			$countSubdiv = $countSubdiv + 1;	
+		}
+	
+		// ignore everything else
+	
+		else
+		{
+			print "EJL says: ";	
+			print ($current+" is not a polygon, nurbs, subdiv, group or curve object. Skipping to next selected object.\n");
+			$countNull = $countNull + 1;	
+		}	
+	}
+
+	select -cl;
+	int $countAll = ($countPoly + $countNurbs + $countCurve + $countSubdiv + $countTransform);
+	$totalTime = `timerX -startTime $startTime`;
+	print($ejlmessage1 + $countAll + $ejlmessage2 + $totalTime + $ejlmessage4 + $countPoly + $ejlmessage5 + $countNurbs +
+	$ejlmessage6 + $countSubdiv + $ejlmessage65 + $countCurve + $ejlmessage7 + $countTransform + $ejlmessage85 + $countNull + $ejlmessage8);
+}
+

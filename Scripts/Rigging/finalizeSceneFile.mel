@@ -1,0 +1,89 @@
+global proc finalizeSceneFile()
+{
+	if (`window -q -ex rigFinalizeWin`)deleteUI rigFinalizeWin;
+	window -t "Rig Scene Finalization" -wh 670 635 rigFinalizeWin;
+	rowColumnLayout -numberOfColumns 2 -columnAttach 1 "right" 0
+   	-columnWidth 1 105 -columnWidth 2 350 animLayout;
+	text -l "";
+	text -l "";
+	string $fileName = basename( `file -q -sn`, "" );
+	text -label "File Name:";
+	textField -fi $fileName myField;
+	text -l "";
+	text -l "";
+	string $dirname = dirname(`file -q -sn`);
+	text -label "File Path:";
+	textField -fi $dirname;
+	text -l "";
+	text -l "";
+	string $perCams[] = `listCameras -p`;
+	string $items[] = {"persp"};
+	string $diff[] = stringArrayRemove($items, $perCams);
+	text -label "Persp Cams:";
+	textScrollList -numberOfRows 4 pName;
+	for($pCam in $diff)
+	{
+		textScrollList -e -a $pCam pName;
+	}
+	text -l "";
+	text -l "";
+	text -label "Ortho Cams:";
+	string $orthoCams[] = `listCameras -o`;
+	string $items[] = {"front","top","side"};
+	string $diff[] = stringArrayRemove($items, $orthoCams);
+	textScrollList -numberOfRows 4 orthoName;
+	for($oCam in $diff)
+	{
+		textScrollList -e -a $oCam orthoName;
+	}
+	text -l "";
+	text -l "";
+	text -label "Obj's without Names:";
+	textScrollList -numberOfRows 4 polyField;
+	string $selList[] = `ls -typ "mesh"`;
+	for($each in $selList)
+	{
+		int $found = startsWith(tolower($each), tolower("polySurface"));
+		if($found == 1)
+		{
+			textScrollList -e -a $each polyField;
+		}
+	}
+	text -l "";
+	text -l "";
+	text -label "Empty Groups:";
+	textScrollList -numberOfRows 4;
+	text -l "";
+	text -l "";
+	text -label "Texture Path:";
+	textScrollList -numberOfRows 4 forTex;
+	string $fileSelection[] = `ls -tex`;
+	for($file in $fileSelection)
+	{
+		string $texName = `getAttr ($file + ".fileTextureName")`;
+		textScrollList -e -a $texName forTex;
+	}
+	text -l "";
+	text -l "";
+	text -label "Key Frames:";
+	textScrollList -numberOfRows 6 keys;
+	string $list[] = `ls -typ "transform"`;
+	for($each in $list)
+	{
+		string $key[] = `keyframe -q -name $each`;
+		for($a in $key)
+		{
+			textScrollList -e -a $a keys;
+		}
+	}
+//	text -l "";
+//	text -l "";
+//	text -label "UnKnown Nodes:";
+//	textScrollList -numberOfRows 4 unKnown;
+//	string $nodes[] = `ls -typ "unknown"`;
+//	for($each in $nodes)
+//	{
+//		textScrollList -e -a $each unKnown;
+//	}
+	showWindow;
+}

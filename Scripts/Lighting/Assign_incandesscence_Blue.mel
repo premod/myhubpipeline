@@ -1,0 +1,1 @@
+global proc Assign_incandesscence_Blue (){string $sel[] = `ls -sl`;createNode shadingEngine;shadingNode -asShader lambert;string $selShad[] = `ls -sl` ;select $sel;hyperShade -assign $selShad;select $selShad;setAttr ($selShad[0] + ".color") -type double3 0 0 0;setAttr ($selShad[0] + ".incandescence") -type double3 0 0 1;select $sel;}

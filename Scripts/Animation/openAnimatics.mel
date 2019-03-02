@@ -1,0 +1,31 @@
+global proc openAnimatics()
+{
+	if((`window -exists animaticsWin`)==true) {deleteUI animaticsWin;} 
+	window -wh 237 79 -s 0 -t "Animatics" animaticsWin;
+    	rowColumnLayout -numberOfColumns 2 -cs 1 10 -cs 2 10; 
+      button -l "Episode 01" -c "animatics01";
+	button -l "Episode 02" -c "animatics02";
+	button -l "Episode 03" -c "animatics03";
+	button -l "Episode 04" -c "animatics04"; 
+	showWindow;
+}
+
+global proc animatics01()
+{
+	system("load " + "Q:/TNN Scripts/Animatics/Episode 1 LOCKED.mov" );
+}
+
+global proc animatics02()
+{
+	system("load " + "Q:/TNN Scripts/Animatics/Episode 2 LOCKED.mov" );
+}
+
+global proc animatics03()
+{
+	system("load " + "Q:/TNN Scripts/Animatics/Episode 3 LOCKED.mov" );
+}
+
+global proc animatics04()
+{
+	system("load " + "Q:/TNN Scripts/Animatics/Episode 4 LOCKED.mov" );
+}

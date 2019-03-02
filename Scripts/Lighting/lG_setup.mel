@@ -1,0 +1,38 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+// run this to install a shelf button for lightGirl with the appropriate icon on the currently active shelf...
+
+global proc lG_setup()
+{
+	// create shelf button on current shelf...
+	global string $gShelfTopLevel;
+	if(`tabLayout -exists $gShelfTopLevel`) {
+		string $tab = ($gShelfTopLevel + "|" + `tabLayout -q -selectTab $gShelfTopLevel`);
+		setParent $tab;
+		
+		shelfButton
+			-image1 "lightGirl.bmp"
+			-annotation "lightGirl"
+			-label "lightGirl"
+			-command "lightGirl";
+	}
+}

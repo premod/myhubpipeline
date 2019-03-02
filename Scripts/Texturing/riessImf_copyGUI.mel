@@ -1,0 +1,1131 @@
+//This procedure uses the imf_copy.exe file to collate images.
+proc collate(string $flags, string $outFormat)
+{
+	//Variables
+	string $fileSelection[];		//This is $originalSelection filterd down to file nodes only.
+	string $file;				//The current file in $fileSelection.
+	string $inputPathAndName;		//This is the directory, file name and extension for the current file.
+	string $inputPath;			//This is the directory for the current file.
+	string $inputName;			//This is the file name and extension for the current file.
+	string $fileCollection;			//This is a string that holds the names of the selected files with their extensions.
+	string $fileName;			//This is a string that holds the name of the new file.
+	string $fileNodeName;			//This is a string that holds the name of the new file node.
+	string $imfCopyString;			//The imf_copy command command to be executed.
+	string $collateFile;			//This holds the name of the new file node created.
+
+
+	//Get file selection and location.
+
+		
+	$fileSelection = `ls -sl -typ file`;
+	select $fileSelection;
+
+	for($file in $fileSelection)
+	{
+		//Get file names from file nodes and convert them to a single string.
+		$inputPathAndName = `getAttr ($file + ".fileTextureName")`;
+		$inputPath = dirname($inputPathAndName);
+		$inputName = basename($inputPathAndName, "");
+		$fileCollection = $fileCollection + $inputName + " ";
+	};
+	
+	//Create file names and node names.
+	$fileName = ($fileSelection[0] + "_Collate");
+	$fileNodeName = ($fileName + "_Node");
+
+	//Change the directory to that of the current file.
+	chdir $inputPath;
+	$imfCopyString = ("imf_copy " + $flags + $fileCollection + $fileName + "." + $outFormat);
+
+	//Execute the command.
+	system($imfCopyString);
+	print ("Shell Command:  " + $imfCopyString + "\n");
+
+	//Put the new file into the file node.
+	$collateFile = `shadingNode -asTexture file -n $fileNodeName`;
+	setAttr -type "string" ($collateFile + ".fileTextureName") ($inputPath + "\\" + $fileName + "." + $outFormat);
+};
+
+//This procedure uses the imf_copy.exe file to perform operations on single images.
+proc singleMap(string $flags, string $outFormat, int $stripExtensions)
+{
+	//Variables
+	string $fileSelection[];		//This is $originalSelection filterd down to file nodes only.	
+	string $file;				//The current file in $fileSelection.
+	string $inputPathAndName;		//This is the directory, file name and extension for the current file.
+	string $inputPath;			//This is the directory for the current file.
+	string $inputName;			//This is the file name and extension for the current file.
+	string $outName;			//This is the name of the output file minus extensions.
+	string $imfCopyString;			//The imf_copy command command to be executed.
+
+
+	//Get file selection.
+	$fileSelection = `ls -sl -typ file`;
+
+	for($file in $fileSelection)
+	{
+		//Get file names and directories for files.
+		$inputPathAndName = `getAttr ($file + ".fileTextureName")`;
+		$inputPath = dirname($inputPathAndName);
+		$inputName = basename($inputPathAndName, "");
+
+		//strip extensions.
+		if($stripExtensions == 1)
+		{
+			$outName = basenameEx($inputName);
+		}
+		else
+		{
+			$outName = $inputName;
+		};
+
+		//Change the directory to that of the current file.
+		chdir $inputPath;
+		$imfCopyString = ("imf_copy " + $flags + $inputName + " " + $outName + "." + $outFormat + " " + $outFormat);
+
+		//Execute the command.
+		system($imfCopyString);
+		print ("Shell Command:  " + $imfCopyString + "\n");
+
+		//Put the new file into the file node.
+		setAttr -type "string" ($file + ".fileTextureName") ($inputPath + "\\" + $outName + "." + $outFormat);
+	};
+};
+
+//This procedure is the entry point and performs data verification.
+global proc riessImf_copyGUI_proc(int $verboseOutput,		//Verbose output (boolean switch).
+				int $errorDiffusion,		//Error diffusion for 16 to 8 bit texture conversion (boolean switch).
+				float $gammaValue,		//Gamma correction value (default 1.0).
+				int $jpegQuality,		//Jpeg compression quality (1 - 100).
+				float $filterValue,		//Filter value (default 1.0).
+				int $compressionAlgorithm,	//Setting of 1 to 5.
+				int $pyramid,			//Create filtered image pyramid (boolean switch).
+				int $endianBig,			//Output big-endian files.  Alpha and x86 are little (boolean switch).
+				int $endianLittle,		//Output little-endian files.  Alpha and x86 are little (boolean switch).
+				int $remapPixels,		//Remap pixels to reduce memory usage (boolean switch).
+				int $collate,			//Collate up to 20 images to pyramid map (boolean switch).
+				int $extractImage,		//Extract image from pyramid map (boolean switch).
+				int $extractImageIndex,		//The image index to extract from pyramid map (0 - 19).
+				string $outFormat,		//The output format.
+				int $stripExtensions)		//This is a switch to see if the input file extensions are removed from the output.
+{
+	//Variables
+	string $v;				//Flag:  Verbose output.
+	string $e;				//Flag:  Error diffusion.
+	string $g;				//Flag:  Gamma correction.
+	string $q;				//Flag:  Jpg compression quality.
+	string $f;				//Flag:  Filter value.
+	string $p;				//Flag:  Image pyramid.
+	string $l;				//Flag:  Little-endian.
+	string $b;				//Flag:  Big-endian.
+	string $r;				//Flag:  Remap pixels.
+	string $c;				//Flag:  Collate.
+	string $x;				//Flag:  Extract image.
+	string $k;				//Flag:  .Exr compression algorithm
+	string $fileSelection[];		//This is $originalSelection filterd down to file nodes only.
+	int $fileSwitch;			//This gets switched to 0 if a selected file node dosen't contain a file texture name.
+	int $extensionSwitch;			//This gets switched to 0 if a selected file isn't a .map file.
+	string $file;				//The current file in $fileSelection.
+	string $inputPathAndName;		//This is the directory, file name and extension for the current file.
+	string $inputName;			//This is the file name and extension for the current file.
+	string $inputExtension;			//This is the file extension for the current file.
+	string $OrigInputPathAndName;		//This is the directory, file name and extension for the first file selected.
+	string $OrigInputPath;			//This is the directory for the first file selectd.
+	int $directorySwitch;			//This is a switch used to determine if the source files are located in the same directory.
+
+	//Put flags into imf_copy command.
+	if($verboseOutput == 1)					{$v = "-v ";};
+	if($errorDiffusion == 1)				{$e = "-e ";};
+	if($gammaValue != 1)					{$g = "-g " + $gammaValue + " ";};
+	if($outFormat == "jpg")					{$q = ("-q " + $jpegQuality + " ");};
+	if(($outFormat == "map") && ($filterValue != 0))	{$f = ("-f " + $filterValue + " ");};
+	if( ($outFormat == "map") && ($pyramid == 1) )		{$p = "-p ";};
+	if( ($outFormat == "map") && ($endianLittle == 1) )	{$l = "-L ";};
+	if( ($outFormat == "map") && ($endianBig == 1) )	{$b = "-B ";};
+	if( ($outFormat == "map") && ($remapPixels == 1) )	{$r = "-r ";};
+	if($collate == 1)					{$c = "-c ";};
+	if($extractImage == 1)					{$x = ("-x " + $extractImageIndex + " ");};
+	switch($compressionAlgorithm)
+	{
+		case 1:
+		$k = "";
+		break;
+
+		case 2:
+		$k = "-k piz ";
+		break;
+
+		case 3:
+		$k = "-k zip ";
+		break;
+
+		case 4:
+		$k = "-k rle ";
+		break;
+
+		case 5:
+		$k = "-k pxr24 ";
+		break;
+
+		default:
+		break;
+	};
+
+	//Get file selection.
+	$fileSelection = `ls -sl -typ file`;
+
+	//Reset switch to true.
+	$fileSwitch = 1;
+	$extensionSwitch = 1;
+	$outFormatSwitch = 1;
+
+	//Check to see that all the file nodes contain a file texture name.
+	for($file in $fileSelection)
+	{
+		//Get file names from file nodes.
+		$inputPathAndName = `getAttr ($file + ".fileTextureName")`;
+		$inputName = basename($inputPathAndName, "");
+		$inputExtension = fileExtension($inputName);
+
+		//Test switches.
+		if($inputName == "")
+		{
+			$fileSwitch = 0;
+			warning ("The file node \"" + $file + "\" contains no file texture name.");
+		};
+
+		if($inputExtension != "map")
+		{
+			$extensionSwitch = 0;
+		};
+	};
+
+	//Proceed if at least one one node is selected.
+	if(size($fileSelection) >= 1)
+	{
+		//This branches to the singleMap procedure.
+		if( ($collate == 0) && ($fileSwitch == 1) )
+		{
+			//Proceed if the flags don't ask for extraction while the file in question isn't a .map file.
+			if( ($extractImage == 1) && ($extensionSwitch == 0) )
+			{
+				error "The file has to be a .map file to extract an image.";
+			}
+			else
+			{
+				singleMap(($v + $e + $g + $q + $f + $p + $l + $b + $r + $k + $x), $outFormat, $stripExtensions);
+			};
+		};
+
+		//This branches to the collate procedure.
+		if( ($collate == 1) && ($fileSwitch == 1) )
+		{
+			//Proceed if all the files are in the same directory.
+
+			//Get the first selected files information.
+			$OrigInputPathAndName = `getAttr ($fileSelection[0] + ".fileTextureName")`;
+			$OrigInputPath = dirname($OrigInputPathAndName);
+
+			//Reset switch to true.
+			$directorySwitch = 1;
+
+			//Check to see if the files are located in the same directory.  If not set $inputStwitch to 0.
+			for($i = 0; $i < size($fileSelection); $i++)
+			{
+				$inputPathAndName = `getAttr ($fileSelection[$i] + ".fileTextureName")`;
+				$inputPath = dirname($inputPathAndName);
+				if($inputPath != $OrigInputPath)
+				{
+					$directorySwitch = 0;
+				};
+			};
+
+			if($directorySwitch == 1)
+			{
+				collate(($c + $v + $g + $f + $l + $b + $r), $outFormat);
+			}
+			else
+			{
+				error "Source images have to be located in the same directory.";
+			};
+		};
+	}
+	else
+	{
+		error "Select at least one file node to convert.";
+	};
+};
+
+global proc riessImf_copyGUI_noCalculation(string $outFormat,		//The output format.
+					int $stripExtensions)		//This is a switch to see if the input file extensions are removed from the output.
+{
+	//Variables.
+	string $fileSelection[];		//This is $originalSelection filterd down to file nodes only.
+	string $file;				//The current file in $fileSelection.
+	string $inputPathAndName;		//This is the directory, file name and extension for the current file.
+	string $inputPath;			//This is the directory for the current file.
+	string $inputName;			//This is the file name and extension for the current file.
+	string $outName;			//This is the name of the output file minus extensions.
+
+
+	//Get file selection.
+	$fileSelection = `ls -sl -typ file`;
+
+	if(size($fileSelection) > 0)
+	{
+		for($file in $fileSelection)
+		{
+			//Get file names from file nodes.
+			$inputPathAndName = `getAttr ($file + ".fileTextureName")`;
+			$inputPath = dirname($inputPathAndName);
+			$inputName = basename($inputPathAndName, "");
+
+			//strip extensions.
+			if($stripExtensions == 1)
+			{
+				$outName = basenameEx($inputName);
+			}
+			else
+			{
+				$outName = $inputName;
+			};
+
+			//Test switches.
+			if($inputName == "")
+			{
+				$fileSwitch = 0;
+				error ("The file node \"" + $file + "\" contains no file texture name.");
+			}
+			else
+			{
+				setAttr -type "string" ($file + ".fileTextureName") ($inputPath + "\\" + $outName + "." + $outFormat);
+			};
+		
+		};
+	}
+	else
+	{
+		error "Select at least one file node to convert.";
+	};
+};
+
+//This procedure returns the chosen output format as an extension string.
+proc string outputFormat()
+{
+	//Variables.
+	int $outputFormatSelection;		//This is the output format selection expressed as an integer.
+	string $outputFormat;			//This is the output format selection expressed as an string.
+
+	//Get the file type selection from the option menu.
+	$outputFormatSelection = `optionMenu -q -sl fileFormatOM`;
+
+	switch ($outputFormatSelection)
+	{
+		case 1:
+		$outputFormat = "rla";
+		break;
+
+		case 2:
+		$outputFormat = "rlb";
+		break;
+
+		case 3:
+		$outputFormat = "pic";
+		break;
+
+		case 4:
+		$outputFormat = "Zpic";
+		break;
+
+		case 5:
+		$outputFormat = "alias";
+		break;
+
+		case 6:
+		$outputFormat = "rgb";
+		break;
+
+		case 7:
+		$outputFormat = "jpg";
+		break;
+
+		case 8:
+		$outputFormat = "png";
+		break;
+
+		case 9:
+		$outputFormat = "exr";
+		break;
+
+		case 10:
+		$outputFormat = "tif";
+		break;
+
+		case 11:
+		$outputFormat = "tif16";
+		break;
+
+		case 12:
+		$outputFormat = "tifu";
+		break;
+
+		case 13:
+		$outputFormat = "iff";
+		break;
+
+		case 14:
+		$outputFormat = "picture";
+		break;
+
+		case 15:
+		$outputFormat = "hdr";
+		break;
+
+		case 16:
+		$outputFormat = "ppm";
+		break;
+
+		case 17:
+		$outputFormat = "tga";
+		break;
+
+		case 18:
+		$outputFormat = "lwi";
+		break;
+
+		case 19:
+		$outputFormat = "bmp";
+		break;
+
+		case 20:
+		$outputFormat = "qntntsc";
+		break;
+
+		case 21:
+		$outputFormat = "qntpal";
+		break;
+
+		case 22:
+		$outputFormat = "ct";
+		break;
+
+		case 23:
+		$outputFormat = "ct16";
+		break;
+
+		case 24:
+		$outputFormat = "ctfp";
+		break;
+
+		case 25:
+		$outputFormat = "cth";
+		break;
+
+		case 26:
+		$outputFormat = "st";
+		break;
+
+		case 27:
+		$outputFormat = "st16";
+		break;
+
+		case 28:
+		$outputFormat = "stfp";
+		break;
+
+		case 29:
+		$outputFormat = "vt";
+		break;
+
+		case 30:
+		$outputFormat = "wt";
+		break;
+
+		case 31:
+		$outputFormat = "zt";
+		break;
+
+		case 32:
+		$outputFormat = "nt";
+		break;
+
+		case 33:
+		$outputFormat = "mt";
+		break;
+
+		case 34:
+		$outputFormat = "tt";
+		break;
+
+		case 35:
+		$outputFormat = "bit";
+		break;
+
+		case 36:
+		$outputFormat = "map";
+		break;
+
+		case 37:
+		$outputFormat = "ps";
+		break;
+
+		case 38:
+		$outputFormat = "eps";
+		break;
+
+		default:
+		break;
+	};
+
+	return $outputFormat;
+};
+
+//This procedure updates the file name text display.
+proc updateFileNameText(string $collateTXT, string $inputExtTXT, string $outputFormat)
+{
+	text -e -l ("File" + $collateTXT + $inputExtTXT + "." + $outputFormat) fileNameTX;
+};
+
+//This procedure turns off UI elements associated with imf_copy.
+global proc RIMFGUIcalculateOff()
+{
+	RIMFGUIjpegOff;
+	RIMFGUIexrOff;
+	RIMFGUImapOff;
+
+	//Turn off all map settings.
+	floatSliderGrp -e -en 0 filterFSG;
+	radioButtonGrp -e -en 0 layeredTypeRBG;
+	radioButtonGrp -e -en 0 fileTypeRBG;
+	checkBoxGrp -e -en 0 remapPixelsCBG;
+	checkBoxGrp -e -en 0 errorDiffusionCBG;
+	checkBoxGrp -e -en 0 extractImageCBG;
+	intSliderGrp -e -en 0 imageIndexISG;
+	floatSliderGrp -e -en 0 gammaFSG;
+};
+
+//This procedure turns on UI elements associated with imf_copy.
+global proc RIMFGUIcalculateOn()
+{
+	RIMFGUIfileFormatChange;
+	floatSliderGrp -e -en 1 gammaFSG;
+};
+
+//This procedure strips the extensions on the file name text display.
+global proc RIMFGUIstripExtensionsOn()
+{
+	//Variables.
+	string $collateTXT;			//This is the string that holds the collate file suffix for the file name text display.
+	string $inputExtTXT;			//This is the string that holds the file extension for the file name text display.
+
+	//Proceed if the collate mode is active
+	if( ((`radioButtonGrp -q -sl layeredTypeRBG`) == 3) && ((`optionMenu -q -sl fileFormatOM`) == 36) )
+	{
+		$collateTXT =  "_Collate";
+		$inputExtTXT = "";
+	}
+	else
+	{
+		$collateTXT =  "";
+		$inputExtTXT = "";
+	};
+	updateFileNameText($collateTXT, $inputExtTXT, outputFormat());
+};
+
+//This procedure restores the extensions on the file name text display.
+global proc RIMFGUIstripExtensionsOff()
+{
+	//Variables.
+	string $collateTXT;			//This is the string that holds the collate file suffix for the file name text display.
+	string $inputExtTXT;			//This is the string that holds the file extension for the file name text display.
+
+	//Proceed if the collate mode is active
+	if( ((`radioButtonGrp -q -sl layeredTypeRBG`) == 3) && ((`optionMenu -q -sl fileFormatOM`) == 36) )
+	{
+		$collateTXT =  "_Collate";
+		$inputExtTXT = "";
+	}
+	else
+	{
+		$collateTXT =  "";
+		$inputExtTXT = ".ext";
+	};
+	updateFileNameText($collateTXT, $inputExtTXT, outputFormat());
+};
+
+//This procedure runs every time the option menu is changed.
+global proc RIMFGUIfileFormatChange()
+{
+	//Variables.
+	string $collateTXT;			//This is the string that holds the collate file suffix for the file name text display.
+	int $outputFormatSelection;		//This is the output format selection expressed as an integer.
+
+	//Store the output selection as an integer.  Jpg is 7, exr is 9 and Map is 36.
+	int $outputFormatSelection = (`optionMenu -q -sl fileFormatOM`);
+
+	if(`checkBoxGrp -q -v1 calculateCBG`)
+	{
+		switch($outputFormatSelection)
+		{
+			case 7:		//Jpeg
+			RIMFGUIjpegOn;
+			RIMFGUIexrOff;
+			RIMFGUImapOff;
+			break;
+		
+			case 9:		//Exr
+			RIMFGUIjpegOff;
+			RIMFGUIexrOn;
+			RIMFGUImapOff;
+			break;
+
+			case 36:	//Map
+			RIMFGUIjpegOff;
+			RIMFGUIexrOff;
+			RIMFGUImapOn;
+			break;
+
+			default:
+			RIMFGUIjpegOff;
+			RIMFGUIexrOff;
+			RIMFGUImapOff;
+			break;
+		};
+	};
+
+	//Refresh the file name text display.
+	if(`checkBoxGrp -q -v1 stripExtensionsCBG`)
+	{
+		RIMFGUIstripExtensionsOn;
+	}
+	else
+	{
+		RIMFGUIstripExtensionsOff;
+	};
+};
+
+//This procedure changes the UI settings for the .map output.
+global proc RIMFGUImapOn()
+{
+	//Variables.
+	int $layeredTypeSelection;		//This holds the type of map output e.g. pyramid, collated.
+
+	//Get the type of map output.
+	$layeredTypeSelection = `radioButtonGrp -q -sl layeredTypeRBG`;
+
+	floatSliderGrp -e -en 1 filterFSG;
+	radioButtonGrp -e -en 1 layeredTypeRBG;
+	radioButtonGrp -e -en 1 fileTypeRBG;
+
+	switch($layeredTypeSelection)
+	{
+		case 1:
+		RIMFGUInonLayeredOn;
+		break;
+
+		case 2:
+		RIMFGUIpyramidOn;
+		break;
+
+		case 3:
+		RIMFGUIcollateOn;
+		break;
+
+		default:
+		break;
+	};
+};
+
+//This procedure changes the UI settings for switching the .map output off.
+global proc RIMFGUImapOff()
+{
+	floatSliderGrp -e -en 0 filterFSG;
+	radioButtonGrp -e -en 0 layeredTypeRBG;
+	radioButtonGrp -e -en 0 fileTypeRBG;
+	checkBoxGrp -e -en 0 remapPixelsCBG;
+	checkBoxGrp -e -en 1 extractImageCBG;
+
+	//Proceed if the extract image checkbox is on.
+	if(`checkBoxGrp -q -v1 extractImageCBG`)
+	{
+		checkBoxGrp -e -en 0 errorDiffusionCBG;
+		intSliderGrp -e -en 1 imageIndexISG;
+	}
+	else
+	{
+		checkBoxGrp -e -en 1 errorDiffusionCBG;
+		intSliderGrp -e -en 0 imageIndexISG;
+	};
+};
+
+//This procedure changes the UI settings for the .jpg output.
+global proc RIMFGUIjpegOn()
+{
+	intSliderGrp -e -en 1 qualityISG;
+};
+
+//This procedure changes the UI settings for switching the .jpg output off.
+global proc RIMFGUIjpegOff()
+{
+	intSliderGrp -e -en 0 qualityISG;
+};
+
+//This procedure changes the UI settings for the .exr output.
+global proc RIMFGUIexrOn()
+{
+	radioButtonGrp -e -en 1 algorithm1RBG;
+	radioButtonGrp -e -en 1 algorithm2RBG;
+};
+
+//This procedure changes the UI settings for switching the .exr output off.
+global proc RIMFGUIexrOff()
+{
+	radioButtonGrp -e -en 0 algorithm1RBG;
+	radioButtonGrp -e -en 0 algorithm2RBG;
+};
+
+//This procedure changes the UI settings for the non layered .map output.
+global proc RIMFGUInonLayeredOn()
+{
+	checkBoxGrp -e -en 1 extractImageCBG;
+
+	//Proceed if the extract image checkbox is on.
+	if(`checkBoxGrp -q -v1 extractImageCBG`)
+	{
+		checkBoxGrp -e -en 0 remapPixelsCBG;
+		checkBoxGrp -e -en 0 errorDiffusionCBG;
+		intSliderGrp -e -en 1 imageIndexISG;
+	}
+	else
+	{
+		checkBoxGrp -e -en 1 remapPixelsCBG;
+		checkBoxGrp -e -en 1 errorDiffusionCBG;
+		intSliderGrp -e -en 0 imageIndexISG;
+	};
+};
+
+//This procedure changes the UI settings for the pyramid .map output.
+global proc RIMFGUIpyramidOn()
+{
+	checkBoxGrp -e -en 1 remapPixelsCBG;
+	checkBoxGrp -e -en 1 errorDiffusionCBG;
+	checkBoxGrp -e -en 0 extractImageCBG;
+	intSliderGrp -e -en 0 imageIndexISG;
+};
+
+//This procedure changes the UI settings for the collated .map output.
+global proc RIMFGUIcollateOn()
+{
+	checkBoxGrp -e -en 1 remapPixelsCBG;
+	checkBoxGrp -e -en 0 errorDiffusionCBG;
+	checkBoxGrp -e -en 0 extractImageCBG;
+	intSliderGrp -e -en 0 imageIndexISG;
+};
+
+//This procedure changes the UI settings for the extract image on setting.
+global proc RIMFGUIextractImageOn()
+{
+	checkBoxGrp -e -en 0 remapPixelsCBG;
+	intSliderGrp -e -en 1 imageIndexISG;
+
+	if(`checkBoxGrp -q -v1 extractImageCBG`)
+	{
+		checkBoxGrp -e -en 0 errorDiffusionCBG;
+	}
+	else
+	{
+		checkBoxGrp -e -en 1 errorDiffusionCBG;
+	};
+};
+
+//This procedure changes the UI settings for the extract image off setting.
+global proc RIMFGUIextractImageOff()
+{
+	checkBoxGrp -e -en 1 errorDiffusionCBG;
+	intSliderGrp -e -en 0 imageIndexISG;
+
+	if( (`optionMenu -q -sl fileFormatOM`) == 36)
+	{
+		checkBoxGrp -e -en 1 remapPixelsCBG;
+	};
+};
+
+//This procedure will close the UI window.
+global proc RIMFGUIcmdClose()
+{
+	deleteUI -window RIMFCGUIWwindow;
+};
+
+//This procedure will gather settings from the UI and run the riessImf_copyGUI_proc procedure.
+global proc RIMFGUIcmdSet()
+{
+	//Variables.	
+	int $littleEndian;		//This holds the flag for the little-endian byte order.
+	int $bigEndian;			//This holds the flag for the big-endian byte order.
+	int $pyramid;			//This holds the flag for the pyramid option.
+	int $collate;			//This holds the flag for the collate option.
+	int $remapPixels;		//This holds the flag for the remap pixels option.
+	int $errorDiffusion;		//This holds the flag for the error diffusion option.
+	int $extractImage;		//This holds the flag for the extract image option.
+	int $compressionAlgorithm;	//This holds the flag for the .exr compression algorithm.
+
+	string $fileNodes[] = `ls -typ "file"`;
+	select $fileNodes;
+
+	//Map output options.
+	if( ((`radioButtonGrp -q -sl layeredTypeRBG`) == 1) && (outputFormat() == "map") ) 		{$pyramid = 0;$collate = 0;};
+	if( ((`radioButtonGrp -q -sl layeredTypeRBG`) == 2) && (outputFormat() == "map") ) 		{$pyramid = 1;$collate = 0;};
+	if( ((`radioButtonGrp -q -sl layeredTypeRBG`) == 3) && (outputFormat() == "map") ) 		{$pyramid = 0;$collate = 1;};
+
+	//Endian settings.
+	if( ((`radioButtonGrp -q -sl fileTypeRBG`) == 1) && (outputFormat() == "map") ) 			{$littleEndian = 1;};
+	if( ((`radioButtonGrp -q -sl fileTypeRBG`) == 2) && (outputFormat() == "map") ) 			{$bigEndian = 1;};
+
+	//Remap pixel settings.
+	if( ((`checkBoxGrp -q -v1 remapPixelsCBG`) == 1) && ((`checkBoxGrp -q -en remapPixelsCBG`) == 1))
+	{
+		$remapPixels = 1;
+	};
+
+	//Error diffusion settings.
+	if( ((`checkBoxGrp -q -v1 errorDiffusionCBG`) == 1) && ((`checkBoxGrp -q -en errorDiffusionCBG`) == 1))
+	{
+		$errorDiffusion = 1;
+	};
+
+	//Extract image settings.
+	if( ((`checkBoxGrp -q -v1 extractImageCBG`) == 1) && ((`checkBoxGrp -q -en extractImageCBG`) == 1))
+	{
+		$extractImage = 1;
+	};
+	
+	//Exr settings.
+	if((`radioButtonGrp -q -sl algorithm2RBG`) == 0)
+	{
+		$compressionAlgorithm = `radioButtonGrp -q -sl algorithm1RBG`;
+	}
+	else
+	{
+		$compressionAlgorithm = (`radioButtonGrp -q -sl algorithm2RBG`) + 3;
+	};
+
+	if(`checkBoxGrp -q -v1 calculateCBG`)
+	{	
+		riessImf_copyGUI_proc(1,							//Verbose output (boolean switch).
+				$errorDiffusion,						//Error diffusion.
+				`floatSliderGrp -q -v gammaFSG`,				//Gamma correction value (default 1.0).
+				`intSliderGrp -q -v qualityISG`,				//Jpeg compression quality (1 - 100).
+				`floatSliderGrp -q -v filterFSG`,				//Filter value (default 1.0).
+				$compressionAlgorithm,						//Setting of 1 to 5.
+				$pyramid,							//Create filtered image pyramid (boolean switch).
+				$bigEndian,							//Output big-endian files.
+				$littleEndian,							//Output little-endian files.  Alpha and x86 are little (boolean switch).
+				$remapPixels,							//Remap pixels to reduce memory usage (boolean switch).
+				$collate,							//Collate up to 20 images to pyramid map (boolean switch).
+				$extractImage,							//Extract image from pyramid map (boolean switch).
+				(`intSliderGrp -q -v imageIndexISG` - 1),			//The image index to extract from pyramid map (0 - 19).
+				outputFormat(),							//The output format.
+				`checkBoxGrp -q -v1 stripExtensionsCBG`);			//This is a switch used to determine if the source files are located in the same directory.
+	}
+	else
+	{
+		riessImf_copyGUI_noCalculation(outputFormat(),					//The output format.
+						`checkBoxGrp -q -v1 stripExtensionsCBG`);	//This is a switch used to determine if the source files are located in the same directory.
+	};
+
+	//Set the option variables.
+	optionVar -intValue "RIMFCGUIcalculateCBG" `checkBoxGrp -q -v1 calculateCBG`;
+	optionVar -intValue "RIMFCGUIstripExtensionsCBG" `checkBoxGrp -q -v1 stripExtensionsCBG`;
+	optionVar -intValue "RIMFCGUIfileFormatOM" `optionMenu -q -sl fileFormatOM`;
+	optionVar -intValue "RIMFCGUIqualityISG" `intSliderGrp -q -v qualityISG`;
+	optionVar -intValue "RIMFCGUIAlgorithm1RBG" `radioButtonGrp -q -sl algorithm1RBG`;
+	optionVar -intValue "RIMFCGUIAlgorithm2RBG" `radioButtonGrp -q -sl algorithm2RBG`;
+	optionVar -floatValue "RIMFCGUIfilterFSG" `floatSliderGrp -q -v filterFSG`;
+	optionVar -intValue "RIMFCGUIlayeredTypeRBG" `radioButtonGrp -q -sl layeredTypeRBG`;
+	optionVar -intValue "RIMFCGUIfileTypeRBG" `radioButtonGrp -q -sl fileTypeRBG`;
+	optionVar -intValue "RIMFCGUIremapPixelsCBG" `checkBoxGrp -q -v1 remapPixelsCBG`;
+	optionVar -intValue "RIMFCGUIerrorDiffusionCBG" `checkBoxGrp -q -v1 errorDiffusionCBG`;
+	optionVar -intValue "RIMFCGUIextractImageCBG" `checkBoxGrp -q -v1 extractImageCBG`;
+	optionVar -intValue "RIMFCGUIimageIndexISG" `intSliderGrp -q -v imageIndexISG`;
+	optionVar -floatValue "RIMFCGUIgammaFSG" `floatSliderGrp -q -v gammaFSG`;
+
+};
+
+//This procedure will run the RIMFGUIcmdSet and RIMFGUIcmdClose procedures.
+global proc RIMFGUIcmdSetClose()
+{
+	RIMFGUIcmdSet;
+	RIMFGUIcmdClose;
+};
+
+//This procedure will reset all the UI settings.
+global proc RIMFCGUIrestSettings()
+{
+	//Output.
+	checkBoxGrp -e -v1 1 stripExtensionsCBG;
+	checkBoxGrp -e -v1 1 calculateCBG;
+	optionMenu -e -sl 36 fileFormatOM;
+
+	//Jpeg output.
+	intSliderGrp -e -v 75 qualityISG;
+
+	//Exr output.
+	radioButtonGrp -e -sl 1 algorithm1RBG;
+	radioButtonGrp -e -sl 0 algorithm2RBG;
+
+	//Map Output
+	floatSliderGrp -e -v 1 filterFSG;
+	radioButtonGrp -e -sl 2 layeredTypeRBG;
+	radioButtonGrp -e -sl 1 fileTypeRBG;
+	checkBoxGrp -e -v1 1 remapPixelsCBG;
+
+	//Options.
+	checkBoxGrp -e -v1 1 errorDiffusionCBG;
+	checkBoxGrp -e -v1 0 extractImageCBG;
+	intSliderGrp -e -v 0 imageIndexISG;
+	floatSliderGrp -e -v 1 gammaFSG;
+
+	RIMFGUIfileFormatChange;
+};
+
+//This procedure will print the version of imf_copy.
+global proc RIMFCGUIversion()
+{
+	//Variables.
+	string $version;	//The result of typing "imf_copy -v" in a command shell.
+
+
+	$version = `system("imf_copy -v")`;
+	print (`substring $version 113 134`);
+};
+
+//This procedure is UI of the script.
+global proc riessImf_copyGUI()
+{
+	//RIMFCGUIWwindow is the container used to hold the main window.
+	//RIMFCGUImainControlsTabLayout is the container used to hold all the controls.
+	//RIMFCGUImainControlsLayout is the container used to hold the top controls.
+	//fileNameTX is the container used to hold the name of the file name text.
+	//calculateCBG is the container used to hold the "Calculate" check box.
+	//stripExtensionsCBG is the container used to hold the "Strip Extensions" check box.
+	//fileFormatOM is the container used to hold the file output selection.
+	//qualityISG is the container used to hold the jpeg quality value.
+	//filterFSG is the container used to hold the filter value.
+	//layeredTypeRBG is the container used to hold the layered type option.
+	//fileTypeRBG is the container used to hold the file type option.
+	//remapPixelsCBG is the container used to hold the remap pixels option.
+	//errorDiffusionCBG is the container used to hold the error diffusion option.
+	//extractImageCBG is the container used to hold the extract image option.
+	//imageIndexISG is the container used to hold the image index number.
+	//gammaFSG is the container used to hold the gamma value.
+	//ctrlSetClose is the container used to hold the set and close button.
+	//ctrlSet is the container used to hold the set button.
+	//ctrlClose is the container used to hold the close button.
+
+	//Set the option variables.
+	if (!`optionVar -exists "RIMFCGUIcalculateCBG"`) optionVar -intValue "RIMFCGUIcalculateCBG" 1;
+	if (!`optionVar -exists "RIMFCGUIstripExtensionsCBG"`) optionVar -intValue "RIMFCGUIstripExtensionsCBG" 1;
+	if (!`optionVar -exists "RIMFCGUIfileFormatOM"`) optionVar -intValue "RIMFCGUIfileFormatOM" 36;
+	if (!`optionVar -exists "RIMFCGUIqualityISG"`) optionVar -intValue "RIMFCGUIqualityISG" 75;
+	if (!`optionVar -exists "RIMFCGUIAlgorithm1RBG"`) optionVar -intValue "RIMFCGUIAlgorithm1RBG" 1;
+	if (!`optionVar -exists "RIMFCGUIAlgorithm2RBG"`) optionVar -intValue "RIMFCGUIAlgorithm2RBG" 0;
+	if (!`optionVar -exists "RIMFCGUIfilterFSG"`) optionVar -floatValue "RIMFCGUIfilterFSG" 1;
+	if (!`optionVar -exists "RIMFCGUIlayeredTypeRBG"`) optionVar -intValue "RIMFCGUIlayeredTypeRBG" 2;
+	if (!`optionVar -exists "RIMFCGUIfileTypeRBG"`) optionVar -intValue "RIMFCGUIfileTypeRBG" 1;
+	if (!`optionVar -exists "RIMFCGUIremapPixelsCBG"`) optionVar -intValue "RIMFCGUIremapPixelsCBG" 1;
+	if (!`optionVar -exists "RIMFCGUIerrorDiffusionCBG"`) optionVar -intValue "RIMFCGUIerrorDiffusionCBG" 1;
+	if (!`optionVar -exists "RIMFCGUIextractImageCBG"`) optionVar -intValue "RIMFCGUIextractImageCBG" 0;
+	if (!`optionVar -exists "RIMFCGUIimageIndexISG"`) optionVar -intValue "RIMFCGUIimageIndexISG" 1;
+	if (!`optionVar -exists "RIMFCGUIgammaFSG"`) optionVar -floatValue "RIMFCGUIgammaFSG" 1;
+
+	if (`window -exists RIMFCGUIWwindow`)
+	{
+		deleteUI -window RIMFCGUIWwindow;
+	};
+
+	window -wh 465 414 -menuBar 1 -title "Riess imf_copy GUI" RIMFCGUIWwindow;
+
+	menu -label "Edit";
+		menuItem -label "Reset Settings" -c RIMFCGUIrestSettings;
+	menu -label "Help";
+		menuItem -label "Version" -c RIMFCGUIversion;
+
+		formLayout RIMFCGUImainLayout;
+			tabLayout -tv 0 -scr 1 -childResizable 1 RIMFCGUImainControlsTabLayout;
+				columnLayout -adjustableColumn 1 RIMFCGUImainControlsLayout;
+
+				frameLayout -l "Output" -collapsable 1 -bs "etchedIn";
+					columnLayout;
+						rowColumnLayout -nc 2 -cw 1 141 -cw 2 199 -co 1 "left" 66;
+
+						//File output preview inital settings.
+						text -l "File Name:  " -al "right" -fn "boldLabelFont";
+						text -l "File.map" -fn "boldLabelFont" fileNameTX;
+						text -l "";
+
+						setParent..;
+
+					columnLayout;
+
+						//Strip extensions control.
+						checkBoxGrp -l "" -v1 `optionVar -q "RIMFCGUIcalculateCBG"`
+						-ncb 1 -l1 "Calculate"
+						-on1 RIMFGUIcalculateOn -of1 RIMFGUIcalculateOff calculateCBG;
+						checkBoxGrp -l "" -v1 `optionVar -q "RIMFCGUIstripExtensionsCBG"`
+						-ncb 1 -l1 "Strip Extensions"
+						-on1 RIMFGUIstripExtensionsOn -of1 RIMFGUIstripExtensionsOff stripExtensionsCBG;
+
+						setParent..;
+
+					rowColumnLayout -nc 2 -cw 1 141 -cw 2 199 -co 1 "left" 66;
+
+						//Output Format controls.
+						text -l "Image Format";
+
+						//Output Format controls.
+ 						optionMenu -cc RIMFGUIfileFormatChange fileFormatOM;
+ 						menuItem -l "Wavefront (rla)";					//Selection 1.
+ 						menuItem -l "Wavefront (rlb)";					//Selection 2.
+ 						menuItem -l "Softimage (pic)";					//Selection 3.
+ 						menuItem -l "Softimage Depth (Zpic)";				//Selection 4.
+ 						menuItem -l "Alias (alias)";					//Selection 5.
+ 						menuItem -l "SGI (rgb)";					//Selection 6.
+ 						menuItem -l "JFIF/JPEG (jpg)";					//Selection 7.
+ 						menuItem -l "PNG (png)";					//Selection 8.
+ 						menuItem -l "OpenEXR (exr)";					//Selection 9.
+ 						menuItem -l "TIFF (tif)";					//Selection 10.
+ 						menuItem -l "TIFF16 (tif16)";					//Selection 11.
+ 						menuItem -l "TIFF uncompressed (tifu)";				//Selection 12.
+ 						menuItem -l "Maya IFF (iff)";					//Selection 13.
+ 						menuItem -l "Dassault (picture)";				//Selection 14.
+ 						menuItem -l "HDR (hdr)";					//Selection 15.
+ 						menuItem -l "Portable Pixmap (ppm)";				//Selection 16.
+ 						menuItem -l "Targa (tga)";					//Selection 17.
+ 						menuItem -l "Solidworks (lwi)";					//Selection 18.
+ 						menuItem -l "Windows Bitmap (bmp)";				//Selection 19.
+ 						menuItem -l "Quantel NTSC (qntntsc)";				//Selection 20.
+ 						menuItem -l "Quantel PAL (qntpal)";				//Selection 21.
+ 						menuItem -l "mentalray Color (ct)";				//Selection 22.
+ 						menuItem -l "mentalray Color:  16 bit (ct16)";			//Selection 23.
+ 						menuItem -l "mentalray Color:  floating point (ctfp)";		//Selection 24.
+ 						menuItem -l "mentalray Color:  HDR (cth)";			//Selection 25.
+ 						menuItem -l "mentalray Alpha (st)";				//Selection 26.
+ 						menuItem -l "mentalray Alpha (st16)";				//Selection 27.
+ 						menuItem -l "mentalray Alpha (stfp)";				//Selection 28.
+ 						menuItem -l "mentalray Basis Vectors (vt)";			//Selection 29.
+ 						menuItem -l "mentalray Basis Vectors (wt)";			//Selection 30.
+ 						menuItem -l "mentalray Depth (zt)";				//Selection 31.
+ 						menuItem -l "mentalray Normal (nt)";				//Selection 32.
+ 						menuItem -l "mentalray Normal (mt)";				//Selection 33.
+ 						menuItem -l "mentalray Tag (tt)";				//Selection 34.
+ 						menuItem -l "mentalray Bit (bit)";				//Selection 35.
+ 						menuItem -l "Memory Mapped (map)";				//Selection 36.
+ 						menuItem -l "PostSctipt (ps)";					//Selection 37.
+ 						menuItem -l "Encapsulated PostSctipt (eps)";			//Selection 38.
+ 
+ 						//Set option menu selection to "map".
+ 						optionMenu -e -sl `optionVar -q "RIMFCGUIfileFormatOM"` fileFormatOM;
+ 						 
+ 						setParent..;
+					setParent..;
+				setParent..;
+
+			frameLayout -w 475 -l "Jpeg Output" -cll 1 -bs "etchedIn";
+				columnLayout;
+
+					intSliderGrp -l "Quality" -min 1 -max 100 -v `optionVar -q "RIMFCGUIqualityISG"`
+					-field true qualityISG;
+
+					setParent..;
+				setParent..;
+
+			frameLayout -w 475 -l "Exr Output" -cll 1 -bs "etchedIn";
+				columnLayout;
+
+					radioButtonGrp -l "Compression Algorithm" -nrb 3 -sl `optionVar -q "RIMFCGUIAlgorithm1RBG"` -la3 "None" "Piz" "Zip"
+					algorithm1RBG;
+					radioButtonGrp -l "" -nrb 2 -shareCollection algorithm1RBG -sl `optionVar -q "RIMFCGUIAlgorithm2RBG"` -la2 "Rle" "Pxr24"
+					algorithm2RBG;
+
+					setParent..;
+				setParent..;
+
+			frameLayout -w 475 -l "Map Output" -cll 1 -bs "etchedIn";
+				columnLayout;
+
+					floatSliderGrp -l "Filter" -pre 3 -min 0 -max 100 -fmx 1000 -v `optionVar -q "RIMFCGUIfilterFSG"` -field true filterFSG;
+					radioButtonGrp -l "Layered Type" -nrb 3 -sl `optionVar -q "RIMFCGUIlayeredTypeRBG"` -la3 "Non Layered" "Pyramid" "Collate"
+							-on1 RIMFGUIfileFormatChange
+							-on2 RIMFGUIfileFormatChange
+							-on3 RIMFGUIfileFormatChange layeredTypeRBG;
+					radioButtonGrp -l "File Type" -nrb 2 -sl `optionVar -q "RIMFCGUIfileTypeRBG"` -la2 "Little-endian" "Big-endian" fileTypeRBG;
+					checkBoxGrp -l "" -v1 `optionVar -q "RIMFCGUIremapPixelsCBG"` -ncb 1 -l1 "Remap Pixels" remapPixelsCBG;
+
+					setParent..;
+				setParent..;
+
+			frameLayout -w 475 -l "Options" -cll 1 -bs "etchedIn";
+				columnLayout;
+
+					//Options controls.
+					checkBoxGrp -l "" -v1 `optionVar -q "RIMFCGUIerrorDiffusionCBG"` -ncb 1 -l1 "Error Diffusion" errorDiffusionCBG;
+					checkBoxGrp -l "" -v1 `optionVar -q "RIMFCGUIextractImageCBG"` -ncb 1 -l1 "Extract Image" -en 0
+							-on1 RIMFGUIextractImageOn -of1 RIMFGUIextractImageOff extractImageCBG;
+					intSliderGrp -l "Image Index" -min 1 -max 20 -en 0 -v `optionVar -q "RIMFCGUIimageIndexISG"` -field 1 imageIndexISG;
+					floatSliderGrp -l "Gamma" -pre 3 -max 100 -fmx 1000 -v `optionVar -q "RIMFCGUIgammaFSG"` -field true gammaFSG;
+
+					setParent..;
+				setParent..;		//Go to RIMFCGUImainControlsLayout.
+			setParent..;			//Go to RIMFCGUImainControlsTabLayout.
+		setParent..;				//Go to RIMFCGUImainLayout.
+
+		//Update the enabled/disables controls.
+		if(`checkBoxGrp -q -v1 calculateCBG`)
+		{
+			RIMFGUIcalculateOn;
+		}
+		else
+		{
+			RIMFGUIcalculateOff;
+		};
+
+		formLayout RIMFCGUIbuttonLayout;
+
+			button -h 26 -l "Set and Close" -c RIMFGUIcmdSetClose ctrlSetClose;
+			button -h 26 -l "Set" -c RIMFGUIcmdSet ctrlSet;
+			button -h 26 -l "Close" -c RIMFGUIcmdClose ctrlClose;
+
+			formLayout -edit
+
+			-attachForm				ctrlSetClose		"top"		5
+			-attachForm				ctrlSetClose		"bottom"	5
+			-attachForm				ctrlSetClose		"left"    	5
+			-attachPosition		ctrlSetClose		"right"    	5 33
+
+			-attachNone				ctrlSet			"top"
+			-attachForm				ctrlSet			"bottom"	5
+			-attachControl		ctrlSet			"left"    	4 ctrlSetClose
+			-attachPosition		ctrlSet			"right"    	5 66
+
+			-attachNone				ctrlClose		"top"
+			-attachForm				ctrlClose		"bottom"	5
+			-attachControl		ctrlClose		"left"		4 ctrlSet
+			-attachPosition		ctrlClose		"right"	5 100
+			RIMFCGUIbuttonLayout;
+
+		//Arrange controls and buttons on RIMFCGUImainLayout layout.
+		formLayout -edit
+
+		-attachForm		RIMFCGUImainControlsTabLayout	"top"		0
+		-attachControl		RIMFCGUImainControlsTabLayout	"bottom"	0 RIMFCGUIbuttonLayout
+		-attachForm		RIMFCGUImainControlsTabLayout	"left"		0
+		-attachForm		RIMFCGUImainControlsTabLayout	"right"		0
+
+		-attachNone		RIMFCGUIbuttonLayout		"top"
+		-attachForm		RIMFCGUIbuttonLayout		"bottom"	0
+		-attachForm		RIMFCGUIbuttonLayout		"left"		0
+		-attachForm		RIMFCGUIbuttonLayout		"right"		0
+		RIMFCGUImainLayout;
+
+	showWindow RIMFCGUIWwindow;
+};

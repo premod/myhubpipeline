@@ -1,0 +1,9 @@
+global proc sanDetachSkinning()
+{
+	string $sel[] = `ls -typ "mesh"`;
+	select -tgl $sel;
+	doDetachSkin "2" { "1","1" };
+	sets -e -forceElement initialShadingGroup;
+	hyperShadePanelMenuCommand("hyperShadePanel1", "deleteUnusedNodes");
+}
+sanDetachSkinning;

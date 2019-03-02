@@ -1,0 +1,14 @@
+global proc dConnectAttrubures()
+{
+	string $selList[] = `ls -rf`;
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		if ( `file -q -dr $currPath[$i]` )
+		{
+			print ($currPath[$i]+"\n");
+			referenceEdit -fld true -r $currPath[$i]; 
+			referenceEdit -failedEdits true -successfulEdits true -editCommand disconnectAttr -r $currPath[$i];
+		}
+	}
+}

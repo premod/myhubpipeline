@@ -1,0 +1,4 @@
+global proc camShake()
+{
+	file -i "//sanstoo/Projects/CustomScripts/Scripts/Animation/Camera_Shake.ma";
+}

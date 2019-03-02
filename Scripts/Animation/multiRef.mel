@@ -1,0 +1,80 @@
+// SCRIPTS WRITTEN BY FJ PRABHU
+
+global proc multiRef(string $whichEp) {
+string $myfolders[];
+global string $myfolders2[];
+global string $ibnRefPath;
+
+switch ($whichEp) { 
+    case "05": 
+	$ibnRefPath = "//sanstoo/Projects/IBN/04_PRODUCTION/REFERENCES/EPISODE_05/CHARACTERS/";
+       break; 
+    case "06": 
+	$ibnRefPath = "//sanstoo/Projects/IBN/04_PRODUCTION/REFERENCES/EPISODE_06/CHARACTERS/";
+        break; 
+    case "07": 
+	$ibnRefPath = "//sanstoo/Projects/IBN/04_PRODUCTION/REFERENCES/EPISODE_07/CHARACTERS/";
+        break; 
+    case "08": 
+	$ibnRefPath = "//sanstoo/Projects/IBN/04_PRODUCTION/REFERENCES/EPISODE_08/CHARACTERS/";
+        break; 
+} 
+
+clear $myfolders;
+clear $myfolders2;
+$myfolders= `getFileList -folder ($ibnRefPath) -fs "*.ma"`;
+$myfolders2= `getFileList -folder ($ibnRefPath) -fs "*.ma"`;
+if (`window -exists MRwin`) deleteUI MRwin;
+window -wh 500 500 -title "Multi Reference (Beta)" MRwin;
+columnLayout;
+rowColumnLayout -numberOfColumns 4
+  -columnWidth 1 200 
+  -columnWidth 2 200 
+  -columnWidth 3 200
+  -columnWidth 4 200; 
+for ($chkBox in $myfolders) {
+if (($chkBox == "02_RENDERABLE")||
+($chkBox ==".mayaSwatches")||
+($chkBox =="01_BLOCKING")){
+  string $items[] = {$chkBox};
+  $myfolders2 = stringArrayRemove($items, $myfolders2);
+} else {
+string $buffer[];
+tokenize ($chkBox, ".", $buffer);
+checkBox $buffer[0];
+}
+}
+setParent ..;
+columnLayout;
+button -label " LOAD REFERENCE(S)" -c "loadMreference" loadButton;
+showWindow MRwin;
+window -e -h 500 -w 800 MRwin;
+}
+
+
+global proc loadMreference () {
+global string $ibnRefPath;
+global string $myfolders2[];
+for ($chkBox in $myfolders2) 
+ {
+string $buffer[];
+tokenize ($chkBox, ".", $buffer);
+ if ((`checkBox -q -v $buffer[0]`) == 1) 
+  {
+  $filepath = ($ibnRefPath + $chkBox);
+  $ns = `substring $chkBox 1 3`;
+  file -r -type "mayaAscii" -gl -namespace $buffer[0] -options "v=0;p=17" $filepath;
+    }
+ }
+removeChk;
+}
+
+
+global proc removeChk () {
+global string $myfolders2[];
+for ($chkBox in $myfolders2) {
+ string $buffer[];
+ tokenize ($chkBox, ".", $buffer);
+ checkBox -e -v 0 $buffer[0];
+}
+}

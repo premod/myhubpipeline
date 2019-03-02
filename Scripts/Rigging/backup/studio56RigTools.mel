@@ -1,0 +1,1994 @@
+global proc studio56RigTools()
+{
+	
+	if((`window -ex RigWindow`)== true)
+	deleteUI RigWindow;
+	string $window = `window -title "studio56 advance Rigging Tools"  -h 400 -w 500 -s 0 -rtf 1 -bgc 0.247 0.247 0.247 -menuBar true RigWindow`;
+	menu -label "File" -to on;
+			menuItem  -label "About" -c "About";
+			menuItem -l "Help";
+			menuItem -d on;
+			menuItem   -label "Exit" -c "deleteUI RigWindow;";
+	string $tab = `tabLayout -imw 100 `;
+	
+	string $tab1 = `columnLayout`;
+		Rigset;
+		setParent $tab;
+	string $tab2 = `columnLayout`;
+		Spine;
+		setParent $tab;
+	string $tab3 = `columnLayout`;
+		Tail;
+		setParent $tab;
+	string $tab4 = `columnLayout`;
+		ear_L;
+		setParent $tab;
+	string $tab5 = `columnLayout`;
+		ear_R;
+		setParent $tab;
+	string $tab6 = `columnLayout`;
+		facial;
+		setParent $tab;
+	string $tab7 = `columnLayout`;
+		finger;
+		setParent $tab;
+	string $tab8 = `columnLayout`;
+		toony;
+		setParent $tab;
+	string $tab9 = `columnLayout`;
+		VisControl;
+		setParent $tab;
+	
+	
+	tabLayout  -e  -tl $tab1 "Basic RIG"  -tl $tab2 "Spine" -tl $tab3 "Tail"  -tl $tab4 "Ear_L"  -tl $tab5 "Ear_R" -tl $tab6 "Facial" -tl $tab7 "Finger" -tl $tab8 "Toony" -tl $tab9 "Finishing"  $tab ;
+	
+showWindow RigWindow;
+}
+global proc visibilityOFF()
+{
+	string $sel[] = `ls -sl`;
+	for ($selection in $sel)
+	{
+	setAttr ($selection + ".lodVisibility") 0;
+	setAttr ($selection + ".visibility") 0;
+
+	}
+}
+global proc shapeNodevisibilityOFF()
+{
+	string $sel[] = `ls -s`;
+	for ($selection in $sel)
+	{
+	setAttr ($selection + ".lodVisibility") 0;
+	setAttr ($selection + ".visibility") 0;
+
+	}
+}
+global proc visibilityON()
+{
+	string $sel[] = `ls -sl`;
+	for ($selection in $sel)
+	{
+	setAttr ($selection + ".lodVisibility") 1;
+	setAttr ($selection + ".visibility") 1;
+
+	}
+}
+global proc shapeNodevisibilityON()
+{
+	string $sel[] = `ls -s`;
+	for ($selection in $sel)
+	{
+	setAttr ($selection + ".lodVisibility") 1;
+	setAttr ($selection + ".visibility") 1;
+}
+}
+global proc pivotON()
+{
+	string $sel[] = `ls -sl `;
+	for ($selection in $sel)
+	{
+	setAttr ($selection + ".displayRotatePivot") 1;
+	}
+}
+global proc pivotOFF()
+{
+	string $sel[] = `ls -sl`;
+	for ($selection in $sel)
+	{
+	setAttr ($selection + ".displayRotatePivot") 0;
+	}
+}
+global proc lockONT()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l true ($selection + ".translate");  
+    }
+}
+global proc lockOFFT()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l false ($selection + ".translate");  
+    }
+}
+global proc lockONR()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l true ($selection + ".rotate");  
+    }
+}
+global proc lockOFFR()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l false ($selection + ".rotate");  
+    }
+}
+global proc lockONS()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l true ($selection + ".scale");  
+    }
+}
+global proc lockOFFS()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l false ($selection + ".scale");  
+    }
+}
+global proc lockONV()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l true ($selection + ".v");  
+    }
+}
+global proc lockOFFV()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+      setAttr -l false ($selection + ".v");  
+    }
+}
+global proc displayMode()
+{
+	
+		string $sel[] = `ls -sl`;
+		for ($selection in $sel)
+		{
+			
+			setAttr ($selection + ".overrideEnabled") 1;
+			if(`radioButtonGrp -q -sl displayMode` == 1)
+					
+					setAttr ($selection +".overrideDisplayType") 0;
+					
+			if(`radioButtonGrp -q -sl displayMode` == 2)
+					
+					setAttr ($selection+".overrideDisplayType") 1;
+					
+			if(`radioButtonGrp -q -sl displayMode` == 3)
+						
+					setAttr ($selection+".overrideDisplayType") 2;
+		}
+}
+global proc matchTool()
+{
+		string $sel[] = `ls -sl`;
+		for ($selection in $sel)
+		{
+			
+			
+			if(`radioButtonGrp -q -sl matchObject` == 1)
+				
+				{
+					string $transition[]=`pointConstraint $sel[1] $sel[0]`;
+					string $findPtCns[] = `listRelatives -type pointConstraint $sel[0]`;
+					select $findPtCns;
+					doDelete;
+				}
+					
+					
+			if(`radioButtonGrp -q -sl matchObject` == 2)
+					
+				{
+					string $transition[]=`orientConstraint $sel[1] $sel[0]`;
+					string $findPtCns[] = `listRelatives -type orientConstraint $sel[0]`;
+					select $findPtCns;
+					doDelete;
+				}
+					
+					
+			if(`radioButtonGrp -q -sl matchObject` == 3)
+				{
+					string $transition[]=`parentConstraint $sel[1] $sel[0]`;
+					string $findPtCns[] = `listRelatives -type parentConstraint $sel[0]`;
+					select $findPtCns;
+					doDelete;
+				}		
+					
+		}
+}
+
+global proc About()
+{
+	if ((`window -exists Aboutwin`)==true)
+	deleteUI Aboutwin;
+	string $window =`window -t "About"  -s 0 -h 100 -w 200 Aboutwin`;
+	columnLayout ;
+	image -i "E:/Scripts/Animation/STUDIO56.jpg";
+	text  -l "designed by premod p sankar" ;
+	showWindow Aboutwin;
+}
+
+global proc Rigset()
+{
+	columnLayout -adj true;
+	separator  -style "in";
+	separator  -style "in";
+	text  -l "Studio56 Rigging Tools" -fn "boldLabelFont" -h 30 -bgc 0.627 0.412 0.188;
+	columnLayout -adj on pivot ;
+	separator  -style "in";
+	separator -st "in";
+	text -l " Show Pivot" -fn  "boldLabelFont" -h 20 ;
+	//separator -st "in";
+	//separator -st "in";
+	rowLayout -nc 4;
+	checkBox  -label "Show Pivot" -h 20 -w 150 -onc "pivotON" -ofc "pivotOFF" -v 0;
+	setParent -u;
+	setParent..;
+	
+	columnLayout -adj on visibility;
+	separator -st "in";
+	//separator -st "in";
+	text -l " Visibility ON/OFF" -fn  "boldLabelFont" -h 20 ;
+	//separator -st "in";
+	//separator -st "in";
+	rowLayout -nc 4;
+	checkBox  -label "Both LOD and Visibilty" - h 20 -w 150 -onc "visibilityON" -ofc "visibilityOFF" -v 1;
+	checkBox -label "ShapeNode Visibility / LOD" -h 20 -w 150 -onc "shapeNodevisibilityON" -ofc "shapeNodevisibilityOFF" -v 1;
+	setParent -u;
+	setParent..;
+	
+    columnLayout -adj on lock;
+    separator -st "in";
+    text -l "Lock ON/OFF" -fn "boldLabelFont" -h 20;
+    //separator -st "in";
+    rowColumnLayout -nc 4 ;
+    checkBox -l "Translate" -h 20 -onc "lockONT" -ofc "lockOFFT" -v 0;
+    checkBox -l "Rotate" -h 20 -onc "lockONR" -ofc "lockOFFR" -v 0;
+    checkBox -l "Scale" -h 20 -onc "lockONS" -ofc "lockOFFS" -v 0;
+    checkBox -l "Visibility" -h 20 -onc "lockONV" -ofc "lockOFFV" -v 0;
+    setParent -u;
+	setParent..;
+	
+	columnLayout -adj on displaymode;
+    separator -st "in";
+    text -l "DisplayMode ON/OFF" -fn "boldLabelFont" -h 20;
+    //separator -st "in";
+    rowColumnLayout -nc 3 ;
+    radioButtonGrp  -nrb 3 -la3 "Normal" "Template" "Reference" -select 1 displayMode ;
+    setParent..;
+    rowColumnLayout -nc 2;
+    button -w 100 -vis 0;
+    button -al "center" -h 30 -w 100 -l "confirm" -c "displayMode" -bgc .5 .5 0;
+    setParent -u;
+	setParent..;
+	
+	columnLayout -adj on matchObjects;
+    separator -st "in";
+    text -l "Match Alignment" -fn "boldLabelFont" -h 20;
+    //separator -st "in";
+    rowColumnLayout -nc 3 ;
+    radioButtonGrp  -nrb 3 -la3 "Translation" "Rotation" "Both" -select 1 matchObject ;
+    setParent..;
+    rowColumnLayout -nc 2;
+    button -w 100 -vis 0;
+    button -al "center" -h 30 -w 100 -l "Match" -c "matchTool" -bgc .0 .3 .5;
+    setParent -u;
+	setParent..;
+	
+	columnLayout -adj on Editors;
+	separator -st "in";
+	//separator -st "double";
+	text -l " Editors" -fn  "boldLabelFont" -h 20;
+	//separator -st "in";
+	//separator -st "double";
+	rowColumnLayout -nc 2 ;
+	button  -al "center" -label "HyperShade" -h 40 -w 150 -c "HypershadeWindow"  -bgc 1 .6 .0;
+	button -al "center" -label "NodeEditor" -w 150 -c "NodeEditorWindow" -h 40 -bgc 1 .6 .0;
+	button -al "center" -label "ConnectionEditor" -h 40 -w 150 -c "ConnectionEditor" -bgc 1 .6 .0;
+	button -al "center" -label "Outliner" -w 150 -c "OutlinerWindow" -h 40 -bgc 1 .6 .0;
+	button -al "center" -label "GraphEditor" -w 150 -c "GraphEditor" -h 40 -bgc 1 .6 .0;
+	button -al "center" -label "ComponentEditor" -h 40 -w 150 -c "ComponentEditor" -bgc 1 .6 .0;
+}
+
+
+
+global proc Tail()
+
+{
+
+    columnLayout;
+    text " ";
+    text -h 20 "Step 1 :Create joints and curve(IK)" ;
+    button  -h 50 -w 300 -label "Add Tail Dynamics Setting To Rig"   -command "ADD_tail"  -bgc 0.5 0.5 0.0 addmatch;
+    text "Do the placing and parenting process,Carefully" ;
+    text -h 20 "Step 2: After arranging the hairSystems U position DO freeze";
+    button  -h 50 -w 300 -label "Freeze tailJoint_Skin"  -command "freeze_tail"-bgc 1 1 1  ;
+    text " ";
+    text -h 20 "Step 3: Skin the NurbsSurface with the IK joints";
+    button  -h 50 -w 300 -label "Bind Surf" -command "bindsurf_tail"-bgc .1 .1 .5  ;
+    text "Rename the FK control Topology to Tail_FK ";
+    text -h 20 "Step 4: Apply Dynamics Setting to the Ear ";
+    button  -h 50 -w 300 -label "Apply Dynamics"   -command "dynamics_tail"-bgc .3 .3 .5  ;
+    text "Finish It!!! u have applied the Dynamics to Tail";
+    text -h 20 "Step 5: Clean You Outliner Please...";
+    button  -h 50 -w 300 -l "Clean Outliner" -c "clearOutlinerTail" -bgc 1 1 1;
+    setParent..;
+    text " ";
+    columnLayout -adj true;
+    separator -st "in";
+    text  "Note: fk controls should be parented(parent -s -r) to joints";
+    text "and corrects its orientation & ik controls parented to joints as "; 
+    text "same method.And match the position using contraint and  ";
+    text " parent to offset grp";
+    
+       string $ex = ("tailJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Tail Settings are done" addmatch;
+    }
+}
+
+
+
+//add initial setting to Tail
+
+
+global proc ADD_tail ()
+
+{
+     string $ex = ("tailJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Tail Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        rename ("joint"+ $a )("tailJoint_IK"+ $a);
+    } 
+    select -r curve1;
+    move -r -os -wd -.1 0 0 ;
+    duplicate -rr;
+    move -r -os -wd .2 0 0 ;
+    select -r curve1 curve2 ;
+    loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true "curve1" "curve2";
+    select -r curve2 ;
+    doDelete;
+    select -r curve1 ;
+    rename "curve1" "tailspinecurve";
+    move -r -os -wd .1 0 0 ;
+    select -r loftedSurface1 ;
+    rename "loftedSurface1" "tailsurf";
+    createHair $counterjoint 1 18 0 0 0 0 5 0 1 1 1;
+    delete pfxHair1;
+    searchReplaceNames "hairSystem1" "tailhairsystem" "all"; 
+    delete "tailhairsystem";
+  for ($i=1;$i<=$counterjoint;$i++)
+    {
+        joint -p 0 0 0 -n "tailJoint_Skin1" ;
+    } 
+    select -r "tailJoint_Skin*";
+    parent -w; 
+    select -r "tailJoint_IK*";
+    duplicate -rr;
+    searchReplaceNames "tailJoint_IK*" "tailJoint_FK" "selected";
+    //select -r "joint*";
+   // searchReplaceNames "joint" "tailJoint_Skin" "hierarchy"; 
+   
+    select -r tailspinecurve;
+    makeCurvesDynamicHairs 1 0 1;
+    searchReplaceNames "hairSystem1" "tailhairsystem_DYN" "all";
+    rename "follicle1""tailHair_follicle";
+    setAttr "tailHair_follicleShape.pointLock" 1;
+    select -cl;
+    string $selection[]= `ls -transforms "tailJoint_IK*"`;  
+    int $counter=  (size($selection)); 
+    CreateLocator;
+    rename "locator1""tail_loc";
+    $loc_pos=`xform  -q -t -ws ("tailJoint_IK"+$counter)`;
+    move -ws $loc_pos[0] $loc_pos[1] $loc_pos[2] "tail_loc";
+    select -r ("tailJoint_FK"+$counter) tail_loc;
+    doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+    
+    
+  for ($i=0;$i<=($counter/2);$i++)
+    {
+        
+        group -n Tail_IK_offset -em;
+        group -n Tail_FK_offset -em;
+        curve -d 1 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n "Tail_IK" ;
+        xform -cp;
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+        joint -p 0 0 0 -n "tail_IK"  ;
+        curve -d 1 -p 0.520619 0 1.99259e-005 -p 0.368133 0.368133 1.99259e-005 -p 0 0.520619 1.99259e-005 -p -0.368133 0.368133 1.99259e-005 -p -0.520619 0 1.99259e-005 -p -0.368133 -0.368133 1.99259e-005 -p 0 -0.520619 1.99259e-005 -p 0.368133 -0.368133 1.99259e-005 -p 0.520619 0 1.99259e-005 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "Tail_FK" ;
+        
+    } 
+    select -cl;
+    select -r "tail_IK*";
+    parent -w;
+    
+    
+};
+
+
+global proc connect_tail()
+
+{
+    parent;
+}
+
+
+global proc freeze_tail()
+
+{
+    string $selection_joint[]= `ls -transforms "tailJoint_Skin*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        setAttr ("tailJoint_Skin"+ $a +".rotateX")0;
+        setAttr ("tailJoint_Skin"+ $a +".rotateY")0;
+        setAttr ("tailJoint_Skin"+ $a +".rotateZ")0;
+        setAttr ("tailJoint_Skin"+ $a +".translateX")0;
+        setAttr ("tailJoint_Skin"+ $a +".translateY")0;
+        setAttr ("tailJoint_Skin"+ $a +".translateZ")0;
+    } 
+};
+
+global proc bindsurf_tail()
+{
+    select -r "tail_IK*""tailsurf";
+    performSkinCluster true;
+    
+};
+
+
+global proc dynamics_tail()
+{
+   
+   select -r Tail_FK;
+   addAttr -ln "DynamicsSettings"  -at long  Tail_FK;
+   setAttr -e-channelBox true Tail_FK.DynamicsSettings;
+   addAttr -ln "Simulations"  -at long  -min 0 -max 1 -dv 0 Tail_FK;
+   setAttr -e-keyable true Tail_FK.Simulations;
+   addAttr -ln "Stiffness"  -at double  -min -1 -max 1 -dv 0 Tail_FK;
+   setAttr -e-keyable true Tail_FK.Stiffness 0.3;
+   addAttr -ln "Iterations"  -at double  Tail_FK;
+   setAttr -e-keyable true Tail_FK.Iterations 30;
+   addAttr -ln "Attraction"  -at double  Tail_FK;
+   setAttr -e-keyable true Tail_FK.Attraction .3;
+   addAttr -ln "Damping"  -at double  Tail_FK;
+   setAttr -e-keyable true Tail_FK.Damping 0.2;
+   addAttr -ln "StartFrame"  -at long  Tail_FK;
+   setAttr -e-keyable true Tail_FK.StartFrame 1;
+   connectAttr -f Tail_FK.Stiffness tailhairsystem_DYNShape.stiffness;
+   connectAttr -f Tail_FK.Iterations tailhairsystem_DYNShape.iterations;
+   connectAttr -f Tail_FK.Attraction tailhairsystem_DYNShape.startCurveAttract;
+   connectAttr -f Tail_FK.Damping tailhairsystem_DYNShape.damp;
+   connectAttr -f Tail_FK.StartFrame tailhairsystem_DYNShape.startFrame;
+   setDrivenKeyframe -currentDriver Tail_FK.Simulations tailhairsystem_DYNShape.simulationMethod;
+   setAttr "Tail_FK.Simulations" 0;
+   setAttr "tailhairsystem_DYNShape.simulationMethod" 1;
+   setDrivenKeyframe -currentDriver Tail_FK.Simulations tailhairsystem_DYNShape.simulationMethod;  
+   setAttr "Tail_FK.Simulations" 1;
+   setAttr "tailhairsystem_DYNShape.simulationMethod" 3;
+   setDrivenKeyframe -currentDriver Tail_FK.Simulations tailhairsystem_DYNShape.simulationMethod;  
+   group -n TailDynamics_Grp -em;
+   setAttr "tailhairsystemFollicles.visibility" 0;
+   select -r tailhairsystem_DYN ;
+   channelBoxCommand -break;
+   CBdeleteConnection "tailhairsystem_DYNShape.cti";
+expression -s "\nif(frame!= tailhairsystem_DYNShape.startFrame)\ntailhairsystem_DYNShape.currentTime = tailhairsystem_DYNShape.currentTime + 1 + tail_loc.translateX - tail_loc.translateX + tail_loc.translateY - tail_loc.translateY + tail_loc.translateZ - tail_loc.translateZ + .I[4] - .I[4] + .I[5] - .I[5] + .I[6] - .I[6]+ .I[7] - .I[7]+ .I[8] - .I[8]+ .I[9] - .I[9]+ .I[10] - .I[10];\nelse\n\ttailhairsystem_DYNShape.currentTime = tailhairsystem_DYNShape.startFrame;"  -o loopSplit1 -n "Tail_Dynamics" -ae 1 -uc all ;
+
+};
+
+global proc clearOutlinerTail()
+{
+	select -r "Tail_FK_offset"  "tailJoint_IK1";
+	group; xform -os -piv 0 0 0;
+	rename "group1" "Tail_Dynamics_Jnt";
+	select -r "Tail_Dynamics_Jnt" "Body";
+	parent;
+	select -r Tail_IK ;
+	select -r tailsurf tailhairsystemFollicles tailhairsystem_DYN tailhairsystem_DYNFollicles tailhairsystem_DYNOutputCurves tail_loc Tail_IK TailDynamics_Grp ;
+	parent;
+}
+
+
+
+
+// add initial setting for spine
+
+
+
+
+global proc Spine()
+{
+    columnLayout -adj true;
+    separator -st "in";
+    //text" ";
+    text"Before starting u have to make the jointSetup for the spine";
+    text"create curve along through the joints and apply curveinfo node";
+    text"then find the curvelength value.";
+    separator -st "in";
+    columnLayout;
+    text "Step 1: Type the curvelength value here ";
+    floatFieldGrp  -cw2 80 80 -l "CurveInfo Value" curveval;
+    //text " ";
+    text "Step 2:  ";
+    button -h 40 -w 300 -label "Add Squash Setting To Rig" -command "Add_spine"  -bgc 0.5 0.5 0.0 addmatch;
+    text " ";
+    text "Step 3: Connect Sqaush and Stretch Nodes to Spine ";
+    button -h 40 -w 300 -label "connect to spine" -command "connect_spine"-bgc 0.5 0.5 1 ;
+    text "Sqaush and Stretch are connected to spine!!!";
+    text  " ";
+    text "Step 4: Type how many controls curves U want in Spine ";
+    intFieldGrp -cw2 95 80 -l "ControlJoints count" cntrljnt;
+    text " ";
+    text "Step 5: create the control curves ";
+    button -h 40 -w 300 -label "ControlCurve" -command "controlcurve_spine"-bgc 0.5 0.5 .5 ;
+    text " ";
+    text "Step 6: create the control curves ";
+    button -h 40 -w 300 -label "Clean Outliner" -command "clearOutlinerSpine"-bgc 1 1 1 ;
+    text " ";
+    columnLayout -adj true;
+    separator -st "in";
+    columnLayout;
+    text "Step 7: Apply breath to the chest,first u connect ";text "             breathconnect attribute to breath blendshape";
+    button -h 40 -w 300 -label "Breath Control to Chest" -command "Breath_spine"-bgc 0.1 0.5 .1 ;
+    
+     string $ex = ("Spine_SknJnt*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Squash Settings are done" addmatch;
+    }
+    
+ 
+}
+
+ 
+
+global proc Add_spine()
+
+{  
+    string $ex = ("Spine_SknJnt*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Squash Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++){
+        
+    
+        rename ("joint"+ $a )("Spine_SknJnt"+ $a);
+   
+    } 
+    rename "Main" "Placer";
+    select -r curve1;
+    
+    rename "curve1" "spineIKCurve";
+    addAttr -ln "Stretch_Switch"  -at double  -min 0 -max 1 -dv 1 Body;
+    addAttr -ln "Squash_Val"  -at double  -min 0 -max 1 -dv 0.5 Body;
+    addAttr -ln "Back_Stretch"  -at double  -min 1 -max 15 -dv 0 Body;
+    addAttr -ln "RigScale"  -at double  -min 1 -max 15 -dv 1 Placer;
+    connectAttr -f Placer.RigScale Placer.scaleX;
+    connectAttr -f Placer.RigScale Placer.scaleY;
+    connectAttr -f Placer.RigScale Placer.scaleZ;
+    string $selection_spinejoint[]= `ls -transforms "Spine_SknJnt*"`;
+    int $counter=  (size($selection_spinejoint));
+  
+    for($a=1;$a<$counter;$a++){
+        createNode frameCache;
+        int$i;
+        string $MULDIV= `createNode multiplyDivide` ;
+        setAttr ($MULDIV+".operation") 3;
+        connectAttr Body.Back_Stretch ("frameCache*"+".stream");
+        connectAttr ("frameCache*"+".varying") ("multiplyDivide*"+".input2X");
+
+    }
+   	
+   	
+	select -r "frameCache*"; 
+    searchReplaceNames "frameCache" "SpineSquash_FC" "selected";
+    select -r "multiplyDivide*"; 
+    searchReplaceNames "multiplyDivide" "SpineMulDiv_POWER" "selected";
+    createNode reverse;
+    rename  "reverse1" "SpineSquashVal_REV";
+    connectAttr Body.Squash_Val SpineSquashVal_REV.inputX;
+    createNode pairBlend;
+    rename  "pairBlend1" "SpineSquashVal_PB";
+    for($i=1;$i<4;$i++)
+    {
+        string $MULDIV= `createNode multiplyDivide` ;
+        setAttr($MULDIV+".operation")2;
+    }
+    rename "multiplyDivide1""SpineSquashVal_DIV";
+    rename "multiplyDivide2""SpineSquashStretch_DIV";
+    rename "multiplyDivide3""SpineSquashScale_DIV";
+    createNode pairBlend;
+    rename  "pairBlend1" "SpineSquashSwitch_PB";
+    connectAttr SpineSquashVal_REV.outputX SpineSquashVal_PB.weight;
+    connectAttr SpineSquashVal_PB.outTranslateY SpineSquashVal_DIV.input2Y;
+    connectAttr Spine_SknJnt1.scaleX SpineSquashVal_PB.inTranslateY1;
+    connectAttr Body.Stretch_Switch SpineSquashSwitch_PB.weight;
+    connectAttr SpineSquashSwitch_PB.outTranslateX SpineSquashStretch_DIV.input1X;
+    connectAttr SpineSquashStretch_DIV.outputX SpineSquashScale_DIV.input1X;
+    connectAttr curveInfo1.arcLength SpineSquashSwitch_PB.inTranslateX2;
+    connectAttr Placer.RigScale SpineSquashScale_DIV.input2X;
+    setAttr "SpineSquashVal_DIV.input1Y" 1;
+    $ns=`floatFieldGrp   -q -v1 curveval` ;
+    setAttr "SpineSquashStretch_DIV.input2X" $ns;
+    
+    
+};
+
+
+
+
+global proc connect_spine()
+
+{
+    
+    
+    string $selection_spinejoint[]= `ls -transforms "Spine_SknJnt*"`;  
+    int $counter=  (size($selection_spinejoint)); 
+    for($a=1;$a<$counter;$a++){
+        
+        connectAttr SpineSquashScale_DIV.outputX ("Spine_SknJnt"+ $a +".scaleX");
+        connectAttr SpineSquashVal_DIV.outputY  ("SpineMulDiv_POWER"+ $a + ".input1X");
+        connectAttr ("SpineMulDiv_POWER" + $a + ".outputX")("Spine_SknJnt"+ $a +".scaleZ");
+        connectAttr ("SpineMulDiv_POWER" + $a + ".outputX")("Spine_SknJnt"+ $a +".scaleY");
+    } 
+  	 	
+  	 	
+  
+ };
+
+
+
+global proc controlcurve_spine()
+{
+    
+    $cntljn=`intFieldGrp -q -v1 cntrljnt`;
+    print $cntljn;
+    for($i=1;$i<=$cntljn;$i++)
+    {
+    group -em -n "Bend_Spine_offset";
+    curve -d 1 -p 3.162278 -1.63595e-009 3.162278 -p 0 -1.63595e-009 4.472136 -p -3.162277 -1.63595e-009 3.162277 -p -4.472136 -1.63595e-009 0 -p -3.162277 -1.63595e-009 -3.162277 -p 0 -1.63595e-009 -4.472136 -p 3.162277 -1.63595e-009 -3.162277 -p 4.472136 -1.63595e-009 0 -p 3.162278 -1.63595e-009 3.162278 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "Bend_Spine";
+    joint -p 0 0 0 -n "SpineJoint_Skin";
+    }
+    select -r "SpineJoint_Skin*";
+    parent -w;
+	
+
+};
+
+
+
+global proc Breath_spine()
+
+{
+   select -r "Chest";
+   addAttr -ln "Breath_Setting"  -at long  Chest;
+   setAttr -e-channelBox true -k on Chest.Breath_Setting;
+   addAttr -ln "Breath"  -at long  -min 0 -max 1 -dv 0 Chest;
+   setAttr -e-keyable true -k on Chest.Breath;
+   addAttr -ln "Breath_Frequency"  -at double  -min -10 -max 10 -dv 0 Chest;
+   setAttr -e-keyable true -k on Chest.Breath_Frequency 0;
+   addAttr -ln "Breath_Speed"  -at double  Chest;
+   setAttr -e-keyable true -k on Chest.Breath_Speed 0;
+   addAttr -ln "Breath_Connected"  -at double  Chest;
+   setAttr -e-keyable true -k on Chest.Breath_Connected 0;
+   addAttr -ln "StartFrame"  -at long  Chest;
+   setAttr -e-keyable true  -k on Chest.StartFrame 1;
+	
+  	
+
+}
+
+global proc clearOutlinerSpine()
+{
+	
+	rename ikHandle1 Spine_IK;
+	parent Spine_SknJnt1 Root_M ;
+	select -r spineIKCurve ;
+	select -add Spine_IK ;
+	group; xform -os -piv 0 0 0;
+	rename "group1" "NoneScale";
+	setAttr -l on  "NoneScale.visibility" 0  ;
+	
+	
+  	//Advanced Twist setting
+   	string $selection_spinejoint[]= `ls -transforms "Spine_SknJnt*"`;  
+    int $counter=  (size($selection_spinejoint)); 
+    //print $counter;
+    string $lastjoint = "Spine_SknJnt" + $counter;
+    string $firstjoint = "Spine_SknJnt"+"1";
+    // print $lastjoint;
+    //print $firstjoint; 
+  	spaceLocator -p 0 0 0;
+	spaceLocator -p 0 0 0;
+	select -r $lastjoint ;
+	select -add locator2 ;
+	doCreatePointConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+	pointConstraint -offset 0 0 0 -weight 1;
+	select -r locator2_pointConstraint1 ;
+	doDelete;
+	select -r $firstjoint ;
+	select -add locator1 ;
+	doCreatePointConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+	pointConstraint -offset 0 0 0 -weight 1;
+	select -r locator1_pointConstraint1 ;
+	doDelete;
+	rename locator1 SpineChestTwist_loc;
+	rename locator2 SpineHipTwist_loc;
+	parent SpineChestTwist_loc Chest ;
+	parent  SpineHipTwist_loc Hip;
+	setAttr " SpineHipTwist_loc.visibility" 0;
+	setAttr "SpineChestTwist_loc.visibility" 0;
+	
+	setAttr "Spine_IK.dTwistControlEnable" 1;
+	setAttr "Spine_IK.dWorldUpType" 4;
+	setAttr "Spine_IK.dWorldUpAxis" 0;
+	
+//clear outline while finishing spine.
+	select -r Placer ;
+	group -n "Rig"; xform -os -piv 0 0 0 ;
+	parent NoneScale Rig ;
+	
+	
+}
+
+
+
+
+// add initial setting for Ear_L
+
+
+
+
+
+
+
+global proc ear_L()
+{
+
+    columnLayout ;
+    text " ";
+    text -h 20 "Step 1 :Create joints and curve(IK)" ;
+    button -h 50 -w 300 -label "Add Left Ear Dynamics Setting To Rig" -command "ADD_ear_L"  -bgc 0.5 0.5 0.0 addmatch;
+    text "Do the placing and parenting process,Carefully" ;
+    text -h 20 "Step 2: After arranging the hairSystems U position DO freeze";
+    button -h 50 -w 300 -label "Freeze ear_LJoint_Skin" -command "freeze_ear_L"-bgc .5 1 .5  ;
+    text " ";
+    text -h 20 "Step 3: Skin the NurbsSurface with the IK joints";
+    button -h 50 -w 300 -label "Bind Surf" -command "bindsurf_ear_L"-bgc .1 .1 .5  ;
+    text "Rename the FK control Topology to Ear_FK ";
+    text -h 20 "Step 4: Apply Dynamics Setting to the Ear ";
+    button -h 50 -w 300 -label "Apply Dynamics" -command "dynamics_ear_L"-bgc .3 .3 .5  ;
+    text "Finish It!!! u have applied the Dynamics to Left Ear";
+    text -h 20 "Step 5: Clean You Outliner Please...";
+    button  -h 50 -w 300 -l "Clean Outliner" -c "clearOutlinerEar_L" -bgc 1 1 1;
+    setParent..;
+    text " ";
+    columnLayout -adj true;
+    separator -st "in";
+    text  "Note: fk controls should be parented(parent -s -r) to joints";
+    text "and corrects its orientation & ik controls parented to joints as "; 
+    text "same method.And match the position using contraint and  ";
+    text " parent to offset grp";
+    
+         string $ex = ("ear_LJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_L Settings are done" addmatch;
+    }
+
+
+}
+
+//add initial setting
+
+
+global proc ADD_ear_L ()
+
+{
+     string $ex = ("ear_LJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_L Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+  for($a=1;$a<=$counterjoint;$a++)
+    {
+        rename ("joint"+ $a )("ear_LJoint_IK"+ $a);
+    } 
+    select -r curve1;
+    move -r -os -wd -.1 0 0 ;
+    duplicate -rr;
+    move -r -os -wd .2 0 0 ;
+    select -r curve1 curve2 ;
+    loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true "curve1" "curve2";
+    select -r curve2 ;
+    doDelete;
+    select -r curve1 ;
+    rename "curve1" "ear_Lspinecurve";
+    move -r -os -wd .1 0 0 ;
+    select -r loftedSurface1 ;
+    rename "loftedSurface1" "ear_Lsurf";
+    createHair $counterjoint 1 18 0 0 0 0 5 0 1 1 1;
+    delete pfxHair1;
+    searchReplaceNames "hairSystem1" "ear_Lhairsystem" "all"; 
+    delete "ear_Lhairsystem";
+  for ($i=1;$i<=$counterjoint;$i++)
+    {
+        joint -p 0 0 0 -n "ear_LJoint_Skin1" ;
+    } 
+    select -r "ear_LJoint_Skin*";
+    parent -w; 
+    select -r "ear_LJoint_IK*";
+    duplicate -rr;
+    searchReplaceNames "ear_LJoint_IK*" "ear_LJoint_FK" "selected";
+    //select -r "joint*";
+   // searchReplaceNames "joint" "ear_LJoint_Skin" "hierarchy"; 
+   
+    select -r ear_Lspinecurve;
+    makeCurvesDynamicHairs 1 0 1;
+    searchReplaceNames "hairSystem1" "ear_Lhairsystem_DYN" "all";
+    rename "follicle1""ear_LHair_follicle";
+    setAttr "ear_LHair_follicleShape.pointLock" 1;
+    select -cl;
+    string $selection[]= `ls -transforms "ear_LJoint_IK*"`;  
+    int $counter=  (size($selection)); 
+    CreateLocator;
+    rename "locator1""ear_L_loc";
+    $loc_pos=`xform  -q -t -ws ("ear_LJoint_IK"+$counter)`;
+    move -ws $loc_pos[0] $loc_pos[1] $loc_pos[2] "ear_L_loc";
+    select -r ("ear_LJoint_FK"+$counter) ear_L_loc;
+    doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+    
+    
+  for ($i=0;$i<=($counter/2);$i++)
+    {
+        
+        group -n ear_L_IK_offset -em;
+        group -n ear_L_FK_offset -em;
+        curve -d 1 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n "ear_L_IK" ;
+      
+        xform -cp;
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+       
+        joint -p 0 0 0 -n "ear_L_IK"  ;
+        curve -d 1 -p 0.520619 0 1.99259e-005 -p 0.368133 0.368133 1.99259e-005 -p 0 0.520619 1.99259e-005 -p -0.368133 0.368133 1.99259e-005 -p -0.520619 0 1.99259e-005 -p -0.368133 -0.368133 1.99259e-005 -p 0 -0.520619 1.99259e-005 -p 0.368133 -0.368133 1.99259e-005 -p 0.520619 0 1.99259e-005 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "ear_L_FK" ;
+     
+    } 
+    select -cl;
+    select -r "ear_L_IK*";
+    parent -w;
+    
+    
+};
+
+
+global proc connect_ear_L()
+
+{
+    parent;
+}
+
+
+global proc freeze_ear_L()
+
+{
+    string $selection_joint[]= `ls -transforms "ear_LJoint_Skin*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        setAttr ("ear_LJoint_Skin"+ $a +".rotateX")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".rotateY")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".rotateZ")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".translateX")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".translateY")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".translateZ")0;
+    } 
+};
+
+global proc bindsurf_ear_L()
+{
+    select -r "ear_L_IK*""ear_Lsurf";
+    performSkinCluster true;
+    
+};
+
+
+global proc dynamics_ear_L()
+{
+   CBdeleteConnection "ear_Lhairsystem_DYNShape.cti";
+   select -r ear_L_FK;
+   addAttr -ln "DynamicsSettings"  -at long  ear_L_FK;
+   setAttr -e-channelBox true ear_L_FK.DynamicsSettings;
+   addAttr -ln "Simulations"  -at long  -min 0 -max 1 -dv 0 ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Simulations;
+   addAttr -ln "Stiffness"  -at double  -min -1 -max 1 -dv 0 ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Stiffness 0.3;
+   addAttr -ln "Iterations"  -at double  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Iterations 30;
+   addAttr -ln "Attraction"  -at double  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Attraction .3;
+   addAttr -ln "Damping"  -at double  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Damping 0.2;
+   addAttr -ln "StartFrame"  -at long  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.StartFrame 1;
+   connectAttr -f ear_L_FK.Stiffness ear_Lhairsystem_DYNShape.stiffness;
+   connectAttr -f ear_L_FK.Iterations ear_Lhairsystem_DYNShape.iterations;
+   connectAttr -f ear_L_FK.Attraction ear_Lhairsystem_DYNShape.startCurveAttract;
+   connectAttr -f ear_L_FK.Damping ear_Lhairsystem_DYNShape.damp;
+   connectAttr -f ear_L_FK.StartFrame ear_Lhairsystem_DYNShape.startFrame;
+   setDrivenKeyframe -currentDriver ear_L_FK.Simulations ear_Lhairsystem_DYNShape.simulationMethod;
+   setAttr "ear_L_FK.Simulations" 0;
+   setAttr "ear_Lhairsystem_DYNShape.simulationMethod" 1;
+   setDrivenKeyframe -currentDriver ear_L_FK.Simulations ear_Lhairsystem_DYNShape.simulationMethod;  
+   setAttr "ear_L_FK.Simulations" 1;
+   setAttr "ear_Lhairsystem_DYNShape.simulationMethod" 3;
+   setDrivenKeyframe -currentDriver ear_L_FK.Simulations ear_Lhairsystem_DYNShape.simulationMethod;  
+   group -n ear_LDynamics_Grp -em;
+   setAttr "ear_LhairsystemFollicles.visibility" 0;
+};
+
+
+global proc clearOutlinerEar_L()
+{
+
+}
+
+
+
+
+//add initial setting to ear_R
+
+
+
+
+
+
+
+global proc ear_R()
+
+{
+
+    columnLayout ;
+    text " ";
+    text -h 20 "Step 1 :Create joints and curve(IK)" ;
+    button -h 50 -w 300 -label "Add Right Ear Dynamics Setting To Rig" -command "ADD_ear_R"  -bgc 0.5 .5 0.0 addmatch;
+  	text "Do the placing and parenting process,Carefully" ;
+  	//text " ";
+    text -h 20 "Step 2: After arranging the hairSystems U position DO freeze";
+    button -h 50 -w 300 -label "Freeze ear_RJoint_Skin" -command "freeze_ear_R"-bgc .5 1 .5  ;
+    text " ";
+    text -h 20 "Step 3: Skin the NurbsSurface with the IK joints";
+    button -h 50 -w 300 -label "Bind Surf" -command "bindsurf_ear_R"-bgc .1 .1 .5  ;
+    text "Rename the FK control Topology to Ear_FK ";
+    text -h 20 "Step 4: Apply Dynamics Setting to the Ear ";
+    button -h 50 -w 300 -label "Apply Dynamics" -command "dynamics_ear_R"-bgc .3 .3 .5  ;
+    text "Finish It!!! u have applied the Dynamics to Right Ear";
+    text -h 20 "Step 5: Clean You Outliner Please...";
+    button  -h 50 -w 300 -l "Clean Outliner" -c "clearOutlinerEar_R" -bgc 1 1 1;
+    setParent..;
+    text " ";
+    columnLayout -adj true;
+    separator -st "in";
+    text  "Note: fk controls should be parented(parent -s -r) to joints";
+    text "and corrects its orientation & ik controls parented to joints as "; 
+    text "same method.And match the position using contraint and  ";
+    text " parent to offset grp";
+    
+         string $ex = ("ear_RJoint_IK*");
+         
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_R Settings are done" addmatch;
+    }
+
+}
+
+//add initial setting
+
+
+global proc ADD_ear_R ()
+
+{
+    
+        string $ex = ("ear_RJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_R Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+  for($a=1;$a<=$counterjoint;$a++)
+    {
+        rename ("joint"+ $a )("ear_RJoint_IK"+ $a);
+    } 
+    select -r curve1;
+    move -r -os -wd -.1 0 0 ;
+    duplicate -rr;
+    move -r -os -wd .2 0 0 ;
+    select -r curve1 curve2 ;
+    loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true "curve1" "curve2";
+    select -r curve2 ;
+    doDelete;
+    select -r curve1 ;
+    rename "curve1" "ear_Rspinecurve";
+    move -r -os -wd .1 0 0 ;
+    select -r loftedSurface1 ;
+    rename "loftedSurface1" "ear_Rsurf";
+    createHair $counterjoint 1 18 0 0 0 0 5 0 1 1 1;
+    delete pfxHair1;
+    searchReplaceNames "hairSystem1" "ear_Rhairsystem" "all"; 
+    delete "ear_Rhairsystem";
+  for ($i=1;$i<=$counterjoint;$i++)
+    {
+        joint -p 0 0 0 -n "ear_RJoint_Skin1" ;
+    } 
+    select -r "ear_RJoint_Skin*";
+    parent -w; 
+    select -r "ear_RJoint_IK*";
+    duplicate -rr;
+    searchReplaceNames "ear_RJoint_IK*" "ear_RJoint_FK" "selected";
+    //select -r "joint*";
+   // searchReplaceNames "joint" "ear_RJoint_Skin" "hierarchy"; 
+   
+    select -r ear_Rspinecurve;
+    makeCurvesDynamicHairs 1 0 1;
+    searchReplaceNames "hairSystem1" "ear_Rhairsystem_DYN" "all";
+    rename "follicle1""ear_RHair_follicle";
+    setAttr "ear_RHair_follicleShape.pointLock" 1;
+    select -cl;
+    string $selection[]= `ls -transforms "ear_RJoint_IK*"`;  
+    int $counter=  (size($selection)); 
+    CreateLocator;
+    rename "locator1""ear_R_loc";
+    $loc_pos=`xform  -q -t -ws ("ear_RJoint_IK"+$counter)`;
+    move -ws $loc_pos[0] $loc_pos[1] $loc_pos[2] "ear_R_loc";
+    select -r ("ear_RJoint_FK"+$counter) ear_R_loc;
+    doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+    
+    
+  for ($i=0;$i<=($counter/2);$i++)
+    {
+        
+        group -n ear_R_IK_offset -em;
+        group -n ear_R_FK_offset -em;
+        curve -d 1 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n "ear_R_IK" ;
+      
+        xform -cp;
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+       
+        joint -p 0 0 0 -n "ear_R_IK"  ;
+        curve -d 1 -p 0.520619 0 1.99259e-005 -p 0.368133 0.368133 1.99259e-005 -p 0 0.520619 1.99259e-005 -p -0.368133 0.368133 1.99259e-005 -p -0.520619 0 1.99259e-005 -p -0.368133 -0.368133 1.99259e-005 -p 0 -0.520619 1.99259e-005 -p 0.368133 -0.368133 1.99259e-005 -p 0.520619 0 1.99259e-005 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "ear_R_FK" ;
+     
+    } 
+    select -cl;
+    select -r "ear_R_IK*";
+    parent -w;
+    
+    
+};
+
+
+global proc connect_ear_R()
+
+{
+    parent;
+}
+
+
+global proc freeze_ear_R()
+
+{
+    string $selection_joint[]= `ls -transforms "ear_RJoint_Skin*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        setAttr ("ear_RJoint_Skin"+ $a +".rotateX")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".rotateY")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".rotateZ")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".translateX")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".translateY")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".translateZ")0;
+    } 
+};
+
+global proc bindsurf_ear_R()
+{
+    select -r "ear_R_IK*""ear_Rsurf";
+    performSkinCluster true;
+    
+};
+
+
+global proc dynamics_ear_R()
+{
+   CBdeleteConnection "ear_Rhairsystem_DYNShape.cti";
+   select -r ear_R_FK;
+   addAttr -ln "DynamicsSettings"  -at long  ear_R_FK;
+   setAttr -e-channelBox true ear_R_FK.DynamicsSettings;
+   addAttr -ln "Simulations"  -at long  -min 0 -max 1 -dv 0 ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Simulations;
+   addAttr -ln "Stiffness"  -at double  -min -1 -max 1 -dv 0 ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Stiffness 0.3;
+   addAttr -ln "Iterations"  -at double  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Iterations 30;
+   addAttr -ln "Attraction"  -at double  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Attraction .3;
+   addAttr -ln "Damping"  -at double  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Damping 0.2;
+   addAttr -ln "StartFrame"  -at long  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.StartFrame 1;
+   connectAttr -f ear_R_FK.Stiffness ear_Rhairsystem_DYNShape.stiffness;
+   connectAttr -f ear_R_FK.Iterations ear_Rhairsystem_DYNShape.iterations;
+   connectAttr -f ear_R_FK.Attraction ear_Rhairsystem_DYNShape.startCurveAttract;
+   connectAttr -f ear_R_FK.Damping ear_Rhairsystem_DYNShape.damp;
+   connectAttr -f ear_R_FK.StartFrame ear_Rhairsystem_DYNShape.startFrame;
+   setDrivenKeyframe -currentDriver ear_R_FK.Simulations ear_Rhairsystem_DYNShape.simulationMethod;
+   setAttr "ear_R_FK.Simulations" 0;
+   setAttr "ear_Rhairsystem_DYNShape.simulationMethod" 1;
+   setDrivenKeyframe -currentDriver ear_R_FK.Simulations ear_Rhairsystem_DYNShape.simulationMethod;  
+   setAttr "ear_R_FK.Simulations" 1;
+   setAttr "ear_Rhairsystem_DYNShape.simulationMethod" 3;
+   setDrivenKeyframe -currentDriver ear_R_FK.Simulations ear_Rhairsystem_DYNShape.simulationMethod;  
+   group -n ear_RDynamics_Grp -em;
+   setAttr "ear_RhairsystemFollicles.visibility" 0;
+};
+
+
+global proc clearOutlinerEar_R()
+{
+
+}
+
+
+
+//add facial setup
+
+
+
+
+
+
+
+
+global proc facial()
+
+{
+    
+columnLayout ;
+
+	text " ";
+	text "Type the name of the blendshape u want to connect from the  ";
+	text"blendshape input history node";
+	text " ";
+    textFieldGrp -cw2 100 150 -l "Name the Node: " t1;
+    text " ";
+    text -align "right" -l " Note:- Match the exact shape name" ;
+    text " ";
+    
+rowColumnLayout -nc 50;
+
+	
+    button - h 30 -w 150 -label "RightSide" -command "ADD_R" -bgc .5 0 0;
+    button - h 30 -w 150 -label "LeftSide" -command "ADD_L" -bgc  0 0 .5;
+
+}
+
+global proc ADD_R()
+{
+    string $name = `textFieldGrp -q -tx t1`;
+    select `ls -sl`;
+    rename $name;
+    setAttr -lock true -keyable false -channelBox false ($name + ".tz");
+    setAttr -lock true -keyable false -channelBox false ($name + ".rx");
+    setAttr -lock true -keyable false -channelBox false ($name + ".ry");
+    setAttr -lock true -keyable false -channelBox false ($name + ".rz");
+    setAttr -lock true -keyable false -channelBox false ($name + ".sx");
+    setAttr -lock true -keyable false -channelBox false ($name + ".sy");
+    setAttr -lock true -keyable false -channelBox false ($name + ".sz");
+    setAttr -lock true -keyable false -channelBox false ($name + ".v");
+    shadingNode -asUtility addDoubleLinear -n ( $name + "Right_ADL");
+    shadingNode -asUtility clamp -n ( $name + "RightCLMP_X");
+    shadingNode -asUtility clamp -n ( $name + "RightCLMP_Y");
+    shadingNode -asUtility multiplyDivide -n ($name + "Right_DIV");
+    setAttr ($name + "RightCLMP_X.maxR") 1;
+    setAttr ($name + "RightCLMP_Y.maxR") 1;
+    setAttr ($name + "Right_ADL.input2") 1;
+    connectAttr -f ($name + "Right_ADL.output") ( $name + "RightCLMP_X.inputR");
+    connectAttr -f ($name + "RightCLMP_X.outputR") ($name + "Right_DIV.input1X");
+    connectAttr -f ($name + "RightCLMP_Y.outputR") ($name + "Right_DIV.input2X");
+    connectAttr -f ($name + ".translateX") ($name + "Right_ADL.input1");
+    connectAttr -f ($name + ".translateY") ($name + "RightCLMP_Y.inputR");
+    connectAttr -f ($name + "Right_DIV.outputX") ("Facial." + $name + "_R");
+    
+}
+
+global proc ADD_L()
+{
+    string $name = `textFieldGrp -q -tx t1 `;
+    shadingNode -asUtility addDoubleLinear -n ( $name + "Left_ADL");
+    shadingNode -asUtility clamp -n ( $name + "LeftCLMP_X");
+    shadingNode -asUtility clamp -n ( $name + "LeftCLMP_Y");
+    shadingNode -asUtility multiplyDivide -n ($name + "Left_DIV");
+    shadingNode -asUtility multiplyDivide -n ($name + "Left_X_DIV");
+    setAttr ($name + "Left_X_DIV.input2X") -1;
+    setAttr ($name + "Left_ADL.input2") 1;
+    setAttr ($name + "LeftCLMP_X.maxR") 1;
+    setAttr ($name + "LeftCLMP_Y.maxR") 1;
+    connectAttr -f ($name + "Left_ADL.output") ( $name + "LeftCLMP_X.inputR");
+    connectAttr -f ($name + "LeftCLMP_X.outputR") ($name + "Left_DIV.input1X");
+    connectAttr -f ($name + "LeftCLMP_Y.outputR") ($name + "Left_DIV.input2X");
+    connectAttr -f ($name + "Left_X_DIV.outputX") ($name + "Left_ADL.input1");
+    connectAttr -f ($name + ".translateX") ($name + "Left_X_DIV.input1X");
+    connectAttr -f ($name + ".translateY") ($name + "LeftCLMP_Y.inputR");
+    connectAttr -f ($name + "Left_DIV.outputX") ("Facial."+ $name + "_L");
+   
+}
+
+
+//toony
+
+
+
+global proc toony()
+{
+	
+    
+    columnLayout -adj true;
+   // separator;
+    text " " ;
+    text "step1: Name the node. eg: toony_head or toony_jaw ";
+    text " " ;
+    textFieldGrp  -cw2 55 200 -l "Node Name" nname;
+    text " " ;
+    text " create the driver joint and 4 toony joint and create a control.";
+    text " Not to rename now";
+    text " ";
+    rowColumnLayout -nc 50;
+    button - h 50 -w 150 -label "rename driver joint" -command "renamedriver" -bgc .5 0 0;
+	 button - h 50 -w 150 -label "rename driven joint" -command "renamedriven" -bgc .5 0 0;
+	 setParent..;
+	 
+    columnLayout -adj true;
+    button - h 50 -w 150 -label "Add nodes" -command "toonyAdd" -bgc .5 0 0;
+    text " ";
+    
+    
+      
+}
+
+    global proc toonyAdd()
+
+{
+	
+	string $name =`textFieldGrp -q -tx nname`;
+	//print $name;
+	
+	shadingNode -asUtility multiplyDivide -n ($name + "_StretchFactor_MulDIV");
+	shadingNode -asUtility plusMinusAverage -n ($name + "_minusstretchFactor_pMA");
+	setAttr ($name + "_minusstretchFactor_pMA.input1D[1]") -1;
+	connectAttr -force ($name +"_StretchFactor_MulDIV.outputX") ($name + "_minusstretchFactor_pMA.input1D[0]");
+	shadingNode -asUtility gammaCorrect -n ($name + "_stretchbias_gma"); 
+	setAttr ($name +"_stretchbias_gma.valueX") 0.333;
+	setAttr ($name +"_stretchbias_gma.valueY") 0.667;
+	shadingNode -asUtility multiplyDivide -n ($name + "_negGamma_MulDIV");
+	setAttr ($name + "_negGamma_MulDIV.input2X") -1;
+	shadingNode -asUtility plusMinusAverage -n ($name + "_substractGamma_pMA");
+	shadingNode -asUtility plusMinusAverage -n ($name + "_AddoneB_pMA");
+	setAttr ($name + "_AddoneB_pMA.input1D[1]") 1;
+	connectAttr -force ($name + "_stretchbias_gma.outValueX") ($name + "_substractGamma_pMA.input1D[1]");
+	connectAttr -force ($name + "_stretchbias_gma.outValueY") ($name + "_substractGamma_pMA.input1D[0]");
+	connectAttr -force ($name + "_negGamma_MulDIV.outputX") ($name + "_AddoneB_pMA.input1D[0]");
+	connectAttr -force ($name + "_stretchbias_gma.outValueY") ($name + "_negGamma_MulDIV.input1X");
+
+	shadingNode -asUtility multiplyDivide -n ($name + "_ProGammaFactor_MulDIV");
+	shadingNode -asUtility multiplyDivide -n ($name + "_MulBy3_MulDIV");
+	setAttr ($name +"_MulBy3_MulDIV.input2Z") 3;
+	setAttr ($name +"_MulBy3_MulDIV.input2X") 3;
+	setAttr ($name +"_MulBy3_MulDIV.input2Y") 3;
+	connectAttr -force ($name + "_substractGamma_pMA.output1D") ($name + "_ProGammaFactor_MulDIV.input1Z");
+	connectAttr -force ($name + "_stretchbias_gma.outValueX") ($name + "_ProGammaFactor_MulDIV.input1X");
+	connectAttr -force ($name + "_AddoneB_pMA.output1D") ($name + "_ProGammaFactor_MulDIV.input1Y");
+	connectAttr -force ($name + "_minusstretchFactor_pMA.output1D") ($name + "_ProGammaFactor_MulDIV.input2Z");
+	connectAttr -force ($name + "_minusstretchFactor_pMA.output1D") ($name + "_ProGammaFactor_MulDIV.input2Y");
+	connectAttr -force ($name + "_minusstretchFactor_pMA.output1D") ($name + "_ProGammaFactor_MulDIV.input2X");
+	connectAttr -force ($name + "_ProGammaFactor_MulDIV.outputZ") ($name + "_MulBy3_MulDIV.input1Z");
+	connectAttr -force ($name + "_ProGammaFactor_MulDIV.outputY") ($name + "_MulBy3_MulDIV.input1Y");
+	connectAttr -force ($name + "_ProGammaFactor_MulDIV.outputX") ($name + "_MulBy3_MulDIV.input1X");
+
+	shadingNode -asUtility multiplyDivide -n ($name + "_HeadScaleValue_MulDIV");
+	setAttr ($name +"_HeadScaleValue_MulDIV.input2X") -1;
+	shadingNode -asUtility plusMinusAverage -n ($name + "_AddoneA_pMA");
+	shadingNode -asUtility plusMinusAverage -n ($name + "_AddoneC_pMA");
+	shadingNode -asUtility plusMinusAverage -n ($name + "_AddoneD_pMA");
+	setAttr ($name + "_AddoneD_pMA.input1D[1]") 1;
+	setAttr ($name + "_AddoneC_pMA.input1D[1]") 1;
+	setAttr ($name + "_AddoneA_pMA.input1D[1]") 1;
+	connectAttr -force ($name + "_MulBy3_MulDIV.outputY") ($name + "_AddoneC_pMA.input1D[0]");
+	connectAttr -force ($name + "_MulBy3_MulDIV.outputX") ($name + "_AddoneA_pMA.input1D[0]");
+	connectAttr -force ($name + "_MulBy3_MulDIV.outputZ") ($name + "_AddoneD_pMA.input1D[0]");
+	setAttr ($name + "_substractGamma_pMA.operation") 2;
+	setAttr ($name + "_StretchFactor_MulDIV.operation") 2;
+
+
+	shadingNode -asUtility multiplyDivide -n ($name + "_CalRotValue_MulDIV");
+	setAttr ($name +"_CalRotValue_MulDIV.input2Z") -40;
+	setAttr ($name +"_CalRotValue_MulDIV.input2X") -40;
+	
+	shadingNode -asUtility multiplyDivide -n ($name + "_HeadScale_MulDIV");
+	connectAttr -force ($name + "_AddoneD_pMA.output1D") ($name + "_HeadScale_MulDIV.input1Y");
+	connectAttr -force ($name + "_AddoneA_pMA.output1D") ($name + "_HeadScale_MulDIV.input1X");
+	connectAttr -force ($name + "_AddoneC_pMA.output1D") ($name + "_HeadScale_MulDIV.input1Z");
+	connectAttr -force ($name + "_HeadScaleValue_MulDIV.outputX") ($name + "_HeadScale_MulDIV.input2Z");
+	connectAttr -force ($name + "_HeadScaleValue_MulDIV.outputX") ($name + "_HeadScale_MulDIV.input2Y");
+	connectAttr -force ($name + "_HeadScaleValue_MulDIV.outputX") ($name + "_HeadScale_MulDIV.input2X");
+	
+	
+	select -r ($name + "_control") ;
+	select -tgl ($name + "_driverend") ;
+	doCreateParentConstraintArgList 1 { "1","0","0","0","1","1","1","1","","1" };
+	float $scalevalue = `getAttr ($name + "_driverend.translateX")`;
+	setAttr ($name + "_StretchFactor_MulDIV.input2X") $scalevalue;
+	connectAttr -f ($name + "_driverend.translateX") ($name + "_StretchFactor_MulDIV.input1X");
+	connectAttr -f ($name + "_control.translateX") ($name + "_CalRotValue_MulDIV.input1X");
+	connectAttr -f ($name + "_control.translateZ") ($name + "_CalRotValue_MulDIV.input1Z");
+	addAttr -ln "stretchbias"  -at double  ($name + "_control");
+	setAttr -e-keyable true ($name + "_control.stretchbias");
+	addAttr -ln "MaintainVolume"  -at double  ($name + "_control");
+	setAttr -e-keyable true ($name + "_control.MaintainVolume");
+	setAttr ($name + "_control.stretchbias") -2;
+	setAttr ($name + "_control.MaintainVolume") 1;
+	connectAttr -f ($name + "_control.MaintainVolume") ($name + "_HeadScaleValue_MulDIV.input1X");
+	setAttr ($name + "_HeadScale_MulDIV.operation") 3;
+	connectAttr -f ($name + "_CalRotValue_MulDIV.outputZ") ($name + "_skin1.rotateY");
+	connectAttr -f ($name + "_CalRotValue_MulDIV.outputX") ($name + "_skin1.rotateZ");
+	connectAttr -f ($name + "_CalRotValue_MulDIV.outputZ") ($name + "_skin2.rotateY");
+	connectAttr -f ($name + "_CalRotValue_MulDIV.outputX") ($name + "_skin2.rotateZ");
+	connectAttr -f ($name + "_CalRotValue_MulDIV.outputZ") ($name + "_skin3.rotateY");
+	connectAttr -f ($name + "_CalRotValue_MulDIV.outputX") ($name + "_skin3.rotateZ");
+	connectAttr -f ($name + "_AddoneC_pMA.output1D") ($name + "_skin1.scaleX");
+	connectAttr -f ($name + "_AddoneD_pMA.output1D") ($name + "_skin2.scaleX");
+	connectAttr -f ($name + "_AddoneA_pMA.output1D") ($name + "_skin3.scaleX");
+	connectAttr -f ($name + "_HeadScale_MulDIV.outputX") ($name + "_skin1.scaleZ");
+	connectAttr -f ($name + "_HeadScale_MulDIV.outputX") ($name + "_skin1.scaleY");
+	connectAttr -f ($name + "_HeadScale_MulDIV.outputY") ($name + "_skin2.scaleY");
+	connectAttr -f ($name + "_HeadScale_MulDIV.outputY") ($name + "_skin2.scaleZ");
+	connectAttr -f ($name + "_HeadScale_MulDIV.outputZ") ($name + "_skin3.scaleZ");
+	connectAttr -f ($name + "_HeadScale_MulDIV.outputZ") ($name + "_skin3.scaleY");
+
+}
+
+global proc renamedriver()
+
+{	
+	string $name =`textFieldGrp -q -tx nname`;
+	select joint1;
+	rename joint1 ($name + "_driverstart");
+	select joint2;
+	rename joint2 ($name + "_driverend");
+	
+}
+
+ global proc renamedriven()
+
+{	
+	string $name =`textFieldGrp -q -tx nname`;
+	//select joint3;
+	rename joint3 ($name + "_skin1");
+	//select joint4;
+	rename joint4 ($name + "_skin2");
+	rename joint5 ($name + "_skin3");
+	rename joint6 ($name + "_skin3");
+	rename orient1 ($name + "_control");
+}
+    
+ 
+ 
+//finger Attributes
+
+
+global proc finger()
+{
+	
+    
+    columnLayout -adj true;
+   // separator;
+    text " " ;
+    text "step1: Name the finger control to add attribute ";
+    text " " ;
+    textFieldGrp  -cw2 80 200 -l "Control Name" contrlname;
+    text " " ;
+    
+ 	columnLayout -adj true;
+    button -h 50 -w 300 -label "Add Attributes" -command "fingerAdd" -bgc .5 .5 0;
+    text " ";
+    columnLayout -adj on ;
+    separator -st "in";
+    text -l "Remove Attributes" -fn "boldLabelFont" -h 20;
+    //separator -st "in";
+    rowColumnLayout -nc 2 ;
+    
+    checkBox -l "Lock Curl & Spread Attibutes" -h 20  -onc "Lon" -ofc "Loff" -v 1;
+    //checkBox -l "Hair Controls" -h 20 -onc "Hon" -ofc "Hoff" -v 0;
+    
+    setParent -u;
+	setParent..;
+    
+    
+      
+}
+
+
+global proc fingerAdd()
+
+{
+
+	string $name =`textFieldGrp -q -tx contrlname`;
+	string $contrl[] = `ls -sl`;
+	string $each;
+	
+	for($each in $contrl)
+		{
+			rename $each $name;
+		}
+		
+
+	addAttr -ln "Curl"  -at "enum" -en "---------------"   $name;
+	setAttr -e-channelBox true  ($name + ".Curl");
+
+	addAttr -min -10 -max 10 -ln "Point_Curl"  -at double   $name;
+	setAttr -e -keyable true  ($name + ".Point_Curl");
+	addAttr -ln "Point_Curl_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Curl_A");
+	addAttr -ln "Point_Curl_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Curl_B");
+	addAttr -ln "Point_Curl_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Curl_C");
+
+
+	addAttr -min -10 -max 10 -ln "Mid_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Curl");
+	addAttr -ln "Mid_Curl_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Curl_A");
+	addAttr -ln "Mid_Curl_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Curl_B");
+	addAttr -ln "Mid_Curl_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Curl_C");
+
+	
+	addAttr -min -10 -max 10 -ln "Ring_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Curl");
+	addAttr -ln "Ring_Curl_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Curl_A");
+	addAttr -ln "Ring_Curl_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Curl_B");
+	addAttr -ln "Ring_Curl_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Curl_C");
+
+	
+	addAttr -min -10 -max 10 -ln "Pinky_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Curl");
+	addAttr -ln "Pinky_Curl_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Curl_A");
+	addAttr -ln "Pinky_Curl_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Curl_B");
+	addAttr -ln "Pinky_Curl_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Curl_C");
+	
+	addAttr -min -10 -max 10 -ln "Thumb_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Curl");
+	addAttr -ln "Thumb_Curl_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Curl_A");
+	addAttr -ln "Thumb_Curl_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Curl_B");
+	addAttr -ln "Thumb_Curl_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Curl_C");
+
+
+
+	addAttr -ln "SpreadFingers"  -at "enum" -en "---------------"   $name;
+	setAttr -e -channelBox true  ($name + ".SpreadFingers");
+
+	addAttr -min -10 -max 10 -ln "Point_Spread"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Spread");
+	addAttr -ln "Point_Spread_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Spread_A");
+	addAttr -ln "Point_Spread_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Spread_B");
+	addAttr -ln "Point_Spread_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Spread_C");
+
+
+	addAttr -min -10 -max 10 -ln "Mid_Spread"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Spread");
+	addAttr -ln "Mid_Spread_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Spread_A");
+	addAttr -ln "Mid_Spread_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Spread_B");
+	addAttr -ln "Mid_Spread_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Spread_C");
+
+	
+	addAttr -min -10 -max 10 -ln "Ring_Spread"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Spread");
+	addAttr -ln "Ring_Spread_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Spread_A");
+	addAttr -ln "Ring_Spread_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Spread_B");
+	addAttr -ln "Ring_Spread_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Spread_C");
+
+	addAttr -min -10 -max 10 -ln "Pinky_Spread"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Spread");
+	addAttr -ln "Pinky_Spread_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Spread_A");
+	addAttr -ln "Pinky_Spread_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Spread_B");
+	addAttr -ln "Pinky_Spread_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Spread_C");
+	
+	addAttr -min -10 -max 10 -ln "Thumb_Spread"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Spread");
+	addAttr -ln "Thumb_Spread_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Spread_A");
+	addAttr -ln "Thumb_Spread_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Spread_B");
+	addAttr -ln "Thumb_Spread_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Spread_C");
+
+	addAttr -ln "Twist"  -at "enum" -en "---------------"   $name;
+	setAttr -e-channelBox true  ($name + ".Twist");
+
+	addAttr -min -10 -max 10 -ln "Point_Twist"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Twist");
+	addAttr -ln "Point_Twist_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Twist_A");
+	addAttr -ln "Point_Twist_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Twist_B");
+	addAttr -ln "Point_Twist_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Twist_C");
+
+	addAttr -min -10 -max 10 -ln "Mid_Twist"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Twist");
+	addAttr -ln "Mid_Twist_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Twist_A");
+	addAttr -ln "Mid_Twist_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Twist_B");
+	addAttr -ln "Mid_Twist_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Twist_C");
+
+	addAttr -min -10 -max 10 -ln "Ring_Twist"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Twist");
+	addAttr -ln "Ring_Twist_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Twist_A");
+	addAttr -ln "Ring_Twist_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Twist_B");
+	addAttr -ln "Ring_Twist_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Twist_C");
+
+	addAttr -min -10 -max 10 -ln "Pinky_Twist"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Twist");
+	addAttr -ln "Pinky_Twist_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Twist_A");
+	addAttr -ln "Pinky_Twist_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Twist_B");
+	addAttr -ln "Pinky_Twist_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Twist_C");
+	
+	addAttr -min -10 -max 10 -ln "Thumb_Twist"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Twist");
+	addAttr -ln "Thumb_Twist_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Twist_A");
+	addAttr -ln "Thumb_Twist_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Twist_B");
+	addAttr -ln "Thumb_Twist_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Twist_C");
+
+	addAttr -ln "Strecth"  -at "enum" -en "---------------"   $name;
+	setAttr -e-channelBox true  ($name + ".Strecth");
+
+	addAttr -min -10 -max 10 -ln "Point_Strecth"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Strecth");
+	addAttr -ln "Point_Strecth_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Strecth_A");
+	addAttr -ln "Point_Strecth_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Strecth_B");
+	addAttr -ln "Point_Strecth_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Point_Strecth_C");
+
+	addAttr -min -10 -max 10 -ln "Mid_Strecth"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Strecth");
+	addAttr -ln "Mid_Strecth_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Strecth_A");
+	addAttr -ln "Mid_Strecth_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Strecth_B");
+	addAttr -ln "Mid_Strecth_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_Strecth_C");
+
+	addAttr -min -10 -max 10 -ln "Ring_Strecth"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Strecth");
+	addAttr -ln "Ring_Strecth_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Strecth_A");
+	addAttr -ln "Ring_Strecth_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Strecth_B");
+	addAttr -ln "Ring_Strecth_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_Strecth_C");
+
+	addAttr -min -10 -max 10 -ln "Pinky_Strecth"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Strecth");
+	addAttr -ln "Pinky_Strecth_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Strecth_A");
+	addAttr -ln "Pinky_Strecth_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Strecth_B");
+	addAttr -ln "Pinky_Strecth_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_Strecth_C"); 
+	
+	addAttr -min -10 -max 10 -ln "Thumb_Strecth"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Strecth");
+	addAttr -ln "Thumb_Strecth_A"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Strecth_A");
+	addAttr -ln "Thumb_Strecth_B"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Strecth_B");
+	addAttr -ln "Thumb_Strecth_C"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Thumb_Strecth_C"); 
+
+}
+
+
+	global proc Lon()
+{
+   setAttr -k true -cb false".Point_Curl";
+   setAttr -k true -cb false".Mid_Curl";
+   setAttr -k true -cb false".Ring_Curl";
+   setAttr -k true -cb false".Pinky_Curl";
+   setAttr -k true -cb false".Thumb_Curl";
+   setAttr -k true -cb false".Point_Spread";
+   setAttr -k true -cb false".Mid_Spread";
+   setAttr -k true -cb false".Ring_Spread";
+   setAttr -k true -cb false".Pinky_Spread";
+   setAttr -k true -cb false".Thumb_Spread";
+   
+   
+}
+
+	global proc Loff()
+{
+   setAttr -k false -cb true".Point_Curl";
+   setAttr -k false -cb true".Mid_Curl";
+   setAttr -k false -cb true".Ring_Curl";
+   setAttr -k false -cb true".Pinky_Curl";
+   setAttr -k false -cb true".Thumb_Curl";
+   setAttr -k false -cb true".Point_Spread";
+   setAttr -k false -cb true".Mid_Spread";
+   setAttr -k false -cb true".Ring_Spread";
+   setAttr -k false -cb true".Pinky_Spread";
+   setAttr -k false -cb true".Thumb_Spread";
+   
+   
+  
+}
+
+
+//Finishing tool
+
+global proc VisControl()
+{
+	
+	columnLayout -adj true;
+	text " ";
+	text "Create the Visibility control";
+	text " ";
+	columnLayout -adj true;
+    button -h 50 -w 250 -label "Create Visibility Control" -command "VisControlAdd" -bgc .0 .3 .5;
+    text " ";
+      
+    columnLayout -adj on ;
+    separator -st "in";
+    text -l "Additional Attributes" -fn "boldLabelFont" -h 20;
+    //separator -st "in";
+    rowColumnLayout -nc 6 ;
+    
+    checkBox -l "Cloth Controls" -h 20 -onc "Con" -ofc "Coff" -v 0;
+    checkBox -l "Hair Controls" -h 20 -onc "Hon" -ofc "Hoff" -v 0;
+    
+    setParent -u;
+	setParent..;
+	
+	columnLayout -adj on ;
+    separator -st "in";
+    text -l "Remove Attributes" -fn "boldLabelFont" -h 20;
+    //separator -st "in";
+    rowColumnLayout -nc 6 ;
+    
+    checkBox -l "RigLevel" -h 20  -ofc "Roff" -v 1;
+    //checkBox -l "Hair Controls" -h 20 -onc "Hon" -ofc "Hoff" -v 0;
+    
+    setParent -u;
+	setParent..;
+	
+	text " ";
+	columnLayout -adj true;
+	separator -st "in";
+	text  -l " Connect Attributes  " -fn "boldLabelFont" -h 20;
+	text " " ;
+	rowColumnLayout -nc 2 ;
+    button -h 50 -w 150 -label "MeshRes to model" -command "ConMeshRes" -bgc .1 .8 0;
+    button -h 50 -w 150 -label "MeshDisplay to model" -command "ConMeshDis" -bgc .2 .7 0;
+    button -h 50 -w 150 -label "BodyControls to Curve" -command "ConBC" -bgc .3 .6 0;
+    button -h 50 -w 150 -label "SecondaryControls to Curve" -command "ConSC" -bgc .4 .5 0;
+    button -h 50 -w 150 -label "ToonyControls to Curve" -command "ConTC" -bgc .5 .4 0;
+    button -h 50 -w 150 -label "FacialControls to Curve" -command "ConFC" -bgc .6 .3 0;
+    button -h 50 -w 150 -label "ClothControls to Curve" -command "ConCC" -bgc .7 .2 0;
+	button -h 50 -w 150 -label "HairControls to Curve" -command "ConHC" -bgc .8 .1 0;
+
+
+    text " ";
+	
+	 
+   
+}
+    
+    
+global proc VisControlAdd()
+{	
+	
+	string $contrl[] = `textCurves  -ch 0 -f "Times New Roman|h-13|w400|c0" -t "V"`;
+	CenterPivot;
+	rename  Text_V_1|Char_V_1|curve1 "Visibility";
+	parent -world Visibility ;
+	delete Text_V_1;
+	
+	setAttr -lock true -keyable false -channelBox false "Visibility.tx";
+	setAttr -lock true -keyable false -channelBox false "Visibility.ty";
+	setAttr -lock true -keyable false -channelBox false "Visibility.tz";
+	setAttr -lock true -keyable false -channelBox false "Visibility.rx";
+	setAttr -lock true -keyable false -channelBox false "Visibility.ry";
+	setAttr -lock true -keyable false -channelBox false "Visibility.rz";
+	setAttr -lock true -keyable false -channelBox false "Visibility.sx";
+	setAttr -lock true -keyable false -channelBox false "Visibility.sy";
+	setAttr -lock true -keyable false -channelBox false "Visibility.sz";
+	setAttr -lock true -keyable false -channelBox false "Visibility.v";
+	
+	
+	addAttr -ln "MeshSetting"  -at "enum" -en "***************"  Visibility;
+	setAttr -e -channelBox true Visibility.MeshSetting;
+	
+	addAttr -ln "MeshRes"  -at "enum" -en "LOW:HIGH:"  Visibility;
+	setAttr -e -channelBox true Visibility.MeshRes;
+	addAttr -ln "MeshDisplay"  -at "enum" -en "Normal:Template:Reference"  Visibility;
+	setAttr -e  -channelBox true Visibility.MeshDisplay;
+	
+	addAttr -ln "RigLevel"  -at "enum" -en "***************"  Visibility;
+	setAttr -e -channelBox true Visibility.RigLevel;
+	
+	addAttr -ln "Riglevel"  -at "enum" -en "0:1:"  Visibility;
+	setAttr -e -channelBox true Visibility.Riglevel;
+	
+	addAttr -ln "ControlSetting"  -at "enum" -en "***************"  Visibility;
+	setAttr -e -channelBox true Visibility.ControlSetting;
+	
+	addAttr -ln "BodyControls"  -at "enum" -en "OFF:ON:"  Visibility;
+	setAttr -e -channelBox true Visibility.BodyControls;
+	addAttr -ln "SecondaryControls"  -at "enum" -en "OFF:ON:"  Visibility;
+	setAttr -e -channelBox true Visibility.SecondaryControls;
+	addAttr -ln "ToonyControls"  -at "enum" -en "OFF:ON:"  Visibility;
+	setAttr -e  -channelBox true Visibility.ToonyControls;
+	addAttr -ln "FacialControls"  -at "enum" -en "OFF:ON:"  Visibility;
+	setAttr -e -channelBox true Visibility.FacialControls;
+	
+}	
+	
+		
+	
+	global proc Con()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+     	addAttr -ln "ClothControls"  -at "enum" -en "OFF:ON:"  Visibility;
+		setAttr -e  -channelBox true Visibility.ClothControls;
+
+    }
+}
+
+	global proc Hon()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+     	addAttr -ln "HairControls"  -at "enum" -en "OFF:ON:"  Visibility;
+		setAttr -e -channelBox true Visibility.HairControls;
+
+    }
+}
+
+	global proc Coff()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+     	catch (`deleteAttr -attribute "ClothControls" "Visibility"`);
+
+    }
+}
+
+	global proc Hoff()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+     	catch (`deleteAttr -attribute "HairControls" "Visibility"`);
+
+    }
+}
+
+	global proc Roff()
+{
+    string $sel[] = `ls -sl`;
+    for ($selection in $sel)
+    {
+     	catch (`deleteAttr -attribute "RigLevel" "Visibility"`);
+		catch (`deleteAttr -attribute "Riglevel" "Visibility"`);
+
+    }
+}
+
+
+global proc ConMeshDis()
+
+{
+	string $selection[]= `ls -sl -dag -lf`;
+
+	for($each in $selection)
+		{
+		
+			setAttr ($each + ".overrideEnabled" )1;
+			connectAttr -f Visibility.MeshDisplay ($each + ".overrideDisplayType");
+			
+
+		}
+}
+
+
+global proc ConMeshRes()
+
+{
+	string $selection[]= `ls -sl`;
+
+	for($each in $selection)
+		{
+		
+			
+			connectAttr -f Visibility.MeshRes ($each + ".divisions");
+			
+
+		}
+}
+
+
+global proc ConBC()
+
+{
+	string $selection[]= `ls -sl -dag -lf`;
+
+	for($each in $selection)
+		{
+		
+			
+			connectAttr -f Visibility.BodyControls ($each + ".visibility");
+			
+
+		}
+}
+
+global proc ConSC()
+
+{
+	string $selection[]= `ls -sl -dag -lf`;
+
+	for($each in $selection)
+		{
+		
+			
+			connectAttr -f Visibility.SecondaryControls ($each + ".visibility");
+			
+
+		}
+}
+
+global proc ConTC()
+
+{
+	string $selection[]= `ls -sl -dag -lf`;
+
+	for($each in $selection)
+		{
+		
+			
+			connectAttr -f Visibility.ToonyControls ($each + ".visibility");
+			
+
+		}
+}
+
+global proc ConFC()
+
+{
+	string $selection[]= `ls -sl -dag -lf`;
+
+	for($each in $selection)
+		{
+		
+			
+			connectAttr -f Visibility.FacialControls ($each + ".visibility");
+			
+
+		}
+}
+
+global proc ConCC()
+
+{
+	string $selection[]= `ls -sl -dag -lf`;
+
+	for($each in $selection)
+		{
+		
+			
+			connectAttr -f Visibility.ClothControls ($each + ".visibility");
+			
+
+		}
+}
+
+global proc ConHC()
+
+{
+	string $selection[]= `ls -sl -dag -lf`;
+
+	for($each in $selection)
+		{
+		
+			
+			connectAttr -f Visibility.HairControls ($each + ".visibility");
+			
+
+		}
+}
+
+
+studio56RigTools;

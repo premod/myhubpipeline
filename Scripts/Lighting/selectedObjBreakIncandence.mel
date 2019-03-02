@@ -1,0 +1,30 @@
+global proc selectedObjBreakIncandence()
+{
+	string $sel[] = `ls -sl`;
+	hyperShade -smn;
+	string $selShad[] = `ls -sl`;
+	for($each in $selShad)
+    	{
+		string $conns[] = `listConnections -p 1 -s 1 -d 0 $each`;
+    		for ($conn in $conns)
+       	{
+       		string $buffer02[];
+        		tokenize($conn, ".", $buffer02);
+        		string $nodeName = $buffer02[0];
+        		string $nodeType[] = `nodeType -i $nodeName`;
+        		string $theDestination[] = `connectionInfo -destinationFromSource $conn`;
+			for($a in $theDestination)
+			{
+				string $incan[];
+   				tokenize($a, ".", $incan);
+				if($incan[1] == "incandescence")
+				{
+					disconnectAttr $conn $theDestination[0];
+				}
+			}
+		}
+		
+	}
+}
+
+selectedObjBreakIncandence;

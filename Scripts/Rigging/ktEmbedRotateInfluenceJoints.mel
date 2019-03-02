@@ -1,0 +1,216 @@
+global proc string ktGetCurentCam()
+{
+	string $curPanel = `getPanel -underPointer`;
+
+	if (`size $curPanel`==0);
+	string $curPanel = `getPanel -withFocus`;
+
+	string $camera = `modelEditor -q -camera $curPanel`;
+
+	return $camera;
+}
+
+global proc act1(string $afsg,string $dir)
+{
+global string $flGX,$flGY,$flGZ;
+  $selJo=`textScrollList -q -si skinClusterInflList`;
+
+  global string $AJF;
+  $opt=`checkBox -q -v $AJF`;
+  if ($opt)
+  {
+  float $AVF[]=`xform -q -ws -t $selJo`;
+  string $cam=`ktGetCurentCam`;
+  viewLookAt -pos ($AVF[0]) ($AVF[1]) ($AVF[2]) $cam;
+  }
+
+  $A=`floatSliderGrp -q -value $afsg`;
+
+  if ($dir=="x")
+  rotate $A 0 0 $selJo;
+  else
+  if ($dir=="y")
+  rotate 0 $A 0 $selJo;
+  else
+  if ($dir=="z")
+  rotate 0 0 $A $selJo;
+
+  print $A;
+};
+
+global proc ktResetfloatSliderGrp(string $xyz,string $dir)
+{
+  floatSliderGrp -e -value 0 $xyz;
+  act1($xyz,$dir);
+}
+
+
+global proc SafePlug_ktRotateInfluenceJoints(int $JNo)
+{
+  if (`currentCtx`=="artAttrSkinContext")
+  {
+	//scriptJob -kill $JNo;
+	//print ($JNo+ ":killed");
+	ktEmbedRotateInfluenceJoints();
+  }
+}
+
+
+//----------------------this section is about focusing max infulencing joint of vertex
+global proc int getMaxIndexofArray(float $Arr[])
+{
+$res=0;
+$szArr=size($Arr);
+	for ($i=0;$i<$szArr;$i++)
+	{
+	  if ($Arr[$res]<$Arr[$i])$res=$i;
+	}
+	return $res;
+}
+
+global proc string ktGetMaxInfluencingJoint(string $_vtx)
+{
+  $ainfJos=`skinPercent -query -transform skinCluster1 $_vtx`;//pCube1.vtx[6]`;
+  $infJoVals=`skinPercent  -query -value skinCluster1  $_vtx`;//pCube1.vtx[6]`;
+  $idx=getMaxIndexofArray($infJoVals);
+  return $ainfJos[$idx];
+}
+
+global proc string[] ktGetAllInfluencingJoints(string $_vtx)
+{
+  $ainfJos=`skinPercent -ib 0.001 -query -transform skinCluster1 $_vtx`;//pCube1.vtx[6]`;
+  return $ainfJos;
+}
+
+global proc string ktGetCurentCam()
+{
+	string $curPanel = `getPanel -underPointer`;
+
+	if (`size $curPanel`==0);
+	string $curPanel = `getPanel -withFocus`;
+
+	string $camera = `modelEditor -q -camera $curPanel`;
+
+	return $camera;
+}
+
+global proc ktfocusMaxInfuencingJoint()
+{
+$A=`ls -st -selection`;
+	if ($A[1]=="float3")
+	{
+		$A=`ls -selection`;
+		$maxJo=ktGetMaxInfluencingJoint($A[0]);
+		float $AVF[]=`xform -q -ws -t $maxJo`;
+		string $cam=`ktGetCurentCam`;
+		viewLookAt -pos ($AVF[0]) ($AVF[1]) ($AVF[2]) $cam;
+		setSmoothSkinInfluence $maxJo;
+	}
+}
+
+global proc ktFocusJointbyScrollList(string $ASL)
+{
+   $selItem=`textScrollList -q -selectItem $ASL`;
+	float $AVF[]=`xform -q -ws -t $selItem[0]`;
+	string $cam=`ktGetCurentCam`;
+	viewLookAt -pos ($AVF[0]) ($AVF[1]) ($AVF[2]) $cam;
+	setSmoothSkinInfluence $selItem[0];
+}
+
+global proc ktOpenInfuencingJointList()
+{
+	$A=`ls -st -selection`;
+
+	if ($A[1]=="float3")
+	{   global string $tsl;
+		$A=`ls -selection`;
+		$JoLst=ktGetAllInfluencingJoints($A[0]);
+	    $win=`window -title "Vtx Influencer Joints"`;
+	    $fl=`formLayout`;
+	    string $tsl=`textScrollList`;
+
+		formLayout -edit
+		-attachForm     $tsl     "top"   1
+		-attachForm     $tsl    "left"   1
+		-attachForm     $tsl    "bottom"   1
+		-attachForm    $tsl    "right"   1 $fl;
+
+		for ($elem in $JoLst)
+		textScrollList -e -append $elem $tsl;
+
+		textScrollList -e -sc "ktFocusJointbyScrollList($tsl)" $tsl;
+
+		showWindow $win;
+
+
+		//float $AVF[]=`xform -q -ws -t $maxJo`;
+		//string $cam=`ktGetCurentCam`;
+		//viewLookAt -pos ($AVF[0]) ($AVF[1]) ($AVF[2]) $cam;
+		//setSmoothSkinInfluence $maxJo;
+
+	}
+
+
+}
+
+//------------------------------------------------------------------------------------
+$JNo=`scriptJob -event "ToolChanged" "SafePlug_ktRotateInfluenceJoints($JNo)"`;
+
+global proc ktEmbedRotateInfluenceJoints()
+{
+	if (`frameLayout -exists artSkinOperationFrame`)
+	{
+		global string $flGX,$flGY,$flGZ;
+		$cl=`frameLayout -q -ca artSkinOperationFrame`;
+
+		string $members[]=`columnLayout -q -childArray $cl`;
+        int $szMembers=`size($members)`;
+
+		if ($szMembers<4)
+		{
+			setParent $cl;
+			rowLayout -numberOfColumns 3 -adjustableColumn 2;
+			text -label "RotateX";
+			$flGX=`floatSliderGrp -min -90 -max 90 -value 0 -dc "act1($flGX,\"x\")"`;
+			button -label "0" -command "ktResetfloatSliderGrp($flGX,\"x\")" -annotation "reset Slider X";
+			setParent..;
+			rowLayout -numberOfColumns 3 -adjustableColumn 2;
+			text -label "RotateY";
+			$flGY=`floatSliderGrp -min -90 -max 90 -value 0 -dc "act1($flGY,\"y\")"`;
+			button -label "0" -command "ktResetfloatSliderGrp($flGY,\"y\")" -annotation "reset Slider Y";
+			setParent..;
+			rowLayout -numberOfColumns 3 -adjustableColumn 2;
+			text -label "RotateZ";
+			$flGZ=`floatSliderGrp -min -90 -max 90 -value 0 -dc "act1($flGZ,\"z\")"`;
+			button -label "0" -command "ktResetfloatSliderGrp($flGZ,\"z\")" -annotation "reset Slider Z";
+
+			setParent..;
+			rowLayout -numberOfColumns 1 -adjustableColumn 1 -columnAttach 1 "both" 5;
+			button -label "Goto Bind Pose" -command "gotoBindPose" -annotation "goto Bind Pose";
+
+			setParent..;
+			rowLayout -numberOfColumns 3
+			-adjustableColumn 3
+			-columnAlign1 "right"
+			-columnAttach 1 "both" 1
+			-columnAttach 2 "both" 1
+			-columnAttach 3 "both" 1;
+
+			button -label "Max Vtx Influencer" -command "ktfocusMaxInfuencingJoint"
+			-annotation "Select a vertice>open paint skin weights tool>press here to dive vertice's max influenced joint";
+
+			button -label "Vtx Influencer Joints" -command "ktOpenInfuencingJointList"
+			-annotation "Select a vertice>open paint skin weights tool>press here to navigate all vtx influencer joints";
+
+			global string $AJF;
+			$AJF=`checkBox -value 1 -label "joint focus" -ann "automatic focuses to painting weight joint"`;
+
+
+			//rowLayout -numberOfColumns 1 -adjustableColumn 1 -columnAttach 1 "both" 0;
+			//button -label "Look At Joint" -command "ktLookatJoint()" -rs 1 -annotation "Look at Current influencing joint";
+
+        }
+	}
+}
+
+ktEmbedRotateInfluenceJoints;

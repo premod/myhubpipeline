@@ -1,0 +1,59 @@
+
+global proc usersetup()
+{
+    	global string $gMainWindow;
+	setParent $gMainWindow;
+	menu -label "Studio56 Modeling" -parent $gMainWindow -tearOff on;
+	menuItem -label "Auto Save" -c "NPautoSaveOptions";
+	menuItem -label "Optimization and Save" -c "fileOptimisation";
+	menuItem -label "Delete Unused Layers" -c "deleteEmptyLayers";
+	//menuItem -label "Useful Tools" -c "xtools";
+	menuItem -divider true;
+	menuItem -label "Asset Manager(Dontuse Now)" -c "assetMan";
+	menuItem -divider true;
+	menuItem -label "Comments" -c "comments";
+}
+
+usersetup;
+
+/*headsUpDisplay 
+               -section          9
+               -block            4
+               -ao               true
+               -blockSize        "small"
+		   -label            "Date :"
+               -labelFontSize    "small"
+               -c                "Sandate"
+		   -atr
+               Sandate;
+
+
+
+global proc string Sandate()
+{
+	string $sanDate = eval("system(\"date /t\")");
+ 	return $sanDate;
+}*/
+
+welcomeWindow();
+
+//optionVar -sv "workingUnitTime" "pal" 
+//-sv workingUnitTimeDefault pal;
+optionVar -sv workingUnitTimeDefault pal;
+	currentUnit -t pal;
+
+playbackOptions -ps 1;
+
+
+optionVar -iv "isIncrementalSaveEnabled" 1;
+optionVar -iv incrementalSaveMaxBackups 10;
+
+
+
+
+
+
+
+
+
+

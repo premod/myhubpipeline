@@ -1,0 +1,1393 @@
+//-------------------------------------------
+//given a driver.attr and driven.attr will find a shared animCurve
+//
+//for internal use when determining which animCurve node is driving a given attribute
+//INPUTS:	string $driver		= name of the driver object
+//			string $driverAttr 	= name of the driver attribute
+//			string $driven		= name of the driven object
+//			string $drivenAttr	= name of the driven attribute
+//OUTPUTS:	string				= the name of the animCurve node shared by these two objects
+//-------------------------------------------
+
+global proc string findAnimCurve(string $driver, string $driverAttr, string $driven, string $drivenAttr)
+{
+	//what is the first incoming connection to this attribute?
+	string $firstDriver = `connectionInfo -sfd ($driven + "." + $drivenAttr)`;
+	//sort responses by incoming connection type
+	if (`nodeType $firstDriver` == "unitConversion")
+	{
+		//if it's a unit conversion, search for the blendNode beyond that unit conversion
+		string $temp[];
+		tokenize $firstDriver "." $temp;
+		string $secondConn = `connectionInfo -sfd ($temp[0] + ".input")`;
+	
+		string $blendNode[];
+		tokenize $secondConn "." $blendNode;
+	
+		//then sort through all the animCurves connected to this driver.attr
+		string $animCurves[] = `connectionInfo -dfs ($driver + "." + $driverAttr)`;
+		int $a;
+		while ($a < `size $animCurves`)
+		{
+			//for every animCurve connected to this driver.attr, find out what the next node is and then the next node beyond that.  
+			//two nodes deep should get you back to the shared blendNode (1st connection = unitConversion, 2nd connection = blendNode)
+			string $animCurvesToken[];
+			tokenize $animCurves[$a] "." $animCurvesToken;
+			string $afterAnimCurves[] = `connectionInfo -dfs ($animCurvesToken[0] + ".output")`;
+	
+			string $afterAnimCurvesToken[];
+			tokenize $afterAnimCurves[0] "." $afterAnimCurvesToken;
+			string $nextConnection[] = `listConnections -s false -scn true $afterAnimCurvesToken[0]`;
+	
+			//compare the original blendNode you found to this new third connection.  if they match, return them.  
+			if ($nextConnection[0] == $blendNode[0])
+			{
+				if (	(`nodeType $animCurvesToken[0]` == "animCurveUL") || (`nodeType $animCurvesToken[0]` == "animCurveUA") || 
+						(`nodeType $animCurvesToken[0]` == "animCurveUU") || (`nodeType $animCurvesToken[0]` == "animCurveUT"))
+					return $animCurvesToken[0];
+				else if ((`nodeType $afterAnimCurvesToken[0]` == "animCurveUL") || (`nodeType $afterAnimCurvesToken[0]` == "animCurveUA") || 
+						(`nodeType $afterAnimCurvesToken[0]` == "animCurveUU") || (`nodeType $afterAnimCurvesToken[0]` == "animCurveUT"))
+					return $afterAnimCurvesToken[0];
+			}
+	
+			$a++;
+		}
+		return "";
+	}
+	else if (`nodeType $firstDriver` == "blendWeighted")
+	{
+		string $blendNode[];
+		tokenize $firstDriver "." $blendNode;
+		string $animCurves[] = `connectionInfo -dfs ($driver + "." + $driverAttr)`;
+	
+		int $a;
+		while ($a < `size $animCurves`)
+		{
+			string $animCurvesToken[];
+			tokenize $animCurves[$a] "." $animCurvesToken;
+			string $afterAnimCurves[] = `connectionInfo -dfs ($animCurvesToken[0] + ".output")`;
+	
+			string $afterAnimCurvesToken[];
+			tokenize $afterAnimCurves[0] "." $afterAnimCurvesToken;
+	
+			if ($afterAnimCurvesToken[0] == $blendNode[0])
+			{
+				return $animCurvesToken[0];
+			}
+	
+			$a++;
+		}
+		return "";
+	}
+	else if ((`nodeType $firstDriver` == "animCurveUL") || (`nodeType $firstDriver` == "animCurveUA") || (`nodeType $firstDriver` == "animCurveUU") || (`nodeType $firstDriver` == "animCurveUT"))
+	{
+		string $animCurvesToken[];
+		tokenize $firstDriver "." $animCurvesToken;
+		
+		return $animCurvesToken[0];
+	}
+	else
+	{
+		warning ("Node connected to " + $driven + $drivenAttr + " is not of an expected type.\n");
+	}
+}
+
+//-------------------------------------------
+//given a driver.attr will find the objects driven by that attribute
+//
+//for internal use when determining which animCurve node is driving a given attribute
+//INPUTS:	string $driver		= name of the driver object
+//			string $driverAttr 	= name of the driver attribute
+//OUTPUTS:	string				= the name of the driven object(s)
+//-------------------------------------------
+/*
+global proc string[] findDriven(string $driver, string $driverAttr)
+{
+	string $curves[], $objects[], $objects2[], $blends[];
+	
+	
+	$curves = `listConnections -s false -d true -type animCurveUL ($driver + "." + $driverAttr)`;
+	return $curves;
+	if (size($curves) > 0) {
+		$objects = `listConnections -s false -d true -type transform $curves`;
+		$blends = `listConnections -s false -d true -type blendWeighted $curves`;
+		
+		if (size($blends) > 0) {
+			$objects2 = `listConnections -s false -d true -type transform $blends`;
+			$objects = stringArrayCatenate($objects, $objects2);
+		}
+		
+		$objects = stringArrayRemoveDuplicates($objects);
+		return $objects;
+	} else
+		return {};
+}
+*/
+
+
+
+
+//-------------------------------------------
+//n clusters from n cvs, ungrouped
+//
+//select splines, then execute:
+//INPUTS:	string $splineList[]		= a list of splines to be clusterized
+//			int $relative				= 1 or 0:  relative clusters or not
+//OUTPUTS:	string $clusterList[]		= a list of cluster names created by the proc
+//-------------------------------------------
+
+global proc string[] clusterize(string $splineList[], int $relative)
+{
+	string $clusterList[1];
+	
+	for ($spline in $splineList)
+	{	
+		int $CVs = `getAttr ($spline + ".degree")` + `getAttr ($spline + ".spans")`;		//number of cvs in spline
+		
+		hilite $spline;																		//hilite mode may be unnecessary, but I haven't tested it yet
+		
+		int $ii = 0;	
+		while($ii < $CVs)
+		{
+			//creates the string representing the object.cv to be selected
+			string $splineCVs = $spline + ".cv[" + $ii + "]";
+	
+			select - r $splineCVs;
+			if ($relative == 1)
+				newCluster "-relative -envelope 1";
+			else
+				newCluster "-envelope 1";
+	
+			//renames the cluster to the string representing its creation order
+			string $clusterName = $spline + "_C" + ($ii + 1);
+			rename $clusterName;
+			
+			//add cluster name to the return array
+			$clusterList[`size($clusterList)`] = $clusterName;
+	
+			$ii++;
+		}
+	}
+	
+	return $clusterList;
+}
+
+
+//-------------------------------------------
+//a proper geometry + normal constraint applicator
+//
+//select driver, driven, then execute:
+//INPUTS:	string $driver				= the surface driving this connection
+//			string $driven				= the object to be constrained
+//OUTPUTS:	string $constraintList[]	= the names of the two constraints
+//-------------------------------------------
+
+global proc string[] geoNorm(string $driver, string $driven)
+{
+	string $constraintList[2];
+		
+	string $tempArray[] = `geometryConstraint -weight 1 $driver $driven`;
+	$constraintList[0] = $tempArray[0];
+	string $tempArray[] = `normalConstraint -aimVector 0 0 1 -wut "objectrotation" -worldUpObject $driver $driver $driven`;
+	$constraintList[1] = $tempArray[0];
+	
+	return $constraintList;
+}
+
+
+//-------------------------------------------
+//create a driven 3 point arc
+//
+//pass points 1, 2, and 3, returns name of new threePointArc and curve
+//INPUTS:	string $locator[] = list of three locators to make the arc from
+//OUTPUTS:	string $arcInfo[] = the names of both the threePointArc node and the curve
+//-------------------------------------------
+
+global proc string[] buildArc(string $locator[])
+{
+	string $arcInfo[2];
+	$arcInfo[0] = `createNode makeThreePointCircularArc`;		//new arc name;
+	createNode nurbsCurve;										//new curveShape
+	string $tempArray[] = `listTransforms -selection`;			//find the transform node
+	$arcInfo[1] = $tempArray[0];								//name of the curve
+	
+	connectAttr ($arcInfo[0] + ".oc") ($arcInfo[1] + ".cr");	//connect curve to arc
+
+	int $i = 0;
+	while ($i < 3)												//connect locator WPs to the arc
+	{
+		connectAttr ($locator[$i] + ".wp") ($arcInfo[0] + ".pt" + ($i + 1));
+	
+		$i++;
+	}
+	
+	return $arcInfo;
+}
+
+
+//-------------------------------------------
+//make a buffer for any object(s) in place under the same parent
+//
+//pass a list of objects
+//INPUTS:	string $targets[]		= a list of objects to buffer
+//			string $include			= "ts" - "translate, scale", "rt" - "rotate, translate", etc.
+//OUTPUTS:	string $bufferList[] 	= a list of new buffer names
+//-------------------------------------------
+
+global proc string[] buffer(string $targets[], string $include)
+{
+	string $bufferList[1];
+	
+	for ($target in $targets)
+	{
+		//create a buffer
+		CreateEmptyGroup;
+		string $buffer = `rename ($target + "_buffer")`;
+		parent $buffer `listRelatives -p $target`;
+		
+		//add buffer name to the return array
+		$bufferList[`size($bufferList)`] = $buffer;
+	
+		//translate/rotate/scale into position
+		if (`gmatch $include  "*t*"`)
+		{
+			string $tempArray[] = `pointConstraint $target $buffer`;
+			delete $tempArray[0];
+		}
+		if (`gmatch $include  "*r*"`)
+		{
+			string $tempArray[] = `orientConstraint $target $buffer`;
+			delete $tempArray[0];
+		}
+		if (`gmatch $include  "*s*"`)
+		{
+			string $tempArray[] = `scaleConstraint $target $buffer`;
+			delete $tempArray[0];
+		}
+		
+		//reparent $target
+		parent $target $buffer;
+	}
+	
+	return $bufferList;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//proc:		JM_mirror
+//author:	Jedidiah Mitchell
+//contact:	www.jedmitchell.com
+//editor:	
+//contact:	
+//date:		03/20/07
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//use:		mirrors a group of objects along a given naming prefix, determining driver status by 
+//			first prefix passed.  returns a list of objects successfully mirrored.  
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//inputs:	string $axis =			axis along which to mirror ("x", "y", or "z")
+//			string $objectList[] =	objects to cull mirrorable list from
+//			string $prefixA =		first object prefix used (ex: "L_", "left_", "upper", etc.)
+//			string $prefixB =		second object prefix (ex: "R_", "right_", "lower", etc.)
+//			int $extras =			0 or 1.  either mirror non-transform node attributes or don't
+//
+//outputs:	string $mirrored[] =	list of objects successfully mirrored (recieving end) or "" if 
+//									no objects were successfully mirrored
+//
+//help:		to create a set of mirrored objects stored in an array for later easy un-mirroring, run 
+//			string $unmirrorList[] = JM_mirror("x", $controlList, "L_", "R_", 0);
+//			this will mirror the group of objects in $controlList from left to right, skipping user 
+//			added attributes.
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc string[] JM_mirror(string $axis, string $objectList[], string $prefixA, string $prefixB, int $extras)
+{
+	string $mirroredList[];			//list of successfully mirrored objects to return	
+	if ($axis == "x" || $axis == "y" || $axis == "z") {	//check to see if the axis of mirroring is valid
+		for ($object in $objectList) {		//check to see if the objects exists, follows the $prefixA naming convention, and has a mirrorable partner
+			if (startsWith($object, $prefixA) && objExists($object) && objExists($prefixB + endString($object, (size($object) - size($prefixA)))))
+			{
+				//generate opposite object name
+				string $oppObject = $prefixB + endString($object, (size($object) - size($prefixA)));
+				$mirroredList[size($mirroredList)] = $oppObject;
+				
+				
+				//the on-axis translate / off-axis rotate channels need a mirroring node
+				string $reverse = ($oppObject + "_mirrorPMA");
+				if (objExists($reverse) || objExists($object + "_mirrorPMA"))	//already mirrored
+					continue;		//don't double mirror any object or object pair
+				else
+					shadingNode -n $reverse  -au plusMinusAverage;
+				setAttr ($reverse + ".op") 2;
+				setAttr ($reverse + ".i3[0].i3x") 0;
+				setAttr ($reverse + ".i3[0].i3y") 0;
+				setAttr ($reverse + ".i3[0].i3z") 0;
+				
+				
+				//stores all the driver/driven connection info for later connection
+					//derive the 9 regular numerical transform attrs
+				string $objAttrList[9];
+				string $oppAttrList[9] = {($oppObject + ".tx"), ($oppObject + ".ty"), ($oppObject + ".tz"), ($oppObject + ".rx"), ($oppObject + ".ry"), ($oppObject + ".rz"), ($oppObject + ".sx"), ($oppObject + ".sy"), ($oppObject + ".sz")};
+				
+					//gather potential extra attrs on each object of the pair
+				string $tempArray[] = `listAttr -c -u -s -k $object`;
+				string $objExtraList[]; clear $objExtraList;
+				
+					//weed out attrs which have no connectable corrollary on the oppObject
+				for ($temp in $tempArray) {
+					if (`objExists ($oppObject + "." + $temp)`) {
+						if (!`getAttr -l ($oppObject + "." + $temp)` && !`connectionInfo -id ($oppObject + "." + $temp)`) {
+							if ($temp != "translateX" && $temp != "translateY" && $temp != "translateZ" && $temp != "rotateX" && $temp != "rotateY" && $temp != "rotateZ" && $temp != "scaleX" && $temp != "scaleY" && $temp != "scaleZ")
+								$objExtraList[size($objAttrList)] = $temp;
+						}
+					}
+				}
+				
+					//empty $objExtraList if $extras == 0
+				if ($extras == 0)
+					clear $objExtraList;
+				
+				
+				//derive the driver side translate, rotate, and scale channel names for this connection
+				switch ($axis)
+				{
+					case "x":
+						//connect the opposite node
+						connectAttr ($object + ".tx") ($reverse + ".i3[1].i3x");
+						connectAttr ($object + ".ry") ($reverse + ".i3[1].i3y");
+						connectAttr ($object + ".rz") ($reverse + ".i3[1].i3z");
+						
+						//fill out the $objAttrList array
+						$objAttrList = {($reverse + ".o3x"), ($object + ".ty"), ($object + ".tz"), ($object + ".rx"), ($reverse + ".o3y"), ($reverse + ".o3z"), ($object + ".sx"), ($object + ".sy"), ($object + ".sz")};
+						break;
+					case "y":
+						//connect the opposite node
+						connectAttr ($object + ".ty") ($reverse + ".i3[1].i3y");
+						connectAttr ($object + ".rx") ($reverse + ".i3[1].i3x");
+						connectAttr ($object + ".rz") ($reverse + ".i3[1].i3z");
+						
+						//fill out the $objAttrList array
+						$objAttrList = {($object + ".tx"), ($reverse + ".o3y"), ($object + ".tz"), ($reverse + ".o3x"), ($object + ".ry"), ($reverse + ".o3z"), ($object + ".sx"), ($object + ".sy"), ($object + ".sz")};
+						break;
+					case "z":
+						//connect the opposite node
+						connectAttr ($object + ".tz") ($reverse + ".i3[1].i3z");
+						connectAttr ($object + ".rx") ($reverse + ".i3[1].i3x");
+						connectAttr ($object + ".ry") ($reverse + ".i3[1].i3y");
+						
+						//fill out the $objAttrList array
+						$objAttrList = {($object + ".tx"), ($object + ".ty"), ($reverse + ".o3z"), ($reverse + ".o3x"), ($reverse + ".o3y"), ($object + ".rz"), ($object + ".sx"), ($object + ".sy"), ($object + ".sz")};
+						break;
+				}
+				
+				
+				//now run through the connections, checking to see if any have existing incoming connections.  skip those.  
+				for ($i = 0; $i < `size($objAttrList)`; $i++) {
+					//check to see if the driven attribute has a connection or is locked
+					if (!`connectionInfo -id $oppAttrList[$i]` && !`getAttr -l $oppAttrList[$i]`)
+						connectAttr $objAttrList[$i] $oppAttrList[$i];
+				}
+				
+				
+				//run through extra attrs, if there are any, doing the same as above (though applicable attrs hae already been tested)
+				if ($objExtraList[0] != "") {
+					for ($objExtra in $objExtraList)
+						connectAttr ($object + "." + $objExtra) ($oppObject + "." + $objExtra);	
+				}
+				
+				// Set mirrored attribute to true so object will display as a different color
+				$tempArray = `listRelatives -shapes $oppObject`;
+				if (attributeExists("mirrored", $tempArray[0]))
+					setAttr ($tempArray[0] + ".mirrored") 1;
+			}
+		}
+		if (size($mirroredList) == 0)
+			warning "No objects were mirrored.";
+		
+	} else { //if the axis of mirroring isn't valid, throw a warning
+		warning "JM_mirror accepts only axes of \"x\", \"y\", or \"z\" are acceptable.\n";
+	}
+	return $mirroredList;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//proc:		JM_unMirror
+//author:	Jedidiah Mitchell
+//contact:	www.jedmitchell.com
+//editor:	
+//contact:	
+//date:		03/20/07
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//use:		disconnects a pair of objects which have been previously mirrored by the JM_mirror proc.
+//			checks both sides of any pair found using the prefix arguments.
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//inputs:	string $objectList[] =	objects to create pairs from and check connections against
+//			string $prefixA =		first object prefix used (ex: "L_", "left_", "upper", etc.)
+//			string $prefixB =		second object prefix (ex: "R_", "right_", "lower", etc.)
+//
+//outputs:	
+//
+//help:		to unMirror objects pass any portion of their set (driver or driven) to JM_unMirror, 
+//			including prefixes to look for:  JM_unMirror($mirroredSet, "L_", "R_")
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc JM_unMirror(string $objectList[], string $prefixA, string $prefixB)
+{
+	//the numerical attrs...
+	string $objAttrList[9] = {".tx", ".ty", ".tz", ".rx", ".ry", ".rz", ".sx", ".sy", ".sz"};
+	int $didAnything = 0;
+	
+	for ($object in $objectList) {
+		if (objExists($object) && startsWith($object, $prefixA) || startsWith($object, $prefixB))
+		{
+			//generate opposite control name
+			string $oppObject;
+			if (startsWith($object, $prefixA))
+				$oppObject = $prefixB + endString($object, (size($object) - size($prefixA)));
+			if (startsWith($object, $prefixB))
+				$oppObject = $prefixA + endString($object, (size($object) - size($prefixB)));
+		
+			if (objExists($oppObject))	
+			{
+				//delete mirror nodes
+				if (objExists($object + "_mirrorPMA")) {
+					delete ($object + "_mirrorPMA");
+					$didAnything = 1;
+				}
+				if (objExists($oppObject + "_mirrorPMA")) {
+					delete ($oppObject + "_mirrorPMA");
+					$didAnything = 1;
+				}
+				
+				
+				//go through each attribute to test it's connections and break them if they are from a mirror
+				for ($objAttr in $objAttrList)
+				{
+					//check connection on the $object side
+					if (`connectionInfo -id ($object + $objAttr)`) {
+						if (`isConnected -iuc ($oppObject + $objAttr) ($object + $objAttr)`) {		//check to see if the attributes are directly connected
+							disconnectAttr ($oppObject + $objAttr) ($object + $objAttr);		//break the connection
+							$didAnything = 1;
+						}
+					}
+								
+					//check connection on the $oppObject side
+					if (`connectionInfo -id ($oppObject + $objAttr)`) {
+						if (`isConnected -iuc ($object + $objAttr) ($oppObject + $objAttr)`) {		//check to see if the attributes are directly connected
+							disconnectAttr ($object + $objAttr) ($oppObject + $objAttr);		//break the connection
+							$didAnything = 1;
+						}
+					}
+				}
+				
+				
+				//also test for connections between "extra" attrs
+					//for $object
+				string $tempArray[] = `listAttr -c -u -s -k $object`;
+				for ($temp in $tempArray) {
+					if (`objExists ($oppObject + "." + $temp)`) {
+						if (`isConnected -iuc ($oppObject + "." + $temp) ($object + "." + $temp)`) {
+							disconnectAttr ($oppObject + "." + $temp) ($object + "." + $temp);
+							$didAnything = 1;
+						}
+					}
+				}
+				
+					//for $oppObject
+				string $tempArray[] = `listAttr -c -u -s -k $oppObject`;
+				for ($temp in $tempArray) {
+					if (`objExists ($object + "." + $temp)`) {
+						if (`isConnected -iuc ($object + "." + $temp) ($oppObject + "." + $temp)`) {
+							disconnectAttr ($object + "." + $temp) ($oppObject + "." + $temp);
+							$didAnything = 1;
+						}
+					}
+				}
+				// Set mirrored attribute to false so object will display as its original color
+				$tempArray = `listRelatives -shapes $object`;
+				if (attributeExists("mirrored", $tempArray[0]))
+					setAttr ($tempArray[0] + ".mirrored") 0;
+				
+				$tempArray = `listRelatives -shapes $oppObject`;
+				if (attributeExists("mirrored", $tempArray[0]))
+					setAttr ($tempArray[0] + ".mirrored") 0;
+			}
+		}
+	}
+	if ($didAnything == 0)
+		warning "No objects were unmirrored.";
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//proc:		JM_distPercent
+//author:	Jedidiah Mitchell
+//contact:	www.jedmitchell.com
+//date:		03/14/07
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//use:		creates a distance measurement between two points but outputs a percentage of total 
+//			distance, as well as straight distance, to two attributes on the hidden locators created 
+//			under each shape to be measured.  the output is clamped to a max value specified by the 
+//			$limit argument (0 is unlimited).
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//inputs:	float $limit = 			maximum percentage value to be returned
+//outputs:	string $markers[] = 	the start/end markers created
+//
+//help:		select two objects and execute "JM_distPercent(2.6)" to create a percent measure with a 
+//			max return value of 2.6.  the marker names are returned as a string array
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc string[] JM_distPercent(int $limit)
+{
+	//selected objects
+	string $tempArray[] = `ls -sl`;
+	
+	if (size($tempArray) != 2)
+		warning ("Wrong number of selected objects for JM_distPercent.  Expected 2, got " + `size($tempArray)` + ".");
+	else
+	{
+		//start object, end object, and route name, for easy insertion
+		string $startObj = $tempArray[0];
+		string $endObj = $tempArray[1];
+		string $route = ($startObj + "_to_" + $endObj + "_distPercent");
+		
+		//dag nodes
+		spaceLocator;
+		string $startMarker = `rename ($route + "_startMarker")`;
+		parent $startMarker $startObj;
+		xform -t 0 0 0 $startMarker;
+		addAttr -ln "percent" -sn "p" -at double $startMarker;
+		setAttr -e -cb 1 ($startMarker + ".p");
+		addAttr -ln "distance" -sn "d" -at double $startMarker;
+		setAttr -e -cb 1 ($startMarker + ".d");
+		setAttr ($startMarker + ".v") 0;
+		
+		spaceLocator;
+		string $endMarker = `rename ($route + "_endMarker")`;
+		parent $endMarker $endObj;
+		xform -t 0 0 0 $endMarker;
+		addAttr -ln "percent" -sn "p" -at double $endMarker;
+		setAttr -e -cb 1 ($endMarker + ".p");
+		addAttr -ln "distance" -sn "d" -at double $endMarker;
+		setAttr -e -cb 1 ($endMarker + ".d");
+		setAttr ($endMarker + ".v") 0;
+		
+		//utilities
+		string $dist = `shadingNode -au -n ($route + "_dist") distanceBetween`;
+		connectAttr ($startMarker + ".wp") ($dist + ".p1");
+		connectAttr ($endMarker + ".wp") ($dist + ".p2");
+		connectAttr ($dist + ".d") ($startMarker + ".d");
+		connectAttr ($dist + ".d") ($endMarker + ".d");
+
+		//key the animCurve
+		setDrivenKeyframe -itt spline -ott spline -cd ($dist + ".d") -dv 0 -v 0 ($startMarker + ".p");
+		setDrivenKeyframe -itt spline -ott spline -cd ($dist + ".d") -dv `getAttr ($dist + ".d")` -v 1 ($startMarker + ".p");
+
+		//find / rename $animCurve & connect it to $endMarker
+		string $curveName[] = `listConnections -d 0 -scn 1 ($startMarker + ".p")`;
+		string $animCurve = `rename $curveName[0] ($route + "_animCurveUU")`;
+		connectAttr ($animCurve + ".o") ($endMarker + ".p");
+		setAttr ($animCurve + ".pst") 1;
+
+		//set pre/post infinity to constrain values to max or min by $type
+		if ($limit > 0)
+		{
+			setDrivenKeyframe -itt spline -dv (`getAttr ($dist + ".d")` * $limit) -v $limit ($startMarker + ".p");
+			setAttr ($animCurve + ".pst") 0;
+		}
+		
+		string $markers[] = {$startMarker, $endMarker};
+		return $markers;
+	}
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//proc:		boxPose
+//author:	jedidiah mitchell
+//contact:	www.jedmitchell.com
+//editor:	
+//contact:	
+//modified:	03/28/07
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//use:		records a pose as driven keys for controls on the face machine, based on a list passed 
+//			to the $FCList arguemnt.  driven keys are applied to the name_FC_boxBuffer nodes for 
+//			both fcs and dfcs.  the procedure will look at passed objects and find FCs among them 
+//			and record their values if non-zero (these can be any FC, but it will include all the 
+//			same FC components).  passed objects will be parsed down to the format "name" and then 
+//			have their FC components derived, such as "name_FC" & "name_directFC".  FCs and 
+//			directFCs will always be checked together, even if only one of the pair is selected.  
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//inputs:	string $FCList[] =	list of controls to check against FCs and key
+//			string $box = 		name of the slider to control this pose
+//			string $axis =		attribute name (in "translateX" or "tx" format -- no ".")
+//			float $value =		position on the pose slider to make the pose (for FM, -1.5, -1, 1, 1.5)
+//outputs:	
+//
+//help:		boxPose($ActiveList, "righteyebrowslider", "tx", -1);
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc boxPose(string $FCList[], string $box, string $axis, float $value)
+{
+	//user errors
+	if (!`objExists(($box + "." + $axis))`) error ("The input " + $box + "." + $axis + " does not exist.");
+		
+	if ($value != -1.5 && $value != -1 && $value != 1 && $value != 1.5) error ("The value " + $value + " does not match the accepted range of -1.5, -1, 1, 1.5.");
+	
+	if (size($FCList) < 1) error "No valid objects were passed to boxPose.";
+	
+	//gather all the selected FCs by parsing selected set
+	
+	select $FCList;
+	
+	/*
+	// This bit of code is commented because a) the menu item already checks for the right objects being selected, and b) for
+	// no reason at all this code breaks if the selected controls are references.  Maya can't do wildcard matches on reference
+	// nodes.  Whatever.
+	clear $FCList;
+	select -r `ls -o -sl -typ "transform" "*FC"`;
+	select -d `ls -o -typ "transform" "*direct*"`;
+	*/
+	
+	string $tempArray[] = `ls -sl`;
+	for ($FC in $tempArray)									//remove the "_FC" from each name
+		$FCList[size($FCList)] = startString($FC, (`size($FC)` - 3));
+	
+	//remove IK_eye from the list as it's not going to respond kindly to these operations... (no boxBuffer)
+	string $tempArray[] = {"IK_eye"};
+	$FCList = stringArrayRemove($tempArray, $FCList);
+	
+	//one last check to see if the list is empty now (meaning the selection set contained no valid objects)
+	if (size($FCList) < 1) error "No valid objects were passed to boxPose (IK_eye_FC is not a valid control).";
+	
+	
+	//before doing anything, turn off ALL of the fmTransform constraints
+	string $newTransList[]; clear $newTransList;		//list of all the active fmTransforms
+	for ($newTrans in `ls -type "fmTransform"`)
+	{
+		if (`getAttr ($newTrans + ".constrain")` == 1)
+			$newTransList[size($newTransList)] = $newTrans;
+		setAttr ($newTrans + ".constrain") 0;
+	}
+	
+	
+	//go through and determine if each FC or dFC has been moved, either by the boxBuffer or the actual control
+		//if it has been, record both the boxBuffer data and the FC data for any channel that has been moved
+			//create a driven key for the box buffer
+				//reset the FC/dFC to zero
+	
+	//list of attributes / types to check
+	string $attrList[9] = {"tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"};
+	string $typeList[2] = {"_FC", "_directFC"};
+	
+	for ($FC in $FCList) {			//loop through all the FCs
+		for ($type in $typeList) {		//loop through all the attrs
+			if (`objExists ($FC + $type)`) {	//check to see if the object exists (for non-dFC controls)
+				for ($attr in $attrList) {		//loop through the types
+				//check each attr to see if it is setable/keyable -- if not, continue
+						//if so, check to see if it has a non-zero value (very low values are excepted because of problems with zeroing surface FCs)
+					if (!`getAttr -se ($FC + $type + "." + $attr)` || !`getAttr -k ($FC + $type + "." + $attr)`)
+						continue;
+					else if (`getAttr($FC + $type + "." + $attr)` > 0.001 || `getAttr($FC + $type + "." + $attr)` < -0.001 || `getAttr($FC + $type + "_boxBuffer." + $attr)` > 0.001 || `getAttr($FC + $type + "_boxBuffer." + $attr)` < -0.001)
+					{
+						
+						//calculate the total distance to move the boxBuffer
+						float $total;
+						// We'll have to treat scaling differently from multiplication
+						if (startsWith($attr, "s"))
+							$total = `getAttr ($FC + $type + "_boxBuffer." + $attr)` * `getAttr ($FC + $type + "." + $attr)`;
+						else
+							$total = `getAttr ($FC + $type + "_boxBuffer." + $attr)` + `getAttr ($FC + $type + "." + $attr)`;
+							
+						//print ("attr keyed: " + $FC + $type + "." + $attr + " = " + $total + "\n");
+						
+						//set the key
+						setDrivenKeyframe -itt spline -ott spline -cd ($box + "." + $axis) -dv $value -v $total ($FC + $type + "_boxBuffer." + $attr);
+						
+
+						//set a zero key, just in case
+						if (startsWith($attr, "s"))
+							setDrivenKeyframe -itt spline -ott spline -cd ($box + "." + $axis) -dv 0 -v 1 ($FC + $type + "_boxBuffer." + $attr);
+						else
+							setDrivenKeyframe -itt spline -ott spline -cd ($box + "." + $axis) -dv 0 -v 0 ($FC + $type + "_boxBuffer." + $attr);
+						
+						
+						//also, set an INSERTED 1 and -1 distance key, in case this is an extreme (1.5, -1.5)
+						if ($value == 1.5)
+							setDrivenKeyframe -i -itt spline -ott spline -cd ($box + "." + $axis) -dv 1 ($FC + $type + "_boxBuffer." + $attr);
+						if ($value == -1.5)
+							setDrivenKeyframe -i -itt spline -ott spline -cd ($box + "." + $axis) -dv -1 ($FC + $type + "_boxBuffer." + $attr);
+						
+						
+						//do it a few times, just to be sure
+						if (startsWith($attr, "s")) {
+							setAttr ($FC + $type + "." + $attr) 1;
+							setAttr ($FC + $type + "." + $attr) 1;
+							setAttr ($FC + $type + "." + $attr) 1;
+						} else {
+							setAttr ($FC + $type + "." + $attr) 0;
+							setAttr ($FC + $type + "." + $attr) 0;
+							setAttr ($FC + $type + "." + $attr) 0;
+						}
+						setAttr ($FC + $type + "_boxBuffer." + $attr) $total;
+						setAttr ($FC + $type + "_boxBuffer." + $attr) $total;
+						setAttr ($FC + $type + "_boxBuffer." + $attr) $total;
+						
+						// Turn off specialUndo for the boxBuffer, because that'll just mess things up from here on out
+						if (attributeExists("specialUndo", ($FC + $type + "_boxBuffer")))
+							setAttr ($FC + $type + "_boxBuffer.specialUndo") false;
+						
+						//now rename this sucker!
+						string $sharedAnimCurve = findAnimCurve($box, $axis, ($FC + $type + "_boxBuffer"), $attr);
+						print ("findAnimCurve(\"" + $box + "\", \"" + $axis + "\", \"" + ($FC + $type + "_boxBuffer") + "\", \"" + $attr + "\"");
+						rename $sharedAnimCurve ($box + "_" + $axis + "_to_" + $FC + $type + "_boxBuffer_" + $attr);
+					}
+					else if (`objExists ($box + "_" + $axis + "_to_" + $FC + $type + "_boxBuffer_" + $attr)`)
+					{	//check to see if this animCurve node exists anyway, and if so, zero it's value at this input!
+						print ("\nthis isn't supposed to show up! " + $FC + $type + "." + $attr + "\n\n");
+						setDrivenKeyframe -itt spline -ott spline -cd ($box + "." + $axis) -dv $value -v 0 ($FC + $type + "_boxBuffer." + $attr);
+					}
+				}
+			}
+		}
+	}
+				
+	//turn fmTransforms back on
+	for ($newTrans in $newTransList)
+		setAttr ($newTrans + ".constrain") 1;
+	
+	//reset selection to the target box control @ the target value
+	select -r $box;
+	setAttr ($box + "." + $axis) $value;
+}
+
+
+// Returns a valid object name based on the string $in.
+global proc string stringToObjectName(string $in)
+{
+	// String of all valid characters, plus extra characters at the beginning and end so that tokenize will always return
+	// more than one string if the dividing string is one of these characters
+	string $validCharacters = "@abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@";
+	string $result = "", $buffer[];
+	int $foundFirstGoodCharacter = 0;
+	int $length = size($in);
+	
+	$in = strip($in);
+	
+	for($i = 1; $i <= $length; ++$i) {
+		string $c = `substring $in $i $i`;
+		
+		// This is probably the best way to test if a character is valid
+		if (`tokenize $validCharacters $c $buffer` > 1) {
+			$foundFirstGoodCharacter = 1;
+			$result += $c;
+		} else {
+			// An object name can't start with an underscore, so we ignore any invalid characters until
+			// a valid character is found.
+			if ($foundFirstGoodCharacter)
+				$result += "_";
+		}
+	}
+	
+	return $result;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//proc:		JM_sandbox
+//author:	Jedidiah Mitchell
+//contact:	www.jedmitchell.com
+//editor:	
+//contact:	
+//date:		03/25/07
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//use:		creates a "sandBox" to put box controls under, as well as box controls.  if you pass 
+//			a name associated with an existing sandbox, the new control will be placed under that 
+//			sandbox.  otherwise a fresh one will be created with a camera already set to the necessary 
+//			specifications.  a "tabed" system is also available, but optional.  tabs can be created 
+//			for EXISTING sandboxes, but cannot be invoked at sandbox creation time.  tabs control 
+//			which boxes are visible at a given time and can be shuffled from the sandbox object 
+//			channel box attribute "boxTab".  the box control will be of name $name, with dimensions 
+//			running from a max of 1 or 0 to a min of 0 or -1 in the x and y axes.  also creates 
+//			"extreme" positions at 1.5x the max / min value of the given channel if activated.  
+//			the script will create two cameras -- one which is constrained to a given object and 
+//			one which is parented under the other camera.  the "free" cam will orbit about whatever 
+//			object has been designated as its focus, and the "orthographic" cam will be able to pan 
+//			across just the sandbox, and will not show any objects but the sandbox (near/far clip 
+//			planes set VERY low).  
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//inputs:	string $sandboxName =	name of a "sandbox" to place the boxControl in or create.  
+//			string $tabName = 		name of the tab under which to add controls (invalid if the 
+//									sandbox does not already exist)
+//			string $boxName = 		name to give the boxControl
+//			string $driver = 		name of the object about which the boxCam should orbit (if 
+//									sandbox already exists, has no effect)
+//			int $extreme =			whether or not to extend the box range to 1.5
+//			int $xMax =				max x value.  accepts 1 or 0
+//			int $xMin =				min x value.  accepts 0 or -1
+//			int $yMax =				max y value.  accepts 1 or 0
+//			int $yMin =				min y value.  accepts 0 or -1
+//
+//outputs:	
+//
+//help:		JM_sandbox("mySandbox", "myBox", "myTab", "pCube1", 1, 1, -1, 0, -1) will create a new 
+//			box control under the "myTab" tab of sandbox "mySandbox", and will orbit about pCube1. 
+//			JM_sandbox("mySandbox", "", "myTab", "", 1, 5, 92, 234, 1) will create just a new sandbox named 
+//			"mySandbox" + camera without focus -- in this case the other numbers don't matter and 
+//			because the sandbox is being created, the "myTab" argument is ignored.  
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc JM_sandbox(string $sandboxName, string $tabName, string $boxName, string $driver, int $extreme, float $xMax, float $xMin, float $yMax, float $yMin)
+{
+	//some constants
+	string $sandbox = ($sandboxName + "_boxControls");
+	string $buffer = ($sandbox + "Buffer");
+	string $repositionReverse = ($sandbox + "_repositionReverse");
+	string $tabNameCondition = ($sandbox + $tabName + "_condition");
+	string $boxText = $boxName;
+	string $boxName = stringToObjectName($boxName);
+	string $control = ($boxName + "_boxControl");
+	
+	//potential user errors
+		//invalid characters in sandboxName
+	if (`gmatch $sandboxName "* *"`) error ("Sandbox name \"" + $sandboxName + "\" contains invalid characters.");
+	
+		//invalid characters in tabName
+	if (`gmatch $tabName "* *"`) error ("Tab name \"" + $tabName + "\" contains invalid characters.");
+	
+	if ($boxName == "" || !isValidObjectName($boxName)) error ("The name '" + $boxName + "' cannot be used.  Please choose a different name.");
+	
+		//no sandboxName
+	if ($sandboxName == "") error "You must enter a name to connect with an existing sandbox or create a new one.";
+		
+		//boxControl already exists under this sandbox
+	if (`objExists($control)`)
+		if (isParentOf($sandbox, $control))
+			 error ("A boxControl by the name of " + $control + " already exists under the sandbox " + $sandbox + ".  Please choose a unique name.");
+	
+		//sandbox exists, tabName exists, no new controls specified
+	if (!`objExists($sandbox)` && $boxName == "" && `objExists($tabNameCondition)`) error ("The tab " + $tabName + " already exists under the sandbox " + $sandbox + ".  Please choose a unique tab name or add a control.");
+	
+		//extreme argument out of range
+	if ($extreme != 1 && $extreme != 0) error "The \"extreme\" argument accepts only inputs of 0 or 1.";
+	
+		//x/yMax argument out of range
+	if (($xMax != 1 && $xMax != 0) || ($yMax != 1 && $yMax != 0)) error "x/yMax arguments accept only inputs of 1 or 0";
+	
+		//x/yMin argument out of range
+	if (($xMin != 0 && $xMin != -1) || ($yMin != 0 && $yMin != -1)) error "x/yMin arguments accept only inputs of 0 or -1";
+	
+		//if boxName had to be re-encoded to exclude invalid characters
+	if ($boxText != $boxName) warning ("\"" + $boxText + "\" contains invalid characters.  Re-encoding as \"" + $boxName + "\".");
+	
+		//if sandbox does not exist but a tab name is specified
+	if (!`objExists($sandbox)` && $tabName != "") warning "Tabs cannot be added to sandboxes at creation time.  Sandbox was created with the Default tab.";
+		
+		//nothing but a sandboxName given...
+	if (`objExists($sandbox)` && $boxName == "" && $tabName == "") warning ("The sandbox " + $sandbox + " already exists.  Please specify another action.");
+	
+		//no valid driver name
+	if (!`objExists($sandbox)`)
+		if (!`objExists($driver)`) warning ("No driver object of name \"" + $driver + "\" exists.  Sandbox will be created in free mode.");
+	
+	
+	//max control translation
+	float $xTransMin;
+	float $xTransMax;
+	float $yTransMin;
+	float $yTransMax;
+	
+	//catch possible 1-dimensional shapes (if it's only a single axis) and alter min/max values
+	int $xOff = 0;
+	int $yOff = 0;
+	if ($yMax == 0 && $yMin == 0)
+	{
+		$yMax = .25;
+		$yMin = -.25;
+		$yOff = 1;
+	}
+	
+	if ($xMax == 0 && $xMin == 0)
+	{
+		$xMax = .25;
+		$xMin = -.25;
+		$xOff = 1;
+	}
+	
+	//create components
+		//sandbox (if not there already)
+	if (!`objExists($sandbox)`)
+	{
+			//remove $tabName -- no tab can be created at sandbox creation time
+		$tabName = "";
+		$tabNameCondition = ($sandbox + "Default_condition");
+		
+			//sandbox buffer
+		createNode -n $buffer transform;
+		
+			//cameras
+				//ortho
+		camera -hfa .980 -vfa .735 -fcp 5 -ncp .001 -ff overscan -p 0 0 1 -o 1 -ow 15;
+		string $orthoCam = `rename ($sandbox + "OrthoCam")`;
+		setAttr ($orthoCam + ".v") 0;
+		setAttr ($orthoCam + ".mtle") 1 1 0;
+		setAttr ($orthoCam + ".mntl") -7 -5 -1;
+		setAttr ($orthoCam + ".xtle") 1 1 1;
+		setAttr ($orthoCam + ".mxtl") 7 5 1;
+		setAttr ($orthoCam + ".rnd") 0;
+		setAttr -lock true ($orthoCam + ".tz");
+		
+				//persp
+		camera -hfa .980 -vfa .735 -fcp 100000 -ncp .001 -ff overscan -p 0 0 25;
+		string $perspCam = `rename ($sandbox + "PerspCam")`;
+		setAttr ($orthoCam + ".rnd") 0;
+		parent $perspCam $buffer;
+		hide $perspCam;
+		
+				//persp buffer
+		string $perspBuffer = `createNode -n ($sandbox + "PerspCam_buffer") transform`;
+		parent $perspBuffer $buffer;
+		parentConstraint $perspCam $perspBuffer;
+		// Parent constraints don't include scale, so...
+		//connectAttr -f ($perspCam + ".s") ($perspBuffer + ".s");
+		scaleConstraint -offset 1 1 1 -weight 1 $perspCam $perspBuffer;
+		
+			//sandbox, attrs, default tabs, utility nodes
+		createNode -n $sandbox transform;
+		parent $sandbox $perspBuffer;
+		parent $orthoCam $sandbox;
+		
+				//boxTab control
+		addAttr -ln "boxTab" -sn "bt" -at "enum" -en "Default" $sandbox;
+		setAttr -cb 1 ($sandbox + ".bt");
+		shadingNode -au -n $tabNameCondition condition;
+		connectAttr ($sandbox + ".bt") ($tabNameCondition + ".ft");
+		setAttr ($tabNameCondition + ".ctr") 1;
+		setAttr ($tabNameCondition + ".cfr") 0;
+		
+				//reposition control
+		addAttr -ln "repositionBoxControls" -sn "rbc" -at bool $sandbox;
+		setAttr -cb 1 ($sandbox + ".rbc");
+		shadingNode -au -n $repositionReverse reverse;
+		connectAttr ($sandbox + ".rbc") ($repositionReverse + ".ix");
+		
+				//general Attrs
+		setAttr -cb 1 ($sandbox + ".tx");
+		setAttr -cb 1 ($sandbox + ".ty");
+		setAttr -l 1 -k 0 ($sandbox + ".tz");
+		setAttr -l 1 -k 0 ($sandbox + ".rx");
+		setAttr -l 1 -k 0 ($sandbox + ".ry");
+		setAttr -l 1 -k 0 ($sandbox + ".rz");
+		setAttr -cb 1 ($sandbox + ".sx");
+		setAttr -cb 1 ($sandbox + ".sy");
+		setAttr -l 1 -k 0 ($sandbox + ".sz");
+		setAttr -cb 1 ($sandbox + ".v");
+				
+			//sandbox boundary
+		curve -d 1 -p -8 0 -4.5 -p -6.5 0 -4.5 -p -6.5 0 -6 -p 8 0 -6 -p 8 0 6 -p -8 0 6 -p -8 0 -4.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 ;
+		string $sandboxA = `rename ($sandbox + "A")`;
+		setAttr ($sandboxA + "Shape.ove") 1;
+		setAttr ($sandboxA + "Shape.ovdt") 1;
+		xform -ro 90 0 0 $sandboxA;
+		makeIdentity -a 1 -r 1 $sandboxA;
+		
+			//sandbox boundary2
+		curve -d 1 -p -8.2 -6.2 0 -p 8.2 -6.2 0 -p 8.2 6.2 0 -p -8.2 6.2 0 -p -8.2 -6.2 0 -k 0 -k 1 -k 2 -k 3 -k 4 ;
+		string $sandboxB = `rename ($sandbox + "B")`;
+		setAttr ($sandboxB + "Shape.ove") 1;
+		setAttr ($sandboxB + "Shape.ovdt") 1;
+		
+			//sandbox control
+		curve -d 1 -p -1 0 -1 -p -1 0 -3 -p 1 0 -3 -p 1 0 -1 -p 3 0 -1 -p 3 0 1 -p 1 0 1 -p 1 0 3 -p -1 0 3 -p -1 0 1 -p -3 0 1 -p -3 0 -1 -p -1 0 -1 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12;
+		string $sandboxC = `rename ($sandbox + "C")`;
+		setAttr ($sandboxC + "Shape.ove") 1;
+		setAttr ($sandboxC + "Shape.ovc") 10;
+		xform -t -7.35 5.35 0 -ro 90 0 0 -s .2 .2 .2 $sandboxC;
+		makeIdentity -a 1 -t 1 -r 1 -s 1 $sandboxC;
+		
+			//parent shapes
+		parent -s -add ($sandboxA + "Shape") ($sandboxB + "Shape") ($sandboxC + "Shape") $sandbox;
+		delete $sandboxA $sandboxB $sandboxC;
+		
+		if (`objExists($driver)`)
+		{
+			// Removing because we need to maintain offset when creating the constraint, meaning it has to be done after the sandbox is created.
+				//constrain $buffer
+			parentConstraint -mo $driver $buffer;
+			scaleConstraint -mo $driver $buffer;
+			
+			//float $bound = ((`getAttr ($driver + ".bbxx")` - `getAttr ($driver + ".bbnx")`) + (`getAttr ($driver + ".bbxy")` - `getAttr ($driver + ".bbny")`) + (`getAttr ($driver + ".bbxz")` - `getAttr ($driver + ".bbnz")`)) / 3;
+			
+				//scale sandbox (default 16 units wide -- scale to less than half bounding box)
+			float $bb[] = `xform -q -ws -bb $driver`;
+			$bound = ($bb[3]-$bb[0] + $bb[4]-$bb[1] + $bb[5]-$bb[2]) / 3.0;
+			float $s = (0.5*$bound) / 128.0;
+			if ($s == 0) // We don't want this to happen...
+				$s = 0.05; // If it does, 0.05 is as good a scale as any I suppose.
+				
+			xform -s $s $s $s $perspCam;
+			//xform -s (.5 / (16 / $bound)) (.5 / (16 / $bound)) (.5 / (16 / $bound)) $perspCam;
+		}
+	}
+	
+	
+	//make new tabs if sandbox exists but tab doesn't.  if no tab name is given, revert to the default
+	if ($tabName == "")
+		$tabNameCondition = ($sandbox + "Default_condition");
+	else
+	{
+			//add tabName enum to boxAttr
+		string $enumList[];
+		string $tempWhatever = `addAttr -q -enumName ($sandbox + ".bt")`;//`attributeQuery -n $sandbox -le bt`;
+		int $enumCount = `tokenize $tempWhatever ":" $enumList`;
+		
+		int $newEnumPosition = -1;
+		for($i = 0; $i < $enumCount; ++$i) {
+			if ($enumList[$i] == $tabName) {
+				$newEnumPosition = $i;
+				break;
+			}
+		}
+		
+		if ($newEnumPosition == -1) {
+			$newEnumPosition = `size($enumList)`;
+			$enumList[size($enumList)] = $tabName;
+			string $newEnum;
+			for ($enum in $enumList) $newEnum += ($enum + ":");
+			addAttr -e -en $newEnum ($sandbox + ".bt");
+			
+				//create new condition
+			shadingNode -au -n $tabNameCondition condition;
+			connectAttr ($sandbox + ".bt") ($tabNameCondition + ".ft");
+			setAttr ($tabNameCondition + ".st") $newEnumPosition;
+			setAttr ($tabNameCondition + ".ctr") 1;
+			setAttr ($tabNameCondition + ".cfr") 0;
+		}
+			//set to active tab
+		setAttr ($sandbox + ".bt") $newEnumPosition;
+		
+	}
+		
+	
+	if ($boxName != "")
+	{
+			//box
+		string $box = `createNode -n ($boxName + "_box") transform`;
+		parent $box $sandbox;
+		xform -t 0 0 0 -ro 0 0 0 -s 1 1 1 $box;
+		connectAttr ($tabNameCondition + ".ocr") ($box + ".v");
+		
+			//control
+		circle -r .25 -d 3 -s 8 -ch 0;
+		rename $control;
+		parent $control $box;
+		xform -t 0 0 0 -ro 0 0 0 -s 1 1 1 $control;
+		setAttr ($control + "Shape.ove") 1;
+		setAttr ($control + "Shape.ovc") 4;
+		connectAttr ($sandbox + ".rbc") ($control + "Shape.ovdt");
+		if ($xOff) setAttr -l 1 -k 0 ($control + ".tx");
+		if ($yOff) setAttr -l 1 -k 0 ($control + ".ty");
+		setAttr -l 1 -k 0 ($control + ".tz");
+		setAttr -l 1 -k 0 ($control + ".rx");
+		setAttr -l 1 -k 0 ($control + ".ry");
+		setAttr -l 1 -k 0 ($control + ".rz");
+		setAttr -l 1 -k 0 ($control + ".sx");
+		setAttr -l 1 -k 0 ($control + ".sy");
+		setAttr -l 1 -k 0 ($control + ".sz");
+		setAttr -l 1 -k 0 ($control + ".v");
+		setAttr ($control + ".mtxe") 1;
+		setAttr ($control + ".xtxe") 1;
+		setAttr ($control + ".mtxl") (abs($xMin) * (-1 - .5 * $extreme));
+		setAttr ($control + ".xtxl") (abs($xMax) * (1 + .5 * $extreme));
+		setAttr ($control + ".mtye") 1;
+		setAttr ($control + ".xtye") 1;
+		setAttr ($control + ".mtyl") (abs($yMin) * (-1 - .5 * $extreme));
+		setAttr ($control + ".xtyl") (abs($yMax) * (1 + .5 * $extreme));
+		
+			//Adding new control to boxControls set:
+		if (`objExists boxControls`)
+			sets -e -add boxControls $control ;
+		
+			//innerBox shape
+		curve -d 1 -p $xMin $yMax 0 -p $xMin $yMin 0 -p $xMax $yMin 0 -p $xMax $yMax 0 -p $xMin $yMax 0 -k 0 -k 1 -k 2 -k 3 -k 4;
+		string $boxA = `rename ($boxName + "_boxA")`;
+		setAttr ($boxA + "Shape.ove") 1;
+		setAttr ($boxA + "Shape.ovdt") 2;
+		setAttr ($boxA + ".tz") .001;
+		
+			//outerBox shape
+		duplicate $boxA;
+		string $boxB = `rename ($boxName + "_boxB")`;
+		if (!$xOff && $extreme) xform -r -s 1.5 1 1 $boxB;
+		if (!$yOff && $extreme) xform -r -s 1 1.5 1 $boxB;
+		makeIdentity -a 1 -r 1 -s 1 $boxB;
+		setAttr ($boxB + "Shape.ove") 1;
+		setAttr ($boxB + "Shape.ovc") 7;
+		connectAttr ($repositionReverse + ".ox") ($boxB + "Shape.ovdt");
+		setAttr ($boxB + ".tz") 0;
+		
+			//boundary
+		offsetCurve  -ch 0 -rn 0 -d -0.1 -ugn 0 $boxB;
+		string $boxC = `rename ($boxName + "_C")`;
+		setAttr ($boxC + "Shape.ove") 1;
+		setAttr ($boxC + "Shape.ovc") 7;
+		connectAttr ($repositionReverse + ".ox") ($boxC + "Shape.ovdt");
+		
+			//text
+				//create text curves & a new transform to recieve their shapes
+		string $textResult[] = `textCurves -ch 0 -f "Arial" -t $boxText -n $boxName`;
+		
+		string $boxLabel = `createNode -n ($boxName + "_label") transform`;
+		
+				//unparent & freeze transforms on the curves, add shapes to $boxLabel, delete original curves
+		string $textCurveList[] = `ls -dag -s ($textResult[0] + "|*")`;
+		for ($i = 0; $i < size($textCurveList); $i++)
+		{
+			string $newName = `rename $textCurveList[$i] ($boxName + "_labelShape" + ($i + 1))`;
+			setAttr ($newName + ".ove") 1;
+			setAttr ($newName + ".ovdt") 2;
+			parent `listRelatives -p $newName` $boxLabel;
+			makeIdentity -a 1 -t 1 `listRelatives -p $newName`;
+			parent -s -add $newName $boxLabel;
+		}
+		
+		delete `ls -type "transform" ($boxLabel + "|*")`;
+		delete $textResult[0];
+		
+		float $unitScale = `convertUnit -toUnit "cm" "1"`;
+		// Fix for mac Maya 7 and 8, where text size is too big
+		if (`about -mac` == 1) {
+			string $versionString = `about -version`;
+			string $strings[];
+			tokenize $versionString " " $strings;
+			float $versionNumber = $strings[0];
+			if ($versionNumber <= 8.0)
+				$unitScale *= 0.32;
+		}
+		setAttr ($boxLabel + ".s") $unitScale $unitScale $unitScale;
+		makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $boxLabel;
+		
+				//recenter $boxLabel & set overrides
+		float $centerX = `getAttr ($boxLabel + ".bcx")`;
+		float $boxCenter = `getAttr ($boxC + ".bcx")`;
+		setAttr ($boxLabel + ".spx") $centerX;
+		setAttr ($boxLabel + ".rpx") $centerX;
+		xform -t ($boxCenter - $centerX) ($yMax * (1 + .5 * $extreme) + .2) 0 -s .125 .125 .125 $boxLabel;
+		makeIdentity -a 1 -t 1 -r 1 -s 1 $boxLabel;
+		
+				//find maximum text scale based on size of boxC and rescale text
+		float $xBound = `getAttr ($boxLabel + ".bbxx")` - `getAttr ($boxLabel + ".bbnx")`;
+		float $maxBound = .5 + `getAttr ($boxC + ".bbxx")` - `getAttr ($boxC + ".bbnx")`;
+		if ($xBound > $maxBound)		//resize text to maximum width ($boxC)
+			xform -s (1 / ($xBound / $maxBound)) (1 / ($xBound / $maxBound)) (1 / ($xBound / $maxBound)) $boxLabel;
+		makeIdentity -a 1 -s 1 $boxLabel;
+	
+			//parent boundary shapes + set initial scale
+		parent -s -add ($boxA + "Shape") ($boxB + "Shape") ($boxC + "Shape") $box;
+		for ($curve in `ls -dag -s ($boxLabel + "|*")`) parent -s -add $curve $box;
+		delete $boxA $boxB $boxC $boxLabel;
+		xform -s .5 .5 .5 $box;
+		setAttr -cb 1 ($box + ".tx");
+		setAttr -cb 1 ($box + ".ty");
+		setAttr -l 1 -k 0 ($box + ".tz");
+		setAttr -l 1 -k 0 ($box + ".rx");
+		setAttr -l 1 -k 0 ($box + ".ry");
+		setAttr -l 1 -k 0 ($box + ".rz");
+		setAttr -cb 1 ($box + ".sx");
+		setAttr -cb 1 ($box + ".sy");
+		setAttr -l 1 -k 0 ($box + ".sz");
+		setAttr -l 1 -k 0 ($box + ".v");
+		
+		select $box;
+	}
+}
+
+
+
+
+
+
+
+
+
+global proc repositionWidgetControl()
+{
+	string $strings[];
+	float $floats[];
+	$strings = `ls -sl`;
+	string $control = $strings[0];
+	string $command;
+	
+	$strings = `listRelatives -parent $control`;
+	string $parent = $strings[0];
+	string $constraints[] = `listRelatives -type "parentConstraint" -type "scaleConstraint" -type "pointConstraint" $parent`;
+	
+	// Get max number of targets
+	int $constraintCount = size($constraints);
+	int $targetCount[];
+	
+	int $maxTargets = 1;
+	for($i = 0; $i < $constraintCount; ++$i) {
+		$command = `nodeType $constraints[$i]`;
+		$targetCount[$i] = eval("size(`" + $command + " -q -targetList " + $constraints[$i] + "`)");
+		$maxTargets = max($maxTargets, $targetCount[$i]);
+	}
+	
+	// Get list of targets and respective weights
+	string $targets[];
+	float $weights[];
+	
+	for($i = 0; $i < $constraintCount; ++$i) {
+		$command = `nodeType $constraints[$i]`;
+		$strings = eval($command + " -q -targetList " + $constraints[$i]);
+		for($n = 0; $n < $targetCount[$i]; ++$n) {
+			$targets[$maxTargets * $i + $n] = $strings[$n];
+			$weights[$maxTargets * $i + $n] = eval($command + " -q -weight " + $strings[$n] + " " + $constraints[$i]);
+		}
+	}
+	
+	$floats = `xform -q -ws -t $control`;
+	xform -ws -t $floats[0] $floats[1] $floats[2] $parent;
+	$floats = `xform -q -ws -ro $control`;
+	xform -ws -ro $floats[0] $floats[1] $floats[2] $parent;
+	$floats = `xform -q -r -s $control`;
+	xform -s $floats[0] $floats[1] $floats[2] $parent;
+	setAttr ($control + ".t") 0 0 0;
+	setAttr ($control + ".r") 0 0 0;
+	setAttr ($control + ".s") 1 1 1;
+	
+	for($i = 0; $i < $constraintCount; ++$i) {
+		$command = `nodeType $constraints[$i]`;
+		$command += " -mo";
+		for($n = 0; $n < $targetCount[$i]; ++$n) {
+			$command += " ";
+			$command += $targets[$maxTargets * $i + $n];
+		}
+		$command += " ";
+		$command += $parent;
+		eval($command);
+		
+		for($n = 0; $n < $targetCount[$i]; ++$n) {
+			$command = `nodeType $constraints[$i]`;
+			$command += " -e -weight ";
+			$command += $weights[$maxTargets * $i + $n];
+			$command += " ";
+			$command += $targets[$maxTargets * $i + $n];
+			$command += " ";
+			$command += $constraints[$i];
+			eval($command);
+		}
+	}
+}
+
+
+
+global proc freeWidgetControl()
+{
+	string $strings[];
+	float $floats[];
+	$strings = `ls -sl`;
+	string $control = $strings[0];
+	string $command;
+	
+	global string $gl_targets[];
+	global float $gl_weights[];
+	global int $gl_targetCount[];
+	global int $gl_constraintCount;
+	global string $gl_constraints[];
+	global int $gl_maxTargets;
+	global string $gl_constraintTypes[];
+	global string $gl_parents[];
+	
+	string $initialConstraints[];
+	$initialConstraints = `listConnections -type "parentConstraint" $control`;
+	$initialConstraints = stringArrayRemoveDuplicates($initialConstraints);
+	
+	int $initialCount = size($initialConstraints);
+	
+	$gl_constraintCount = 0;
+	clear $gl_constraints;
+	clear $gl_targets;
+	clear $gl_weights;
+	clear $gl_targetCount;
+	clear $gl_constraints;
+	clear $gl_constraintTypes;
+	clear $gl_parents;
+	
+	for($constraint in $initialConstraints) {
+		$strings = `listRelatives -parent $constraint`;
+		$strings = `listRelatives -parent $strings[0]`;
+		if ($strings[0] == "placement_markers")
+			continue;
+		
+		$gl_constraints[$gl_constraintCount] = $constraint;
+		++$gl_constraintCount;
+	}
+		
+	
+	$gl_maxTargets = 1;
+	for($i = 0; $i < $gl_constraintCount; ++$i) {
+		
+		$gl_constraintTypes[$i] = `nodeType $gl_constraints[$i]`;
+		$gl_targetCount[$i] = eval("size(`" + $gl_constraintTypes[$i] + " -q -targetList " + $gl_constraints[$i] + "`)");
+		$gl_maxTargets = max($gl_maxTargets, $gl_targetCount[$i]);
+		$strings = `listRelatives -parent $gl_constraints[$i]`;
+		$gl_parents[$i] = $strings[0];
+	}
+	
+	// Get list of targets and respective weights
+	
+	for($i = 0; $i < $gl_constraintCount; ++$i) {
+		$command = $gl_constraintTypes[$i];
+		$strings = eval($command + " -q -targetList " + $gl_constraints[$i]);
+		for($n = 0; $n < $gl_targetCount[$i]; ++$n) {
+			$gl_targets[$gl_maxTargets * $i + $n] = $strings[$n];
+			$gl_weights[$gl_maxTargets * $i + $n] = eval($command + " -q -weight " + $strings[$n] + " " + $gl_constraints[$i]);
+		}
+	}
+	
+	for($i = 0; $i < $gl_constraintCount; ++$i)
+		delete $gl_constraints[$i];
+	
+}
+
+global proc restoreWidgetControl()
+{
+	global string $gl_targets[];
+	global float $gl_weights[];
+	global int $gl_targetCount[];
+	global int $gl_constraintCount;
+	global string $gl_constraints[];
+	global int $gl_maxTargets;
+	global string $gl_constraintTypes[];
+	global string $gl_parents[];
+	string $strings[];
+	
+	string $command;
+	
+	for($i = 0; $i < $gl_constraintCount; ++$i) {
+		
+		$command = $gl_constraintTypes[$i];
+		$command += " -mo";
+		for($n = 0; $n < $gl_targetCount[$i]; ++$n) {
+			$command += " ";
+			$command += $gl_targets[$gl_maxTargets * $i + $n];
+		}
+		$command += " ";
+		$command += $gl_parents[$i];
+		$strings = eval($command);
+		
+		for($n = 0; $n < $gl_targetCount[$i]; ++$n) {
+			$command = $gl_constraintTypes[$i];
+			$command += " -e -weight ";
+			$command += $gl_weights[$gl_maxTargets * $i + $n];
+			$command += " ";
+			$command += $gl_targets[$gl_maxTargets * $i + $n];
+			$command += " ";
+			$command += $strings[0];
+			eval($command);
+		}
+		
+		
+	}
+}

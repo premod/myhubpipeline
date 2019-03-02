@@ -1,0 +1,8 @@
+// SCRIPTS WRITTEN BY FJ PRABHU
+
+global proc string whichChar () {
+string $whichChar[] = `ls -sl`;
+string $buffer[];
+tokenize ($whichChar[0],":",$buffer);
+return $buffer[0];
+}

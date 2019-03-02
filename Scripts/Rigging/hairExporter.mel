@@ -1,0 +1,9 @@
+global proc hairExporter()
+{
+	string $jnts[] = `ls -typ "joint"`;
+	select -tgl $jnts;
+	delete -staticChannels -unitlessAnimationCurves false -hierarchy none -controlPoints 0 -shape 1;
+	projectViewer ExportActive;
+}
+
+

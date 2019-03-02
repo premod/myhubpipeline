@@ -1,0 +1,6 @@
+global proc removeSetup() 
+{
+	headsUpDisplay -rem HUDtime;  
+	headsUpDisplay -rem HUDname;
+	headsUpDisplay -rem HUDdate;
+}

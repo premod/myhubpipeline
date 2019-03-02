@@ -1,0 +1,129 @@
+
+
+global proc reportDuplicateNodes()
+{
+	if(`window -query -exists ReportDuplicateNodesWin`)
+		deleteUI ReportDuplicateNodesWin;
+
+	window -title "Report Duplicate Node Names" -toolbox true -sizeable false ReportDuplicateNodesWin;
+	columnLayout -adjustableColumn true;
+
+	text -l "";
+
+	string $myCBG =	`checkBoxGrp
+					-va2 true false
+					-numberOfCheckBoxes 2
+					-labelArray2 "Create Set" "Auto Rename"
+					RDNN
+					`;
+
+	text -l "";
+
+	button -label "Report Duplicates" -command "XVIVO_ReportDuplicateNodes_CL; deleteUI ReportDuplicateNodesWin";
+
+	window -edit -widthHeight 210 92 ReportDuplicateNodesWin; 
+	showWindow ReportDuplicateNodesWin;
+}
+
+global proc XVIVO_ReportDuplicateNodes_CL()
+{
+	int $makeSet = `checkBoxGrp -q -v1 RDNN`; 
+	int $autoRename = `checkBoxGrp -q -v2 RDNN`;
+
+	XVIVO_ReportDuplicateNodes_Main($makeSet,$autoRename);
+}
+
+
+proc XVIVO_ReportDuplicateNodes_Main(int $makeSet, int $autoRename)
+{
+	if(($makeSet==0)&&($autoRename==0))
+		return;
+
+	string $objectsL[] = `ls -l`, $objectL;
+	string $objectsS[], $objectS;
+	string $lhs[], $result[0];
+
+	int $depth[], $numObjects=0, $maxDepth=0,$isDuplicate[];
+	int $i, $j, $k, $it=0;
+
+	for($object in $objectsL)
+	{
+		$objectsS[$numObjects] = XVIVO_ReportDuplicateNodes_StripPath($objectsL[$numObjects]);
+		$depth[$numObjects]=XVIVO_ReportDuplicateNodes_GetDepth($objectsL[$numObjects]);
+
+		if($depth[$numObjects]>$maxDepth)
+			$maxDepth=$depth[$numObjects];
+
+		$numObjects++;
+	}
+
+	$lhs=$objectsS;
+
+	$i=$j=$k=0;
+
+	for($i=0; $i< $numObjects; $i++)
+	{
+		if($isDuplicate[$i]!=1)
+		{
+			if($it++==99)
+			{
+				print (($i+1) + " of " + $numObjects + "\n");
+				print ("Duplicate Names found: " + $k + "\n");
+				$it=0;
+			}
+
+			for($j=$i+1; $j< $numObjects; $j++)
+			{
+				if(($lhs[$i]==$lhs[$j])&&($isDuplicate[$i]!=1))
+				{
+					$result[$k] = $objectsL[$i];
+					$isDuplicate[$i]=1;
+					$isDuplicate[$j]=1;
+					$k++;
+				}
+			}
+		}
+	}
+
+	if (($makeSet==1)&&(`size($result)`>0))
+		sets -n ("Renaming_Set_" + $k + "_Items") $result;
+
+	if (($autoRename==1)&&(`size($result)`>0))
+	{
+		$i=$j=$k=0;
+
+		for($i=$maxDepth; $i>0; $i--)
+		{
+			print ".";
+			for($j=0; $j<$numObjects; $j++)
+			{
+				if(($depth[$j]==$i)&&($isDuplicate[$j]==1))
+				{
+					$k++;
+					if(!`reference -q -inr $objectsL[$j]`)
+						$objectsL[$j] = `rename -is $objectsL[$j] ($objectsS[$j] +$k)`;
+	
+					$isDuplicate[$j]=0;
+				}
+			}
+		}
+	}
+}
+
+global proc string XVIVO_ReportDuplicateNodes_StripPath(string $object)
+{
+	int $items;
+	string $buffer[];
+
+	$items = `tokenize $object "|" $buffer`;
+	$object=$buffer[$items-1];
+
+	return $object;
+}
+
+global proc int XVIVO_ReportDuplicateNodes_GetDepth(string $object)
+{
+	string $buffer[];
+	return (`tokenize $object "|" $buffer`-1);
+}
+

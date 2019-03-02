@@ -1,0 +1,2204 @@
+
+
+global proc string ap_getLocalDirectoryFullPath()
+{
+	string $pathData, $fileName;
+	$pathData = `workspace -q -fre "anzovinPoseLocal"`;
+	
+	string $pathSubstr;
+	if (size($pathData) > 3)
+		$pathSubstr = `substring $pathData 2 3`;
+	else
+		$pathSubstr = "";
+	if (!startsWith($pathData, "/") && !startsWith($pathData, "\\") && $pathSubstr != ":\\" && $pathSubstr != ":/") {
+		$fileName = `workspace -q -rootDirectory`;
+		$fileName += $pathData;
+	} else
+		$fileName = $pathData;
+	
+	return $fileName;
+}
+
+global proc string ap_getGlobalDirectoryFullPath()
+{
+	string $pathData, $fileName;
+	$pathData = `workspace -q -fre "anzovinPoseGlobal"`;
+	
+	string $pathSubstr;
+	if (size($pathData) > 3)
+		$pathSubstr = `substring $pathData 2 3`;
+	else
+		$pathSubstr = "";
+	if (!startsWith($pathData, "/") && !startsWith($pathData, "\\") && $pathSubstr != ":\\" && $pathSubstr != ":/") {
+		$fileName = `workspace -q -rootDirectory`;
+		$fileName += $pathData;
+	} else
+		$fileName = $pathData;
+	
+	return $fileName;
+}
+
+
+// It would be nice if I didn't need this function, but a grid layout in a scroll layout doesn't resize propperly, and that's just the way it is.
+// So this function makes sure the pose grid layout is always the right size so that all of the icons are visible.
+global proc ap_resizeGridLayout(string $scrollLayout, string $gridLayout)
+{
+	int $cellHeight = `gridLayout -q -cellHeight $gridLayout`;
+	int $cellWidth = `gridLayout -q -cellWidth $gridLayout`;
+	int $width = `scrollLayout -q -scrollAreaWidth $scrollLayout`;
+	int $cellCount = `gridLayout -q -numberOfChildren $gridLayout`;
+	
+	int $rowNum = ($width-1) / $cellWidth;
+	if ($rowNum == 0)
+		$rowNum = 1;
+	
+	float $a, $b;
+	$a = $cellCount;
+	$b = $rowNum;
+	
+	int $colNum = ceil($a / $b);
+	int $height = $cellHeight * $colNum + 1;
+	gridLayout -e -height $height $gridLayout;
+}
+
+
+// Re-orders the pose icon list when dragging and dropping
+global proc ap_poseButtonDropCallback(string $dragControl, string $dropControl, string $msgs[], int $x, int $y, int $type)
+{
+	if ($msgs[0] == "poseIconMove") {
+		string $dragControlName = anzg_getObjectSansPath($dragControl);
+		string $dropControlName = anzg_getObjectSansPath($dropControl);
+		string $children[] = `gridLayout -q -gridOrder anzUI_poseGridLayout`;
+		
+		int $dragIndex = -1, $dropIndex = -1;
+		for($i = 0; $i < size($children); ++$i) {
+			if ($dragControlName == $children[$i])
+				$dragIndex = $i;
+			if ($dropControlName == $children[$i])
+				$dropIndex = $i;
+		}
+		
+		if ($dropIndex != -1 && $dragIndex != -1 && $dropIndex != $dragIndex) {
+			
+			int $d;
+			if ($dropIndex < $dragIndex)
+				$d = 1;
+			else
+				$d = -1;
+			
+			for($n = $dropIndex; $n != $dragIndex; $n += $d) {
+			
+				gridLayout -e -position $children[$dragIndex] ($n+1) anzUI_poseGridLayout;
+				$children = `gridLayout -q -gridOrder anzUI_poseGridLayout`;
+			}
+			
+			ap_savePoseOrder();
+		}
+	}
+}
+
+global proc string[] ap_poseButtonDragCallback(string $dragControl, int $x, int $y, int $mods)
+{
+	string $bloop[];
+	$bloop[0] = "poseIconMove";
+	return $bloop;
+}
+
+// Callback function for "Clicking pose applies it" menu item
+global proc ap_poseAppliesMenuCallback()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	int $applyMakesKeyframes = `menuItem -q -radioButton ap_clickPoseSetsKeyframesMenu`;
+	
+	anzUI_addUIAttribute($anzovinInterfaceCurrentCharacter, "applyMakesKeyframes", "bool");
+	anzUI_setUIIntAttribute($anzovinInterfaceCurrentCharacter, "applyMakesKeyframes", $applyMakesKeyframes);
+}
+
+// Callback function for "Sort new poses into character directories" menu item
+global proc ap_sortPosesMenuCallback()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	int $sortPoses = `menuItem -q -checkBox ap_sortPosesByCharacterMenu`;
+	
+	anzUI_addUIAttribute($anzovinInterfaceCurrentCharacter, "sortPoses", "bool");
+	anzUI_setUIIntAttribute($anzovinInterfaceCurrentCharacter, "sortPoses", $sortPoses);
+}
+
+
+// Creates a file browser dialog for choosing a directory, specifically for the ap_setPoseDirectoriesCallback function.
+global proc ap_createDirectoryChooseDialog(string $textField)
+{
+	global string $gDefaultFileBrowserDir; // global variable for the start path of a file browser window
+	string $startPath = `textField -q -text $textField`;
+	string $fullPath;
+	string $pathSubstr = "";
+	
+	if (size($startPath) >= 3)
+		$pathSubstr = `substring $startPath 2 3`;
+	
+	if (startsWith($startPath, "/") || startsWith($startPath, "\\") || $pathSubstr == ":/" || $pathSubstr == ":\\") {
+		// Not a local path
+		$fullPath = $startPath;
+	} else {
+		$fullPath = `workspace -q -rootDirectory`;
+		$fullPath += $startPath;
+	}
+	
+	$gDefaultFileBrowserDir = $fullPath;
+	fileBrowser ("ap_setPoseDirBrowseDialogEnd \"" + $textField + "\"") "Choose a directory" "" 4;
+}
+
+// Callback function after the file browser dialog created in the above function is finished.
+global proc ap_setPoseDirBrowseDialogEnd(string $textField, string $path, string $ignored)
+{
+	string $workspace = `workspace -q -rootDirectory`;
+	
+	if (endsWith($workspace, "/") || endsWith($workspace, "\\"))
+		$workspace = `substring $workspace 1 (size($workspace)-1)`;
+	
+	if (startsWith($path, $workspace)) {
+		// Can be local path:
+		if (size($path) <= size($workspace))
+			$path = "";
+		else
+			$path = `substring $path (size($workspace)+2) (size($path))`;
+	}
+	
+	textField -e -text $path $textField;
+}
+
+
+// Callback function for "Set pose directories" menu item
+global proc ap_setPoseDirectoriesCallback()
+{
+	string $dir, $textField;
+	
+	if (`window -exists apSetPoseDirectoriesWindow`) {
+		showWindow apSetPoseDirectoriesWindow;
+		return;
+	}
+	
+	string $window = `window -title "Set Pose Directories" apSetPoseDirectoriesWindow`;
+		columnLayout -adjustableColumn true -rowSpacing 10;
+			rowLayout	-numberOfColumns 4 
+ 						-columnWidth4 90 75 95 1
+						-columnAttach4 "right" "both" "both" "both"
+						-columnAlign4 "right" "center" "center" "center"
+ 						-columnOffset4 5 0 5 6
+ 						-adjustableColumn 2;
+ 				text -label "Local directory:";
+ 				$dir = `workspace -q -fre "anzovinPoseLocal"`;
+ 				$textField = `textField -text $dir apSetPoseDirectoriesLocalField`;
+ 				button -label "Browse..." -command ("ap_createDirectoryChooseDialog \"" + $textField + "\"");
+			setParent ..;
+			
+			rowLayout	-numberOfColumns 4 
+ 						-columnWidth4 90 75 95 1
+						-columnAttach4 "right" "both" "both" "both"
+						-columnAlign4 "right" "center" "center" "center"
+ 						-columnOffset4 5 0 5 6
+ 						-adjustableColumn 2;
+ 				text -label "Global directory:";
+ 				$dir = `workspace -q -fre "anzovinPoseGlobal"`;
+ 				$textField = `textField -text $dir apSetPoseDirectoriesGlobalField`;
+ 				button -label "Browse..." -command ("ap_createDirectoryChooseDialog \"" + $textField + "\"");;
+			setParent ..;
+			
+			rowLayout -numberOfColumns 3
+						-columnWidth3 1 91 93
+						-columnAttach3 "left" "left" "left"
+						-columnAlign3 "center" "center" "center"
+						-columnOffset3 0 0 0
+						-adjustableColumn 1;
+					text -label "Duh duh duh!" -visible 0;
+					button -label "Save" -width 85 -command "apSetPoseDirectoriesWindowSave";
+					button -label "Cancel" -width 85 -command "deleteUI apSetPoseDirectoriesWindow";
+			setParent ..;
+	
+	window -e -width 500 -height 135 $window;
+	
+	showWindow;
+}
+
+
+// Callback function for "Resolve pose ambiguities while applying"
+global proc ap_resolveAmbiguitiesCallback()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	int $resolvePoseAmbiguities = `menuItem -q -checkBox ap_resolvePoseAmbiguitiesMenu`;
+	
+	anzUI_addUIAttribute($anzovinInterfaceCurrentCharacter, "resolvePoseAmbiguities", "bool");
+	anzUI_setUIIntAttribute($anzovinInterfaceCurrentCharacter, "resolvePoseAmbiguities", $resolvePoseAmbiguities);
+}
+
+
+global proc string ap_createPoseShelfInterface()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	//string $shelfLayout = `shelfLayout -style "iconAndTextVertical" -cellWidth 72 -cellHeight 90 anzUI_PoseShelfLayout`;	
+	//	string $button = `shelfButton -annotation "Duh!" -style "iconAndTextVertical" -label "blah" -font "smallBoldLabelFont" -image "N:/Projects/brianStuff/SetupMachine3/poses/test.bmp"`;
+	
+	int $applyAndKeyframePreference = anzUI_getUIIntAttribute($anzovinInterfaceCurrentCharacter, "applyMakesKeyframes", 1);
+	int $sortPosesPreference = anzUI_getUIIntAttribute($anzovinInterfaceCurrentCharacter, "sortPoses", 1);
+	
+	string $menuBarLayout = `menuBarLayout`;
+ 		menu -label "Poses"; 
+ 			menuItem -label "New Pose..." -command "ap_CreateNewPoseWindow"
+ 						-ann "Creates a new pose using the selected controls on the current character.";
+ 			menuItem -divider true;
+ 			radioMenuItemCollection;
+ 			menuItem -label "Clicking pose applies it" -radioButton ($applyAndKeyframePreference == 0) -command "ap_poseAppliesMenuCallback"
+ 						-ann "Clicking a pose icon to apply it will only set the attributes and not set any keyframes."
+ 						ap_clickPoseNoKeyframesMenu;
+ 			menuItem -label "Clicking pose applies it and keyframes" -radioButton ($applyAndKeyframePreference == 1) -command "ap_poseAppliesMenuCallback"
+ 						-ann "Clicking a pose icon to apply it will set the attributes and then set keyframes for them."
+ 						ap_clickPoseSetsKeyframesMenu;
+ 			menuItem -divider true;
+ 			menuItem -label "Set Local and Global pose directories..." -command "ap_setPoseDirectoriesCallback"
+ 						-ann "Change the global and local directories used for saving and loading poses.";
+ 			menuItem -label "Add pose directory..." -command "fileBrowser \"ap_addDirectoryToLibraryUICallback\" \"Choose a directory	\" \"\" 4"
+ 						-ann "Add a new directory to the pose file browser.";
+ 			menuItem -label "Remove current top-level pose directory" -command "ap_removeCurrentPoseDirectory"
+ 						-ann "Remove a directory from the pose file browser, excluding the global and local directories."
+ 						-enable false
+ 						anzUI_removeDirectoryMenuItem;
+ 			menuItem -divider true;
+ 			menuItem -label "Sort new poses into character directories" -checkBox ($sortPosesPreference == 1) -command "ap_sortPosesMenuCallback"
+ 						-ann "Automatically save new poses to folders named after the character in the global and local directories."
+ 						ap_sortPosesByCharacterMenu;
+ 			menuItem -label "Resolve pose ambiguities while applying" -checkBox false -enable false -command "ap_resolveAmbiguitiesCallback"
+ 						-ann "Prompt for directions if any part of a saved pose is ambiguous as to how it should be applied to the current character. (Only enabled if relevant.)"
+ 						ap_resolvePoseAmbiguitiesMenu;
+		
+		
+		string $scrollLayout = `scrollLayout -childResizable true anzUI_poseScrollLayout`;
+			//string $formLayout = `formLayout -width 50 -height 50 -bgc 0.6 0.8 0.6`;
+				string $gridLayout = `gridLayout -columnsResizable true	-autoGrow true -cellWidthHeight 72 90 anzUI_poseGridLayout`;
+					
+					scrollLayout -e -resizeCommand ("ap_resizeGridLayout \"" + $scrollLayout + "\" \"" + $gridLayout + "\"") $scrollLayout;
+					
+					
+					//string $button = `iconTextButton -annotation "Duh!" -style "iconAndTextVertical" -label "blah" -font "smallBoldLabelFont" -image "N:/Projects/brianStuff/SetupMachine3/poses/test.bmp" -dropCallback "ap_poseButtonDropCallback" -dragCallback "ap_poseButtonDragCallback"`;
+					
+				setParent ..;
+			//setParent ..;
+		/*	formLayout -e	-attachForm $gridLayout "left" 0
+							-attachForm $gridLayout "right" 0
+							-attachForm $gridLayout "top" 0
+							-attachForm $gridLayout "bottom" 0
+						$formLayout;*/
+		setParent ..;
+	setParent ..;
+	
+	return $menuBarLayout;
+}
+
+
+// Saves the current order of the poses to the appropriate AnzovinInterfaceNode.
+global proc ap_savePoseOrder()
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	global string $anz_poseCurrentDirectory;
+	
+	$interfaceNode = ($anzovinInterfaceCurrentCharacterNamespace + "AnzovinInterfaceNode");
+	if (!objExists($interfaceNode))
+		return;
+	
+	if (!attributeExists("poseOrderData", $interfaceNode)) {
+		addAttr -longName "poseOrderData" -numberOfChildren 2 -attributeType compound -multi $interfaceNode;
+		addAttr -longName "directory" -dt "string" -parent "poseOrderData" $interfaceNode;
+		addAttr -longName "files" -dt "stringArray" -parent "poseOrderData" $interfaceNode;
+	}
+	
+	int $count = `getAttr -s ($interfaceNode + ".poseOrderData")`;
+	int $index = -1;
+	for($i = 0; $i < $count; ++$i) {
+		string $dir = `getAttr ($interfaceNode + ".poseOrderData[" + $i + "].directory")`;
+		if ($dir == $anz_poseCurrentDirectory) {
+			$index = $i;
+			break;
+		}
+	}
+	if ($index == -1) {
+		$index = $count;
+		setAttr ($interfaceNode + ".poseOrderData[" + $index + "].directory") -type "string" $anz_poseCurrentDirectory;
+	}
+	
+	string $children[] = `gridLayout -q -gridOrder anzUI_poseGridLayout`;
+	int $realChildCount = 0;
+	
+	for($button in $children) {
+		if (`iconTextButton -exists $button`)
+			++$realChildCount;
+	}
+	
+	string $command;
+	$command += "setAttr ";
+	$command += $interfaceNode;
+	$command += ".poseOrderData[";
+	$command += $index;
+	$command += "].files -type \"stringArray\" ";
+	$command += $realChildCount;
+	for($button in $children) {
+		if (`iconTextButton -exists $button`) {
+			$command += " \"";
+			
+			// Making sure we get the right file:
+			// (This is a paranoid thing to do, because chances are the file extension will never change capitalization or whatever,
+			//  but I like playing it safe dagnabbit.)
+			string $fileNameSansExtension = `iconTextButton -q -label $button`;
+			string $fileList[] = `getFileList -folder $anz_poseCurrentDirectory -filespec ($fileNameSansExtension + ".*")`;
+			string $targetFileName = "";
+			for($file in $fileList) {
+				if (endsWith(tolower($file), ".pose")) {
+					$targetFileName = $file;
+					break;
+				}
+			}
+			if ($targetFileName == "")
+				$targetFileName = $fileNameSansExtension + ".pose";
+			
+			$command += $targetFileName;
+			$command += "\"";
+		}
+	}
+	$command += ";";
+	
+	eval($command);
+}
+
+
+// Creates the shelf buttons.  $directory must end in a slash
+global proc ap_CreatePoseShelfButtons(string $directory)
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	$interfaceNode = ($anzovinInterfaceCurrentCharacterNamespace + "AnzovinInterfaceNode");
+	string $files[];
+	
+		
+	if ($directory == "")
+		return;
+	
+	string $filesOnDisk[] = `getFileList -folder $directory -filespec "*.pose"`;
+	
+	
+	// We're going to look to see if the pose order for these poses has been saved to the interface node:
+	int $poseOrderFound = 0;
+	if (`objExists $interfaceNode`) {
+		if (attributeExists("poseOrderData", $interfaceNode)) {
+			int $count = `getAttr -s ($interfaceNode + ".poseOrderData")`;
+			int $index = -1;
+			for($i = 0; $i < $count; ++$i) {
+				// Check for a matching directory:
+				string $dir = `getAttr ($interfaceNode + ".poseOrderData[" + $i + "].directory")`;
+				if ($dir == $directory) {
+					$index = $i;
+					break;
+				}
+			}
+			if ($index != -1) {
+				// It has!
+				$poseOrderFound = 1;
+				
+				// Now we need to construct a new list that is all of the saved files (that actually exist on disk) in their preserved order,
+				// plus any new files that weren't originally in the list tacked on to the end.
+				string $savedOrder[] = `getAttr ($interfaceNode + ".poseOrderData[" + $i + "].files")`;
+				string $savedOrderSansMissingFiles[];
+				
+				// Remove any files that don't exist anymore:
+				int $n = 0;
+				for($i = 0; $i < size($savedOrder); ++$i) {
+					int $found = 0;
+					for($fileOnDisk in $filesOnDisk) {
+						if ($fileOnDisk == $savedOrder[$i]) {
+							$found = 1;
+							break;
+						}
+					}
+					if ($found == 1) {
+						$savedOrderSansMissingFiles[$n] = $savedOrder[$i];
+						++$n;
+					}
+				}
+				
+				// Now add on the files that weren't there from before:
+				// (This will combine the two string arrays together then remove duplicates.  The later duplicates are always the ones
+				//  removed.)
+				$files = stringArrayRemoveDuplicates(stringArrayCatenate($savedOrderSansMissingFiles, $filesOnDisk));
+				
+				// Save back the new pose order data so that it doesn't continue to store non-existant files:
+				string $command;
+				$command += "setAttr ";
+				$command += $interfaceNode;
+				$command += ".poseOrderData[";
+				$command += $index;
+				$command += "].files -type \"stringArray\" ";
+				$command += size($files);
+				for($file in $files) {
+					$command += " \"";
+					$command += $file;
+					$command += "\"";
+				}
+				$command += ";";
+				eval($command);
+			}
+		}
+	}
+	if ($poseOrderFound == 0)
+		$files = $filesOnDisk;
+	
+	string $oldButtons[] = `gridLayout -q -childArray anzUI_poseGridLayout`;
+	for($oldButton in $oldButtons)
+		deleteUI $oldButton;
+	
+	// Here's a rather baffling UI workaround:
+	// The icons in the pose interface won't draw correctly the first time in Linux, so it's
+	// necessary to fill the layout with a bunch of fake buttons, delete them, and then
+	// draw the actual ones.  Why?  Who knows!!
+	if (`about -linux` == 1) {
+		string $oldParent = `setParent -q`;
+		setParent anzUI_poseGridLayout;
+		for($i = 0; $i < size($files); ++$i)
+			iconTextButton -style "textOnly" -label "ffff" -font "smallBoldLabelFont" -annotation "wheee!";
+		ap_resizeGridLayout("anzUI_poseScrollLayout", "anzUI_poseGridLayout");
+		setParent $oldParent;
+		
+		string $oldButtons[] = `gridLayout -q -childArray anzUI_poseGridLayout`;
+		for($oldButton in $oldButtons)
+			deleteUI $oldButton;
+	}
+	
+	string $oldParent = `setParent -q`;
+	setParent anzUI_poseGridLayout;
+	
+	for($i = 0; $i < size($files); ++$i) {
+		string $file = $files[$i];
+		string $filePath = ($directory + $file);
+		string $button;
+		
+		string $fileName = `substring $file 1 (size($file)-5)`;
+		string $command = "ap_LoadPoseFromFile(\"" + $filePath + "\");";
+		string $iconPath;
+		
+		if (`about -windows` == 1)
+			$iconPath = $directory + $fileName + ".bmp";
+		else
+			$iconPath = $directory + $fileName + ".xpm";
+		
+		if (`filetest -f $iconPath` == 1) {
+			$button = `iconTextButton -style "iconAndTextVertical" -label $fileName -font "smallBoldLabelFont"
+						-annotation $fileName
+						-dragCallback "ap_poseButtonDragCallback" -dropCallback "ap_poseButtonDropCallback"
+						-command $command
+						-image $iconPath`;
+		} else {
+			$button = `iconTextButton -style "textOnly" -label $fileName -font "smallBoldLabelFont"
+					-annotation $fileName
+					-dragCallback "ap_poseButtonDragCallback" -dropCallback "ap_poseButtonDropCallback"
+					-command $command`;
+		}
+		ap_createPoseIconContextualMenu($button, $filePath);
+	}
+	
+	ap_resizeGridLayout("anzUI_poseScrollLayout", "anzUI_poseGridLayout");
+	
+	setParent $oldParent;
+}
+
+global proc ap_createPoseIconContextualMenu(string $button, string $filePath)
+{
+	popupMenu;
+ 	
+	menuItem -label "Apply pose and keyframe" -command ("ap_LoadPoseFromFileAndKeyframe(\"" + $filePath + "\");")
+				-ann "Apply the pose and set keyframes for the affected attributes";
+				
+	menuItem -label "Apply pose" -command ("ap_LoadPoseFromFileNoKeyframe(\"" + $filePath + "\");")
+				-ann "Apply the pose";
+ 	
+	menuItem -label "Mirror pose and keyframe" -command ("ap_MirrorPoseFromFileAndKeyframe(\"" + $filePath + "\");")
+				-ann "Applies the pose switching right and left controls, and set keyframes for the affected attributes";
+				
+	menuItem -label "Mirror pose" -command ("ap_MirrorPoseFromFileNoKeyframe(\"" + $filePath + "\");")
+				-ann "Applies the pose switching right and left controls.";
+				
+	menuItem -divider true;
+	
+	menuItem -label "Select controls affected by pose" -command ("ap_SelectPoseFromFile(\"" + $filePath + "\");")
+				-ann "Selects the controls affected by the pose, but does not change any of the controls' attributes.";
+	
+	menuItem -divider true;
+	
+	menuItem -label "Rename pose" -command ("ap_renamePose(\"" + $filePath + "\");")
+				-ann "Renames the pose. (Warning: cannot undo!)";
+	
+	menuItem -label "Delete pose" -command ("ap_deletePose(\"" + $button + "\", \"" + $filePath + "\");")
+				-ann "Deletes the pose. (Warning: cannot undo!)";
+	
+	menuItem -divider true;
+	
+	menuItem -label "Move pose to..." -command ("ap_moveOrCopyPoseTo \"" + $filePath + "\" 0") 
+				-ann "Prompts for a directory to move the pose to. (Warning: cannot undo!)";
+	
+	menuItem -label "Move pose to global directory" -command ("ap_moveOrCopyToGlobal \"" + $filePath + "\" 0") 
+				-ann "Moves the pose to the global directory, in the same relative location if it's being moved from the local directory. (Warning: cannot undo!)";
+	
+	menuItem -label "Move pose to local directory" -command ("ap_moveOrCopyToLocal \"" + $filePath + "\" 0") 
+				-ann "Moves the pose to the local directory, in the same relative location if it's being moved from the global directory. (Warning: cannot undo!)";
+	
+	menuItem -label "Copy pose to..." -command ("ap_moveOrCopyPoseTo \"" + $filePath + "\" 1")
+				-ann "Prompts for a directory to copy the pose to. (Warning: cannot undo!)";
+	
+	menuItem -label "Copy pose to global directory" -command ("ap_moveOrCopyToGlobal \"" + $filePath + "\" 1") 
+				-ann "Copies the pose to the global directory, in the same relative location if it's in the local directory. (Warning: cannot undo!)";
+	
+	menuItem -label "Copy pose to local directory" -command ("ap_moveOrCopyToLocal \"" + $filePath + "\" 1") 
+				-ann "Copies the pose to the local directory, in the same relative location if it's in the global directory. (Warning: cannot undo!)";
+}
+
+// Prompts to delete the specified pose, then deletes it if the answer is yes.
+global proc ap_deletePose(string $button, string $filePath)
+{
+	string $strings[];
+	int $count;
+	string $fileName;
+ 	global string $anz_poseCurrentDirectory;
+	
+	$count = `tokenize $filePath "\\/" $strings`;
+	$fileName = $strings[$count-1];
+	
+	
+	string $result = `confirmDialog -title "Delete pose" -message ("Are you sure you want to delete the pose '" + $fileName + "'? (WARNING: This cannot be undone!)")
+ 		-button "Yes" -button "No" -defaultButton "No"
+ 		-cancelButton "No" -dismissString "No"`;
+ 	
+ 	if ($result == "Yes") {
+		
+		deleteUI $button;
+		sysFile -delete $filePath;
+		string $iconPathBase = `substring $filePath 1 (size($filePath)-5)`;
+		string $iconPath = $iconPathBase + ".bmp";
+		sysFile -delete $iconPath;
+		string $iconPath = $iconPathBase + ".xpm";
+		sysFile -delete $iconPath;
+		ap_CreatePoseShelfButtons($anz_poseCurrentDirectory);
+ 	}
+}
+
+// Prompts to rename the specified pose
+global proc ap_renamePose(string $filePath)
+{
+	string $strings[];
+	int $count;
+	string $fileName, $directory, $fileNameSansExtension;
+ 	global string $anz_poseCurrentDirectory;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	string $interfaceNode = ($anzovinInterfaceCurrentCharacterNamespace + "AnzovinInterfaceNode");
+	string $text;
+	
+	$filePath = fromNativePath($filePath);
+	
+	$count = `tokenize $filePath "/" $strings`;
+	$fileName = $strings[$count-1];
+	
+	$directory = "";
+	for($i = 0; $i < $count-1; ++$i) {
+		$directory += $strings[$i];
+		$directory += "/";
+	}
+	
+	$fileNameSansExtension = `substring $fileName 1 (size($fileName)-5)`;
+	
+	
+ 	string $result = `promptDialog 
+ 		-title "Rename Pose"
+ 		-text $fileNameSansExtension
+ 		-message "Enter New Name:"
+ 		-button "OK" -button "Cancel"
+ 		-defaultButton "OK" -cancelButton "Cancel"
+ 		-dismissString "Cancel"`;
+ 
+ 	if ($result == "OK") {
+ 		$text = `promptDialog -query -text`;
+ 		
+		if (`filetest -w ($directory + $text + ".pose")`) {
+			confirmDialog -title "Pose exists" -message "A pose with that name already exists."
+ 				-button "OK" -defaultButton "OK";
+			return;
+		}
+ 		
+ 		sysFile -rename ($directory + $text + ".pose") $filePath;
+ 		sysFile -rename ($directory + $text + ".bmp") ($directory + $fileNameSansExtension + ".bmp");
+ 		sysFile -rename ($directory + $text + ".xpm") ($directory + $fileNameSansExtension + ".xpm");
+ 		
+		// In saved pose order data (if it exists), replace old pose with new pose:
+		
+		if (objExists($interfaceNode)) {
+			if (attributeExists("poseOrderData", $interfaceNode)) {
+				
+ 				int $index = -1;
+ 				for($i = 0; $i < `getAttr -s ($interfaceNode + ".poseOrderData")`; ++$i) {
+ 					if ($directory == `getAttr ($interfaceNode + ".poseOrderData[" + $i + "].directory")`) {
+ 						$index = $i;
+ 						break;
+ 					}
+ 				}
+ 				if ($index != -1) {
+ 					string $files[] = `getAttr ($interfaceNode + ".poseOrderData[" + $index + "].files")`;
+		 			
+					string $command;
+					$command += "setAttr ";
+					$command += $interfaceNode;
+					$command += ".poseOrderData[";
+					$command += $index;
+					$command += "].files -type \"stringArray\" ";
+					$command += size($files);
+					for($file in $files) {
+						$command += " \"";
+						if ($file == $fileName)
+							$command += ($text + ".pose");
+						else
+							$command += $file;
+						$command += "\"";
+					}
+					$command += ";";
+					eval($command);
+		 			
+ 				}
+ 			}
+ 		}
+		ap_CreatePoseShelfButtons($anz_poseCurrentDirectory);
+ 	}
+	
+}
+
+
+// Moves the pose $filePath to the directory $newDirectory
+global proc ap_actuallyMoveOrCopyPose(int $copy, string $filePath, string $newDirectory, string $ignored)
+{
+ 	global string $anz_poseCurrentDirectory;
+	string $strings[];
+	string $fileName, $fileNameSansExtension, $filePathSansExtension;
+	int $count;
+	
+	$count = `tokenize $filePath "/\\" $strings`;
+	$fileName = $strings[$count-1];
+	$fileNameSansExtension = `substring $fileName 1 (size($fileName)-5)`;
+	$filePathSansExtension = `substring $filePath 1 (size($filePath)-5)`;
+	
+	$newDirectory = fromNativePath($newDirectory);
+	if (!endsWith($newDirectory, "/"))
+		$newDirectory += "/";
+	
+	if (`filetest -w ($newDirectory + $fileName)`) {
+		string $result = `confirmDialog -title "Overwrite" -message "A pose already exists in that directory with the specified name.  Overwrite?"
+ 							-button "Yes" -button "No" -defaultButton "No"
+ 							-cancelButton "No" -dismissString "No"`;
+ 		if ($result == "No")
+			return;
+	}
+	
+	if ($copy) {
+		sysFile -copy ($newDirectory + $fileName) $filePath;
+		sysFile -copy ($newDirectory + $fileNameSansExtension + ".bmp") ($filePathSansExtension + ".bmp");
+		sysFile -copy ($newDirectory + $fileNameSansExtension + ".xpm") ($filePathSansExtension + ".xpm");
+	} else {
+		sysFile -rename ($newDirectory + $fileName) $filePath;
+		sysFile -rename ($newDirectory + $fileNameSansExtension + ".bmp") ($filePathSansExtension + ".bmp");
+		sysFile -rename ($newDirectory + $fileNameSansExtension + ".xpm") ($filePathSansExtension + ".xpm");
+	}
+	ap_CreatePoseShelfButtons($anz_poseCurrentDirectory);
+	
+	if ($copy)
+		print ("Copied '" + $filePath + "' to '" + $newDirectory + "'\n");
+	else
+		print ("Moved '" + $filePath + "' to '" + $newDirectory + "'\n");
+		
+}
+
+
+// Prompts the user for a directory to move or copy the pose to, then moves or copies it
+global proc ap_moveOrCopyPoseTo(string $filePath, int $copy)
+{
+	global string $gDefaultFileBrowserDir;
+ 	global string $anz_poseCurrentDirectory;
+	
+	$filePath = fromNativePath($filePath);
+	
+	$gDefaultFileBrowserDir = $anz_poseCurrentDirectory;
+	if ($copy)
+		fileBrowser ("ap_actuallyMoveOrCopyPose " + $copy + " \"" + $filePath + "\"") "Choose a directory" "" 4;
+	else
+		fileBrowser ("ap_actuallyMoveOrCopyPose " + $copy + " \"" + $filePath + "\"") "Choose a directory" "" 4;
+}
+
+// Moves a pose to the local directory, preserving any global-directory-relative path it may have if it's in the global directory.
+global proc ap_moveOrCopyToLocal(string $filePath, int $copy)
+{
+	string $globalDir, $localDir, $targetLocation;
+	string $strings[];
+	int $count;
+	
+	$localDir = ap_getLocalDirectoryFullPath();
+	$globalDir = ap_getGlobalDirectoryFullPath();
+	
+	$targetLocation = $localDir;
+	if (!endsWith($targetLocation, "/"))
+		$targetLocation += "/";
+	
+	if (size($localDir) > 0 && startsWith($filePath, $localDir)) {
+		error "File is already in the local directory!";
+		return;
+	}
+	
+	// Maintain relative path if pose is in global directory
+	if (size($globalDir) > 0 && startsWith($filePath, $globalDir)) {
+		string $partialPath = `substring $filePath (size($globalDir)+1) (size($filePath))`;
+		
+		$count = `tokenize $partialPath "/\\" $strings`;
+		for($i = 0; $i < ($count-1); ++$i) {
+			$targetLocation += $strings[$i];
+			$targetLocation += "/";
+		}
+	}
+	
+	sysFile -makeDir $targetLocation;
+	ap_actuallyMoveOrCopyPose($copy, $filePath, $targetLocation, "");
+}
+
+// Moves a pose to the global directory, preserving any local-directory-relative path it may have if it's in the local directory.
+global proc ap_moveOrCopyToGlobal(string $filePath, int $copy)
+{
+	string $globalDir, $localDir, $targetLocation;
+	string $strings[];
+	int $count;
+	
+	$localDir = ap_getLocalDirectoryFullPath();
+	$globalDir = ap_getGlobalDirectoryFullPath();
+	
+	$targetLocation = $globalDir;
+	if (!endsWith($targetLocation, "/"))
+		$targetLocation += "/";
+	
+	if (size($globalDir) > 0 && startsWith($filePath, $globalDir)) {
+		error "File is already in the global directory!";
+		return;
+	}
+	
+	// Maintain relative path if pose is in global directory
+	if (size($localDir) > 0 && startsWith($filePath, $localDir)) {
+		string $partialPath = `substring $filePath (size($localDir)+1) (size($filePath))`;
+		
+		$count = `tokenize $partialPath "/\\" $strings`;
+		for($i = 0; $i < ($count-1); ++$i) {
+			$targetLocation += $strings[$i];
+			$targetLocation += "/";
+		}
+	}
+	
+	sysFile -makeDir $targetLocation;
+	ap_actuallyMoveOrCopyPose($copy, $filePath, $targetLocation, "");
+}
+
+
+
+global proc ap_addDirectoryToLibraryUI(string $directory)
+{
+	global string $anz_libraryUI;
+	global string $gLibraryUILookupTable[];
+	string $currentFolders[];
+	
+	string $directoriesVisorName = lookupTableLookup(
+		$gLibraryUILookupTable,
+		"libraryUI",
+		$anz_libraryUI,
+		"directoriesVisorName");
+	
+	$currentFolders = `visor -q -folderList $directoriesVisorName`;
+	
+	for($folder in $currentFolders) {
+		if ($folder == $directory) {
+			warning ("Directory '" + $directory + "' is already in the pose file browser.");
+			return;
+		}
+		if (startsWith($directory, ($folder + "/"))) {
+			warning ("A parent directory of '" + $directory + "' is already present in the pose file browser.");
+			return;
+		}
+		if (startsWith($folder, ($directory + "/"))) {
+			warning ("'" + $directory + "' is a parent directory of an existing directory in the pose file browser.");
+			return;
+		}
+		if (`filetest -d $directory` != 1) {
+			warning ("'" + $directory + "' does not exist or is not a folder.");
+			return;
+		}
+	}
+	
+	visor 
+		-addFolder 
+		-openDirectories true
+		-type directory
+		-path $directory
+		-name $directory
+		-rebuild
+		$directoriesVisorName;
+}
+
+global proc ap_addDirectoryToLibraryUICallback(string $directory, string $ignored)
+{
+	ap_addDirectoryToLibraryUI($directory);
+}
+
+
+global proc ap_removeCurrentPoseDirectory()
+{
+	global string $anz_poseCurrentDirectory;
+	global string $gLibraryUILookupTable[];
+	global string $anz_libraryUI;
+	string $folders[];
+	
+	string $directoriesVisorName = lookupTableLookup(
+		$gLibraryUILookupTable,
+		"libraryUI",
+		$anz_libraryUI,
+		"directoriesVisorName");
+		
+	$folders = `visor -q -folderList $directoriesVisorName`;
+	for($i = 0; $i < size($folders); ++$i) {
+		if (startsWith($anz_poseCurrentDirectory, $folders[$i])) {
+			visor -deleteFolder $folders[$i] $directoriesVisorName;
+			
+			$anz_poseCurrentDirectory = "";
+			ap_CreatePoseShelfButtons("");
+			return;
+		}
+	}
+	
+	warning "For some reason the selected directory wasn't found.  This error shouldn't ever happen!";
+}
+
+
+// Function when the 'Save' button is pressed in the set pose directories window.
+global proc apSetPoseDirectoriesWindowSave()
+{
+	global string $anz_libraryUI;
+	global string $gLibraryUILookupTable[];
+	string $oldFolders[], $oldLocal, $oldGlobal;
+	string $newFolders[];
+	
+	string $directoriesVisorName = lookupTableLookup(
+		$gLibraryUILookupTable,
+		"libraryUI",
+		$anz_libraryUI,
+		"directoriesVisorName");
+	$oldFolders = `visor -q -folderList $directoriesVisorName`;
+	
+	$oldLocal = ap_getLocalDirectoryFullPath();
+	$oldGlobal = ap_getGlobalDirectoryFullPath();
+	
+	workspace -fr "anzovinPoseLocal" `textField -q -text apSetPoseDirectoriesLocalField`;
+	workspace -fr "anzovinPoseGlobal" `textField -q -text apSetPoseDirectoriesGlobalField`;
+	deleteUI apSetPoseDirectoriesWindow;
+	
+	int $folderCount = 0;
+	for($folder in $oldFolders) {
+		if ($folder != $oldLocal && $folder != $oldGlobal) {
+			$newFolders[$folderCount] = $folder;
+			++$folderCount;
+		}
+	}
+	
+	// Destroy the current libraryUI and rebuild it with the new directories
+	libraryUIDelete($anz_libraryUI, 1);
+	
+	setParent anzUI_poseFileBrowserFormLayout;
+	ap_createPoseFileBrowserInterface();
+	
+	for($i = 0; $i < $folderCount; ++$i)
+		ap_addDirectoryToLibraryUI($newFolders[$i]);
+	
+	workspace -saveWorkspace;
+}
+
+global proc string ap_createPoseFileBrowserInterface()
+{
+	global string $anz_libraryUI;
+	string $parentLayout = `setParent -q`;
+	$anz_libraryUI = libraryUI(
+					$parentLayout, 
+					"", 	// directoriesVisorName
+					""); 	// filesVisorName
+	
+	global string $anz_poseCurrentDirectory;
+	
+	// To do: Change this later when there's a way to set the pose directory
+	$anz_poseCurrentDirectory = ap_getLocalDirectoryFullPath();
+	
+	libraryUISetRootDirectory($anz_libraryUI, $anz_poseCurrentDirectory);
+	libraryUIShowDirectoriesOnly($anz_libraryUI);
+	
+	
+	global string $gLibraryUILookupTable[];
+	string $directoriesVisorName = lookupTableLookup($gLibraryUILookupTable, "libraryUI", $anz_libraryUI, "directoriesVisorName");
+	hyperGraph -edit -directoryPressCommand ("newLibraryUIDirectoryPressed " + $anz_libraryUI + "\"\"") $directoriesVisorName;
+	
+	string $globalPath = ap_getGlobalDirectoryFullPath();
+	if ($globalPath != $anz_poseCurrentDirectory)
+		ap_addDirectoryToLibraryUI($globalPath);
+	
+	
+	setParent $parentLayout;
+	
+	return $anz_libraryUI;
+}
+
+global proc newLibraryUIDirectoryPressed(
+	string $libraryUI,
+	string $oldCurrentDirectoryName,
+	string $editor,
+	string $dummy)
+{
+	global string $anz_poseCurrentDirectory;
+	
+	
+	libraryUIDirectoryPressed($libraryUI, $oldCurrentDirectoryName, $editor, $dummy);
+	$anz_poseCurrentDirectory = libraryUICurrentDirectory($libraryUI);
+	ap_CreatePoseShelfButtons($anz_poseCurrentDirectory);
+	
+	int $enable = 1;
+	if (startsWith($anz_poseCurrentDirectory, ap_getGlobalDirectoryFullPath()))
+		$enable = 0;
+	else if (startsWith($anz_poseCurrentDirectory, ap_getLocalDirectoryFullPath()))
+		$enable = 0;
+	
+	menuItem -edit -enable $enable anzUI_removeDirectoryMenuItem;
+	
+}
+
+
+
+
+proc checkObjectsForPose(string $objects[])
+{
+	global string $anz_poseTypeScripts[];
+	global string $anz_installedProducts[];
+	string $cn, $characterNamespace;
+	int $poseType = 0, $type, $error;
+	
+	if (size($objects) == 0) {
+		error "To create a pose, select controls from one character.";
+		return;
+	}
+	
+	$characterNamespace = anzg_getNamespace($objects[0]);
+	
+	for($object in $objects) {
+		$cn = anzg_getNamespace($object);
+		
+		if ($cn != $characterNamespace) {
+			error "Only select controls from one character when saving a pose.";
+			return;
+		}
+		
+		$error = 0;
+		for($command in $anz_poseTypeScripts) {
+			$type = eval($command + "(\"" + $object + "\");");
+			if ($type != 0)
+				break;
+		}
+		if ($type == 0)
+			$error = 1;
+		else if ($poseType == 0)
+			$poseType = $type;
+		else if ($poseType != $type)
+			$error = 1;
+		
+		if ($error == 1) {
+			string $errorString;
+			// We'll construct a succinct, natural English error message here.
+			$errorString = "When saving a pose select controls from only ";
+			$errorString += $anz_installedProducts[0];
+			for($i = 1; $i < size($anz_installedProducts); ++$i) {
+				if (size($anz_installedProducts) == 2)
+					$errorString += " or only ";
+				else if (size($anz_installedProducts) > 2 && $i == (size($anz_installedProducts)-1))
+					$errorString += ", or only ";
+				else
+					$errorString += ", only ";
+				$errorString += $anz_installedProducts[$i];
+			}
+			$errorString += ".";
+			error $errorString;
+			return;
+		}
+	}
+	
+	
+}
+
+
+global proc int ap_SavePoseToFile(string $fileName, string $objects[])
+{
+	global string $anz_poseTypeScripts[];
+	global string $anz_poseSaveScripts[];
+	global int $anz_installedProductCount;
+	global string $anz_poseObjects[];
+	global string $anz_poseFileName;
+	int $productIndex = -1, $type;
+	
+	// Figure out which Anzovin product we're using here:
+	for($i = 0; $i < $anz_installedProductCount; ++$i) {
+		$type = eval($anz_poseTypeScripts[$i] + "(\"" + $objects[0] + "\");");
+		if ($type != 0) {
+			$productIndex = $i;
+			break;
+		}
+	}
+	if ($productIndex == -1)
+		return 1;
+	
+	$anz_poseObjects = $objects;
+	$anz_poseFileName = $fileName;
+	
+	return eval($anz_poseSaveScripts[$productIndex] + ";");
+}
+
+
+global proc ap_LoadPoseFromFile(string $fileName)
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	int $keyframe = anzUI_getUIIntAttribute($anzovinInterfaceCurrentCharacter, "applyMakesKeyframes", 1);
+	
+	if ($keyframe)
+		ap_LoadPoseFromFileAndKeyframe($fileName);
+	else
+		ap_LoadPoseFromFileNoKeyframe($fileName);
+}
+
+global proc ap_LoadPoseFromFileAndKeyframe(string $fileName)
+{
+	global int $ap_alsoSetKeyframes;
+	global int $ap_applyPoseToAttributes;
+	global int $ap_mirrorPose;
+	
+	$ap_mirrorPose = 0;
+	$ap_applyPoseToAttributes = 1;
+	$ap_alsoSetKeyframes = 1;
+	eval("source \"" + $fileName + "\"");
+}
+
+global proc ap_LoadPoseFromFileNoKeyframe(string $fileName)
+{
+	global int $ap_alsoSetKeyframes;
+	global int $ap_applyPoseToAttributes;
+	global int $ap_mirrorPose;
+	
+	$ap_mirrorPose = 0;
+	$ap_applyPoseToAttributes = 1;
+	$ap_alsoSetKeyframes = 0;
+	eval("source \"" + $fileName + "\"");
+}
+
+global proc ap_MirrorPoseFromFileAndKeyframe(string $fileName)
+{
+	global int $ap_alsoSetKeyframes;
+	global int $ap_applyPoseToAttributes;
+	global int $ap_mirrorPose;
+	
+	$ap_mirrorPose = 1;
+	$ap_applyPoseToAttributes = 1;
+	$ap_alsoSetKeyframes = 1;
+	eval("source \"" + $fileName + "\"");
+}
+
+global proc ap_MirrorPoseFromFileNoKeyframe(string $fileName)
+{
+	global int $ap_alsoSetKeyframes;
+	global int $ap_applyPoseToAttributes;
+	global int $ap_mirrorPose;
+	
+	$ap_mirrorPose = 1;
+	$ap_applyPoseToAttributes = 1;
+	$ap_alsoSetKeyframes = 0;
+	eval("source \"" + $fileName + "\"");
+}
+
+global proc ap_SelectPoseFromFile(string $fileName)
+{
+	global int $ap_alsoSetKeyframes;
+	global int $ap_applyPoseToAttributes;
+	global int $ap_mirrorPose;
+	
+	$ap_mirrorPose = 0;
+	$ap_applyPoseToAttributes = 0;
+	$ap_alsoSetKeyframes = 0;
+	eval("source \"" + $fileName + "\"");
+}
+
+// Returns the all the lowest level nodes of a namespace that, when selected, include all other nodes in that namespace.  Used
+// for getting all the objects to add to the "view only" list of the anzovinPoseCamera modelEditor.
+global proc string[] getTopLevelNodesOfNamespace(string $namespace)
+{
+	string $allNodes[] = `ls -type nurbsSurface -type mesh -type subdiv ($namespace + "*")`;
+	string $result[];
+	string $parentFullPath, $parent, $lastParent, $strings[];
+	int $count = 0, $n;
+	
+	for($node in $allNodes) {
+		$parentFullPath = $lastParent = $node;
+		
+		$n = `tokenize $node "|" $strings`;
+		$parent = $strings[$n-1];
+		
+		//print "\nSTART\n";
+		//print ("   $node = " + $node + "\n");
+		//print ("   $parent = " + $parent + "\n");
+		
+		while(startsWith($parent, $namespace)) {
+			$lastParent = $parentFullPath;
+			
+			$strings = `listRelatives -parent $parentFullPath`;
+			$parent = $strings[0];
+			$strings = `listRelatives -path -parent $parentFullPath`;
+			$parentFullPath = $strings[0];
+			
+			//print ("      next $parent = " + $parent + "\n");
+		}
+		//print ("   result = " + $lastParent + "\n");
+		
+		$result[$count] = $lastParent;
+		++$count;
+	}
+	$result = stringArrayRemoveDuplicates($result);
+	return $result;
+}
+
+
+proc fitPoseToView(string $objects[])
+{
+	string $characterNamespace = anzg_getNamespace($objects[0]);
+	string $selection[] = `ls -sl`;
+	
+	// Add only the character to the view
+	modelEditor -edit -viewSelected 0 apNewPoseWindowEditor;
+	if (size($characterNamespace) > 0) {
+		string $characterObjects[] = getTopLevelNodesOfNamespace($characterNamespace);
+		
+		select $characterObjects;
+		modelEditor -edit -viewSelected 1 -addSelected apNewPoseWindowEditor;
+		
+	}
+	select $objects;
+	viewFit anzovinPoseCamera;
+	select $selection;
+	
+}
+
+
+global proc ap_RefreshControlsInPoseWindow(string $listControl, int $checkSelection)
+{
+	string $selection[] = `ls -sl`;
+	
+	if ($checkSelection == 1)
+		checkObjectsForPose($selection);
+	
+	textScrollList -e -removeAll $listControl;
+	
+	for($object in $selection)
+		textScrollList -e -append $object $listControl;
+	
+	
+	fitPoseToView($selection);
+}
+
+global proc ap_AutoFitView()
+{
+	string $objects[] = `textScrollList -q -allItems apControlsScrollList`;
+	fitPoseToView($objects);
+}
+
+
+global proc ap_AddSelectedToPoseList()
+{
+	string $selection[] = `ls -sl`;
+	string $list[], $newList[];
+	int $oldSize;
+	
+	if (size($selection) == 0) {
+		warning "Nothing selected!";
+		return;
+	}
+	
+	$list = `textScrollList -q -allItems apControlsScrollList`;
+	$newList = stringArrayCatenate($selection, $list);
+	
+	$oldSize = size($newList);
+	$newList = stringArrayRemoveDuplicates($newList);
+	
+	checkObjectsForPose($newList);
+	
+	if (size($newList) != $oldSize)
+		warning "Some controls were not added because they already existed in the list.";
+	
+	textScrollList -e -removeAll apControlsScrollList;
+	for($item in $newList)
+		textScrollList -e -append $item apControlsScrollList;
+	
+	string $currentCharacter = `text -q -label apNameStaticText`;
+	string $newCharacter = anzg_getNamespace($selection[0]);
+	if ($newCharacter != "")
+		$newCharacter = (`substring $newCharacter 1 (size($newCharacter)-1)`);
+	
+	if ($newCharacter != $currentCharacter) {
+		text -e -label $newCharacter apNameStaticText;
+		fitPoseToView($newList);
+	}
+}
+
+global proc ap_RemoveSelectedFromPoseList()
+{
+	int $selection[] = `textScrollList -q -selectIndexedItem apControlsScrollList`;
+	
+	for($i = (size($selection)-1); $i >= 0; --$i)
+		textScrollList -e -removeIndexedItem $selection[$i] apControlsScrollList;
+}
+
+global proc ap_PoseSaveDialogEnd(string $path, string $ignored)
+{
+	if (!endsWith($path, "/"))
+		$path += "/";
+	
+	textField -e -text $path apPoseSaveDirectoryField;
+	/*string $buffer[];
+	int $count;
+	string $namePlusExtension, $nameSansExtension, $pathSansFile;
+	
+	if (!endsWith("path", "/") && !endsWith("path", "\\")) {
+		$count = `tokenize $path "/\\" $buffer`;
+		$namePlusExtension = $buffer[$count-1];
+		
+		$pathSansFile = "";
+		for($i = 0; $i < $count-1; ++$i)
+			$pathSansFile += ($buffer[$i] + "/");
+		
+		textField -e -text $pathSansFile apPoseSaveDirectoryField;
+		
+		$count = `tokenize $namePlusExtension "." $buffer`;
+		$nameSansExtension = $buffer[0];
+		for($i = 1; $i < $count-1; ++$i)
+			$nameSansExtension += ("." + $buffer[$i]);
+		
+		textField -e -text $nameSansExtension apPoseNameTextField;
+		
+		
+	} else
+		textField -e -text $path apPoseSaveDirectoryField;*/
+	
+}
+
+global proc ap_CreateNewPoseWindow()
+{
+	int $offset = 5;
+	global string $anz_lastUsedOtherDirectory;
+	string $strings[];
+	string $selection[] = `ls -sl`;
+	string $characterNamespace, $namespaceSansColon;
+	
+	checkObjectsForPose($selection);
+	
+	$characterNamespace = anzg_getNamespace($selection[0]);
+	if ($characterNamespace != "")
+		$namespaceSansColon = (`substring $characterNamespace 1 (size($characterNamespace)-1)`);
+	else
+		$namespaceSansColon = "< unnamed >";
+	
+	// Create camera
+	if (`objExists anzovinPoseCamera`)
+		delete anzovinPoseCamera;
+	
+	$strings = `camera	-aspectRatio 1
+						-displayFieldChart 0
+						-displayFilmGate 0
+						-displayFilmOrigin 0
+						-displayFilmPivot 0
+						-depthOfField 0
+						-displayResolution 0
+						-displaySafeAction 0
+						-displaySafeTitle 0
+						-n "anzovinPoseCamera"`;
+	
+	rename $strings[0] "anzovinPoseCamera";
+	setAttr anzovinPoseCamera.renderable 0;
+	hide anzovinPoseCamera;
+	// Just in case, I'm adding a catch statement here
+	catch(`parent anzovinPoseCamera ($characterNamespace + "deformation_buffer")`);
+	
+	if (`window -exists apNewPoseWindow`)
+		deleteUI apNewPoseWindow;
+	
+	// Create window
+	string $window = `window -title "New Pose" -sizeable 0 -width 420 -height 365 apNewPoseWindow`;
+		string $form1 = `formLayout`;
+			
+			//string $temp = `formLayout -bgc 0 0 1 -width 160 -height 160`;
+			string $modelEditorLayout = `frameLayout -borderStyle "etchedOut"  -cl false -cll false -m on -labelVisible false -width 160 -height 160 apNewPoseViewLayout`;
+				//glRenderEditor -lookThru anzovinPoseCamera smNewPoseWindowGLRenderEditor;
+				
+				modelEditor apNewPoseWindowEditor;
+				modelEditor -edit -camera anzovinPoseCamera apNewPoseWindowEditor;
+				modelEditor -edit
+							-displayAppearance "smoothShaded"
+							-grid 0
+							-nc 0 -ns 1 -pm 1 -sds 1 -pl 0 -lt 0 -ca 0 -cv 0 -hu 0 -j 0 -ikh 0 -df 0 -dy 0 -fl 0 -hs 0 -fo 0 -lc 0 -dim 0 -ha 0 -pv 0
+							-textures 1
+							-strokes 1
+							-displayTextures 1
+							-textureMaxSize 64
+							-useDefaultMaterial 0
+							-displayLights "default"
+							-fogging 0
+							apNewPoseWindowEditor;
+				
+				
+				setParent ..;
+			
+			string $positionInfoStaticText1 = `text -align "left" -width 160 -font "smallPlainLabelFont" -label "Reposition this view to create\nthe pose preview icon:"`;
+			//string $positionInfoStaticText2 = `text -align "left" -width 160 -font "smallPlainLabelFont" -label "the pose preview icon:"`;
+			
+			string $autoFitButton = `button -label "Auto-fit View" -command ("ap_AutoFitView")`;
+			
+			string $creatingStaticText = `text -align "left" -label "Creating pose for character: "`;
+			
+			string $nameStaticText;
+			if (`about -macOS` == 1)
+				$nameStaticText = `text -align "left" -font "smallBoldLabelFont" -label $namespaceSansColon apNameStaticText`;
+			else
+				$nameStaticText = `text -align "left" -font "boldLabelFont" -label $namespaceSansColon apNameStaticText`;
+			
+			int $nameOffset = 0;
+			if (`about -macOS` == 1)
+				$nameOffset = -25;
+			
+			string $listStaticText = `text -align "left" -label "Controls:"`;
+			string $controlList = `textScrollList -allowMultiSelection true apControlsScrollList`;
+			select $selection;
+			ap_RefreshControlsInPoseWindow($controlList, 0);
+			
+			//string $reloadButton = `button -label "Reload From Selected" -command ("smRefreshControlsInPoseWindow(\"" + $controlList + "\", 1)")`;
+			string $addButton = `button -label "Add Controls from Selection" -command ("ap_AddSelectedToPoseList")`;
+			string $removeButton = `button -label "Remove from List" -command ("ap_RemoveSelectedFromPoseList")`;
+			
+			// Here we go!
+			
+			string $form2 = `formLayout`;
+				
+				string $rowLayout1 = `rowLayout -numberOfColumns 2
+						-adjustableColumn 2
+						-columnWidth 1 50
+						-columnAlign  1 "right"
+ 						-columnAttach 1 "both"	$offset
+ 						-columnAttach 2 "both"  $offset`;
+					text -align "left" -label "Name:";
+					textField apPoseNameTextField;
+					setParent ..;
+				
+				/*
+				string $rowLayout2 = `rowLayout -numberOfColumns 4
+						-adjustableColumn 4
+						//-columnWidth 1 50
+						//-columnWidth 3 70
+						-columnAlign  1 "right"
+						-columnAlign  2 "left"
+						-columnAlign  3 "left"
+						-columnAlign  4 "left"
+ 						-columnAttach 1 "both"	$offset
+ 						-columnAttach 2 "both"  $offset
+ 						-columnAttach 3 "both"  $offset
+ 						-columnAttach 4 "both"  $offset`;
+					text -align "left" -label "Save in:";
+					radioCollection;
+					radioButton -label "Character Folder";
+					radioButton -label "Global Folder";
+					radioButton -label "Other...";
+					//textField;
+					//button -label "Browse";
+					setParent ..;
+				*/
+				string $form2Form1 = `formLayout`;
+					string $form2Text = `text -align "left" -label "Save in:"`;
+					
+					string $form2TextField = `textField -enable off -text $anz_lastUsedOtherDirectory apPoseSaveDirectoryField`;
+					string $form2BrowseButton = `button -enable off -label "Browse..." -command "fileBrowser \"ap_PoseSaveDialogEnd\" \"Choose a directory	\" \"\" 4"`;
+					
+					
+					radioCollection;
+					string $form2Button1 = `radioButton -select -label "Local Directory"
+												-onCommand ("control -e -enable off " + $form2TextField + "; control -e -enable off " + $form2BrowseButton + ";")
+												apSavePoseRadioButton1`;
+					string $form2Button2 = `radioButton -label "Global Directory"
+												-onCommand ("control -e -enable off " + $form2TextField + "; control -e -enable off " + $form2BrowseButton + ";")
+												apSavePoseRadioButton2`;
+					string $form2Button3 = `radioButton -label "Other..."
+												-onCommand ("control -e -enable on " + $form2TextField + "; control -e -enable on " + $form2BrowseButton + ";")
+												apSavePoseRadioButton3`;
+					
+					setParent ..;
+					
+					
+					formLayout -e
+						-attachForm $form2Text "left" $offset
+						
+						-attachControl $form2Button1 "left" $offset $form2Text
+						-attachControl $form2Button2 "left" $offset $form2Button1
+						-attachControl $form2Button3 "left" $offset $form2Button2
+						
+						-attachControl $form2BrowseButton "top" $offset $form2Text
+						-attachForm $form2BrowseButton "right" $offset
+						
+						-attachForm $form2TextField "left" $offset
+						-attachControl $form2TextField "top" $offset $form2Text
+						-attachControl $form2TextField "right" $offset $form2BrowseButton
+						
+						
+						$form2Form1;
+				
+				string $form2Form3 = `formLayout`;
+					string $cancelButton = `button -label "Cancel" -width 80 -command "deleteUI apNewPoseWindow"`;
+					string $saveButton = `button -label "Save" -width 80 -command "ap_SavePoseWindowEnd"`;
+					setParent ..;
+					
+					formLayout -e
+						-attachForm $saveButton "right" 0
+						-attachForm $saveButton "bottom" 0
+						-attachControl $cancelButton "right" ($offset*3) $saveButton
+						-attachForm $cancelButton "bottom" 0
+						$form2Form3;
+				
+				setParent ..;
+				
+			formLayout -e
+				-attachForm $rowLayout1 "left" 0
+				-attachForm $rowLayout1 "top" $offset
+				-attachForm $rowLayout1 "right" 0
+				
+				-attachForm $form2Form1 "left" 0
+				-attachControl $form2Form1 "top" $offset $rowLayout1
+				-attachForm $form2Form1 "right" 0
+				
+				-attachForm $form2Form3 "left" 0
+				-attachControl $form2Form3 "top" $offset $form2Form1
+				-attachForm $form2Form3 "right" 0
+				-attachForm $form2Form3 "bottom" 0
+				
+				$form2;
+				
+			//string $duh = `formLayout -bgc 1 0 0`;
+			//	setParent ..;
+			
+			setParent ..;
+		
+		formLayout -e
+			
+			// Here we go!
+			
+			-attachForm $positionInfoStaticText1 "right" $offset
+			-attachForm $positionInfoStaticText1 "top" $offset
+			
+			//-attachForm $positionInfoStaticText2 "right" $offset
+			//-attachControl $positionInfoStaticText2 "top" 0 $positionInfoStaticText1
+			
+			-attachForm $modelEditorLayout "right" $offset
+			//-attachForm $modelEditorLayout "top" $offset
+			-attachControl $modelEditorLayout "top" 0 $positionInfoStaticText1
+			
+			-attachControl $autoFitButton "top" $offset $modelEditorLayout
+			-attachForm $autoFitButton "right" $offset
+			
+			
+			-attachForm $creatingStaticText "top" $offset
+			-attachForm $creatingStaticText "left" $offset
+			
+			-attachForm $nameStaticText "top" $offset
+			-attachControl $nameStaticText "right" $offset $modelEditorLayout
+			-attachControl $nameStaticText "left" $nameOffset $creatingStaticText 
+			
+			-attachControl $listStaticText "top" $offset $creatingStaticText
+			-attachForm $listStaticText "left" $offset 
+			
+			
+			
+			-attachForm $controlList "left" $offset 
+			-attachControl $controlList "top" 0 $listStaticText 
+			-attachControl $controlList "right" $offset $modelEditorLayout
+			-attachOppositeControl $controlList "bottom" 0 $modelEditorLayout
+			//-attachControl $controlList "bottom" $offset $reloadButton 
+			
+			-attachControl $removeButton "top" $offset $controlList
+			-attachOppositeControl $removeButton "right" 0 $controlList
+			
+			-attachControl $addButton "top" $offset $controlList
+			-attachControl $addButton "right" $offset $removeButton
+			
+			
+			-attachForm $form2 "left" $offset
+			-attachControl $form2 "top" $offset $removeButton 
+			-attachForm $form2 "right" $offset
+			-attachForm $form2 "bottom" $offset
+			
+			/*
+			-attachControl $duh "left" $offset $modelEditorLayout 
+			-attachForm $duh "top" $offset
+			-attachForm $duh "right" $offset
+			-attachOppositeControl $duh "bottom" $offset $modelEditorLayout
+			*/
+			$form1;
+	
+	
+	// I don't know why I have to do this but apparently I do:
+	if (`about -macOS` == 1)
+		window -e -width 491 -height 379 apNewPoseWindow;
+	else
+		window -e -width 420 -height 365 apNewPoseWindow;
+	showWindow $window;
+	
+	scriptJob -uiDeleted $window "delete anzovinPoseCamera" -parent $window;
+	
+	select $selection;
+}
+
+
+global proc ap_SavePoseWindowEnd()
+{
+	global string $anz_lastUsedOtherDirectory;
+	string $fileName, $fileBaseName;
+	
+	string $objects[] = `textScrollList -q -allItems apControlsScrollList`;
+	if (size($objects) == 0) {
+		error "You're going to have to include some controls for this pose first.";
+		return;
+	}
+	
+	$fileBaseName = `textField -q -text apPoseNameTextField`;
+	if (size($fileBaseName) == 0) {
+		error "Type in a name for the pose file you want to save.";
+		return;
+	}
+	
+	int $dontAppendCharacterName = 0;
+	// Figure out which directory this pose is being saved into:
+	if (`radioButton -q -select apSavePoseRadioButton3`) {
+		$fileName = fromNativePath(`textField -q -text apPoseSaveDirectoryField`);
+		if ($fileName == "") {
+			error "No directory chosen for saving the pose.";
+			return;
+		}
+		$dontAppendCharacterName = 1;
+		$anz_lastUsedOtherDirectory = $fileName;
+	} else {
+		string $pathData;
+		if (`radioButton -q -select apSavePoseRadioButton1`) {
+			$pathData = `workspace -q -fre "anzovinPoseLocal"`;
+			if (size($pathData) == 0)
+				error "No path specified for the local pose directory.";
+		} else if (`radioButton -q -select apSavePoseRadioButton2`) {
+			$pathData = `workspace -q -fre "anzovinPoseGlobal"`;
+			if (size($pathData) == 0)
+				error "No path specified for the global pose directory.";
+		} else
+			error "Apparently none of the radio buttons were selected.  That shouldn't even be possible, but if this whole \"save a pose\" thing is going to work then you're just going to have to click one of them.";
+		
+		string $pathSubstr = `substring $pathData 2 3`;
+		if (!startsWith($pathData, "/") && !startsWith($pathData, "\\") && $pathSubstr != ":\\" && $pathSubstr != ":/") {
+			$fileName = `workspace -q -rootDirectory`;
+			$fileName += $pathData;
+		} else
+			$fileName = $pathData;
+	}
+	
+	// At this point $fileName should end with a slash
+	if (!endsWith($fileName, "/") && !endsWith($fileName, "\\"))
+		$fileName += "/";
+	
+	// Figure out what the "sort pose by character" option is for the current character:
+	string $charName = `text -q -label apNameStaticText`;
+	string $interfaceNode;
+	if ($charName != "" && $charName != "< unnamed >")
+		$interfaceNode = ($charName + ":" + "AnzovinInterfaceNode");
+	else
+		$interfaceNode = "AnzovinInterfaceNode";
+	int $sortPoses = 1;
+	if (`objExists $interfaceNode`) {
+		if (attributeExists("sortPoses", $interfaceNode))
+			$sortPoses = `getAttr ($interfaceNode + ".sortPoses")`;
+	}
+	// Add that character name to the path
+	if ($sortPoses && $charName != "" && $charName != "< unnamed >" && !$dontAppendCharacterName) {
+		$fileName += $charName;
+		$fileName += "/";
+	}
+	
+	// Add the file name:
+	string $poseName = `textField -q -text apPoseNameTextField`;
+	$fileName += $poseName;
+	$fileName += ".pose";
+	
+	
+	if (`filetest -w $fileName`) {
+		string $result = `confirmDialog -title "Overwrite" -message "A pose already exists with the specified name.  Overwrite?"
+ 							-button "Yes" -button "No" -defaultButton "No"
+ 							-cancelButton "No" -dismissString "No"`;
+ 		if ($result == "No")
+			return;
+	}
+	
+	
+	// Create the directories that the file is supposed to be included in, if they don't exist:
+	string $nativeDirName = dirname($fileName);
+	string $dirName = fromNativePath($nativeDirName);
+	sysFile -makeDir $dirName;
+	
+	// Save the file!
+	int $result = ap_SavePoseToFile($fileName, $objects);
+	if ($result != 0) {
+		error ("The pose failed to save!  Attempted to save as: " + $fileName);
+		return;
+	}
+	//deleteUI smNewPoseWindow;
+	
+	print ("Pose saved to: " + $fileName + "\n");
+	
+	
+	
+	// Create icon preview:
+	
+	global int $apOldIntRenderSettings[];
+	global string $apOldStringRenderSettings[];
+	global float $apOldFloatRenderSettings[];
+	
+	int $frame = `currentTime -q`;
+	
+	// Ugh!
+	$apOldIntRenderSettings[0] = `getAttr -l defaultHardwareRenderGlobals.startFrame`;
+	$apOldIntRenderSettings[1] = `getAttr -l defaultHardwareRenderGlobals.endFrame`;
+	$apOldIntRenderSettings[2] = `getAttr defaultHardwareRenderGlobals.alphaSource`;
+	$apOldIntRenderSettings[3] = `getAttr defaultHardwareRenderGlobals.extension`;
+	$apOldIntRenderSettings[4] = `getAttr defaultHardwareRenderGlobals.imageFormat`;
+	$apOldIntRenderSettings[5] = `getAttr defaultHardwareRenderGlobals.drawStyle`;
+	$apOldStringRenderSettings[2] = `getAttr defaultHardwareRenderGlobals.filename`;
+	$apOldStringRenderSettings[0] = `getAttr defaultHardwareRenderGlobals.resolution`;
+	$apOldFloatRenderSettings = `getAttr "defaultHardwareRenderGlobals.backgroundColor"`;
+	$apOldIntRenderSettings[6] = `getAttr "defaultHardwareRenderGlobals.startFrame"`;
+	$apOldIntRenderSettings[7] = `getAttr "defaultHardwareRenderGlobals.endFrame"`;
+	$apOldIntRenderSettings[8] = `getAttr "defaultHardwareRenderGlobals.grid"`;
+	$apOldIntRenderSettings[9] = `getAttr "defaultHardwareRenderGlobals.cameraIcons"`;
+	$apOldIntRenderSettings[10] = `getAttr "defaultHardwareRenderGlobals.lightIcons"`;
+	$apOldIntRenderSettings[11] = `getAttr "defaultHardwareRenderGlobals.emitterIcons"`;
+	$apOldIntRenderSettings[12] = `getAttr "defaultHardwareRenderGlobals.transformIcons"`;
+	$apOldIntRenderSettings[13] = `getAttr "defaultHardwareRenderGlobals.collisionIcons"`;
+	$apOldIntRenderSettings[14] = `getAttr "defaultHardwareRenderGlobals.fieldIcons"`;
+	$apOldIntRenderSettings[15] = `getAttr "defaultHardwareRenderGlobals.multiPassRendering"`;
+	$apOldIntRenderSettings[16] = `getAttr "defaultHardwareRenderGlobals.geometryMask"`;
+	$apOldIntRenderSettings[17] = `getAttr "defaultHardwareRenderGlobals.fullImageResolution"`;
+	$apOldIntRenderSettings[18] = `getAttr "defaultHardwareRenderGlobals.lineSmoothing"`;
+	$apOldIntRenderSettings[19] = $frame;
+	
+	
+	
+	// Blegh!
+	setAttr defaultHardwareRenderGlobals.alphaSource 0;
+	setAttr defaultHardwareRenderGlobals.extension 1;
+	setAttr defaultHardwareRenderGlobals.imageFormat 20;
+	setAttr defaultHardwareRenderGlobals.drawStyle 3;
+	setAttr -type "string" defaultHardwareRenderGlobals.filename $poseName;
+	setAttr -type "string" defaultHardwareRenderGlobals.resolution "72x72 72 72 1.0";
+	setAttr "defaultHardwareRenderGlobals.backgroundColor" -type double3 0.5 0.5 0.5 ;
+	setAttr -l off "defaultHardwareRenderGlobals.startFrame";
+	setAttr -l off "defaultHardwareRenderGlobals.endFrame";
+	setAttr "defaultHardwareRenderGlobals.startFrame"  $frame;
+	setAttr "defaultHardwareRenderGlobals.endFrame"    $frame;
+	setAttr "defaultHardwareRenderGlobals.grid" 0;
+	setAttr "defaultHardwareRenderGlobals.cameraIcons" 0;
+	setAttr "defaultHardwareRenderGlobals.lightIcons" 0;
+	setAttr "defaultHardwareRenderGlobals.emitterIcons" 0;
+	setAttr "defaultHardwareRenderGlobals.transformIcons" 0;
+	setAttr "defaultHardwareRenderGlobals.collisionIcons" 0;
+	setAttr "defaultHardwareRenderGlobals.fieldIcons" 0;
+	setAttr "defaultHardwareRenderGlobals.multiPassRendering" 0;
+	setAttr "defaultHardwareRenderGlobals.geometryMask" 0;
+	setAttr "defaultHardwareRenderGlobals.fullImageResolution" 0;
+	setAttr "defaultHardwareRenderGlobals.lineSmoothing" 1;
+	
+	//layout -e -vis off smNewPoseViewLayout;
+	deleteUI apNewPoseWindowEditor;
+	string $oldParent = `setParent -q`;
+	setParent apNewPoseViewLayout;
+		glRenderEditor -lookThru anzovinPoseCamera apNewPoseRenderView;
+	frameLayout -e -width 160 -height 160 apNewPoseViewLayout;
+	setParent $oldParent;
+	deleteUI apNewPoseWindowEditor;
+	
+	$apOldStringRenderSettings[1] = `workspace -q -rte "images"`;
+	workspace -rt "images" $dirName;
+	
+	frameLayout -e -width 72 -height 72 apNewPoseViewLayout;
+	if (`about -linux` == 1) {
+		// Slightly change width size to force the UI to refresh (Linux UI bug workaround)
+		window -e -width (`window -q -width apNewPoseWindow`-1) apNewPoseWindow;
+		refresh;
+	}
+	
+	glRender -e -flipbookCallback "ap_GLRenderFinishedCallback";
+	glRender -e
+		-antiAliasMethod "gaussian"
+		-imageSize 72 72 1
+		-imageName blah
+		-grid false
+		-frameStart $frame
+		-frameEnd $frame
+		-drawStyle "smoothShaded"
+		-textureDisplay true
+		-viewport 72 72 1.0
+		-imageDirectory $nativeDirName
+		-renderSequence apNewPoseRenderView;
+	
+}
+
+global proc ap_GLRenderFinishedCallback( 
+  	string $image, int $fs, int $fe, int $fi, int $rate,
+  	string $path, string $filename )
+{
+	/*
+	print "Finished hardware render\n";
+	print ("    Image name       "+$image+"\n");
+	print ("    Frames           "+$fs+" to "+$fe+" by "+$fi+"\n");
+	print ("    Frame rate       "+$rate+"\n");
+	print ("    File path        "+$path+"\n");
+	print ("    Filename pattern "+$filename+"\n");*/
+	
+	scriptJob -idleEvent "ap_FinishCreatingNewPose" -killWithScene -runOnce true ;
+}
+  
+global proc ap_FinishCreatingNewPose()
+{
+	global int $apOldIntRenderSettings[];
+	global string $apOldStringRenderSettings[];
+	global float $apOldFloatRenderSettings[];
+	string $fileName, $filePath;
+	global string $anz_poseCurrentDirectory;
+	
+	$fileName = `getAttr defaultHardwareRenderGlobals.filename`;
+	$filePath = `workspace -q -rte "images"`;
+	
+	sysFile -rename ($filePath + "/" + $fileName + ".bmp") ($filePath + "/" + $fileName + "." + $apOldIntRenderSettings[19] + ".bmp");
+	
+	deleteUI apNewPoseWindow;
+	
+	workspace -rt "images" $apOldStringRenderSettings[1];
+	
+	// Aaaaa!
+	setAttr defaultHardwareRenderGlobals.alphaSource $apOldIntRenderSettings[2];
+	setAttr defaultHardwareRenderGlobals.extension $apOldIntRenderSettings[3];
+	setAttr defaultHardwareRenderGlobals.imageFormat $apOldIntRenderSettings[4];
+	setAttr defaultHardwareRenderGlobals.drawStyle $apOldIntRenderSettings[5];
+	setAttr -type "string" defaultHardwareRenderGlobals.resolution $apOldStringRenderSettings[0];
+	setAttr -type "string" defaultHardwareRenderGlobals.filename $apOldStringRenderSettings[2];
+	setAttr "defaultHardwareRenderGlobals.backgroundColor" -type double3 $apOldFloatRenderSettings[0] $apOldFloatRenderSettings[1] $apOldFloatRenderSettings[2] ;
+	setAttr -l off "defaultHardwareRenderGlobals.startFrame";
+	setAttr -l off "defaultHardwareRenderGlobals.endFrame";
+	setAttr "defaultHardwareRenderGlobals.startFrame" $apOldIntRenderSettings[6];
+	setAttr "defaultHardwareRenderGlobals.endFrame" $apOldIntRenderSettings[7];
+	setAttr "defaultHardwareRenderGlobals.grid" $apOldIntRenderSettings[8];
+	setAttr "defaultHardwareRenderGlobals.cameraIcons" $apOldIntRenderSettings[9];
+	setAttr "defaultHardwareRenderGlobals.lightIcons" $apOldIntRenderSettings[10];
+	setAttr "defaultHardwareRenderGlobals.emitterIcons" $apOldIntRenderSettings[11];
+	setAttr "defaultHardwareRenderGlobals.transformIcons" $apOldIntRenderSettings[12];
+	setAttr "defaultHardwareRenderGlobals.collisionIcons" $apOldIntRenderSettings[13];
+	setAttr "defaultHardwareRenderGlobals.fieldIcons" $apOldIntRenderSettings[14];
+	setAttr "defaultHardwareRenderGlobals.multiPassRendering" $apOldIntRenderSettings[15];
+	setAttr "defaultHardwareRenderGlobals.geometryMask" $apOldIntRenderSettings[16];
+	setAttr "defaultHardwareRenderGlobals.fullImageResolution" $apOldIntRenderSettings[17];
+	setAttr "defaultHardwareRenderGlobals.lineSmoothing" $apOldIntRenderSettings[18];
+	setAttr -l $apOldIntRenderSettings[0] "defaultHardwareRenderGlobals.startFrame";
+	setAttr -l $apOldIntRenderSettings[1] "defaultHardwareRenderGlobals.endFrame";
+	
+	
+	// Convert the rendered BPM to XPM
+	ap_convertBMPToXPM($filePath + "/" + $fileName + ".bmp");
+	
+	
+	// Okay we're done.
+	
+	ap_CreatePoseShelfButtons($anz_poseCurrentDirectory);
+}
+
+global proc ap_poseSceneClose()
+{
+	global string $anz_libraryUI;
+	if (size($anz_libraryUI) != 0 && `paneLayout -exists $anz_libraryUI`)
+		libraryUIDelete($anz_libraryUI, 1);
+}
+
+
+// Returns 0 for little endian (intel) byte order, otherwise returns 1 for big endian (ppc) byte order
+// Far as I know, there's no way to determine the byte order in MEL other than just reading a file and
+// seeing how it comes out.
+global proc int ap_isBigEndian()
+{
+	string $path = `internalVar -userTmpDir`;
+	$path += "/endianTest.txt";
+	
+	int $file = `fopen $path "w"`;
+	if ($file == 0) {
+		warning "Couldn't test for byte order - assuming little endian";
+		return 0;
+	}
+	fprint $file "ABCD";
+	fclose $file;
+	
+	$file = `fopen $path "r"`;
+	int $value;
+	$value = `fread $file $value`;
+	fclose $file;
+	
+	sysFile -delete $path;
+	
+	if ($value == 0x41424344) // result of read operation in a PPC environment
+		return 1;
+	else
+		return 0;
+}
+
+
+// Read data in little endian byte order, I think
+proc int ap_read(int $file, int $numOfBytes, int $bigEndian)
+{
+	int $data;
+	global float $ap_currentReadFData;
+	global int $ap_currentDataByte;
+	int $byte;
+	int $result = 0;
+	int $rawData;
+	float $n1, $n2;
+	
+	for($byte = 0; $byte < $numOfBytes; ++$byte) {
+		
+		
+		if ($ap_currentDataByte == 0) {
+			$rawData = `fread $file $rawData`;
+		
+			if ($rawData < 0)
+				$ap_currentReadFData = 4294967296.0 + $rawData;
+			else
+				$ap_currentReadFData = $rawData;
+		}
+		/*
+		print "    $ap_currentReadFData = ";
+		print $ap_currentReadFData;
+		print "\n";
+		print "    $ap_currentDataByte = ";
+		print $ap_currentDataByte;
+		print "\n";
+		*/
+		
+		int $partToGet = 0;
+		
+		if ($bigEndian)
+			$partToGet = 3-$ap_currentDataByte;
+		else
+			$partToGet = $ap_currentDataByte;
+		
+		$n1 = $ap_currentReadFData;
+		
+		// half ass MEL bitwise operations
+		if ($partToGet == 0) {
+			$n2 = $n1;
+			$n2 = floor($n2 / 256.0);
+			$n2 *= 256.0;
+			$n1 -= $n2;
+		} else if ($partToGet == 1) {
+			$n1 = floor($n1 / 256.0);
+			$n2 = $n1;
+			$n2 = floor($n2 / 256.0);
+			$n2 *= 256;
+			$n1 -= $n2;
+		} else if ($partToGet == 2) {
+			$n1 = floor($n1 / 65536);
+			$n2 = $n1;
+			$n2 = floor($n2 / 256.0);
+			$n2 *= 256;
+			$n1 -= $n2;
+		} else if ($partToGet == 3) {
+			$n1 = floor($n1 / 16777216.0);
+		}
+		
+		/*
+		print "    $partToGet = ";
+		print $partToGet;
+		print "\n";
+		*/
+		
+		$result += $n1 * pow(256, $byte);
+		
+		++$ap_currentDataByte;
+		if ($ap_currentDataByte > 3)
+			$ap_currentDataByte = 0;
+		
+	}
+	
+	return $result;
+}
+
+proc string ap_byteToHex(int $byte)
+{
+	string $hexChars = "0123456789ABCDEF";
+	string $result = "";
+	int $n;
+	
+	if ($byte < 0 || $byte > 255)
+		return "00";
+			
+	$n = $byte / 16;
+	$result += `substring $hexChars ($n+1) ($n+1)`;
+	
+	$n = $byte - ($n * 16);
+	$result += `substring $hexChars ($n+1) ($n+1)`;
+	
+	return $result;
+}
+
+// I really wish I didn't have to write this function, but I do.
+// BMP's are only supported in the UI for Windows.  All other OSes have to use XPM for some ungodly reason.
+// So here's a platform independent MEL function for converting from one to the other. 
+global proc ap_convertBMPToXPM(string $path)
+{
+	int $file;
+	int $bigEndian = ap_isBigEndian();
+	global float $ap_currentReadFData;
+	global int $ap_currentDataByte;
+	
+	$ap_currentReadFData = 0;
+	$ap_currentDataByte = 0;
+	
+	$file = `fopen $path "r"`;
+	if ($file == 0)
+		error("ap_convertBMPToXPM - Couldn't open BMP file '" + $path + "' for reading");
+	
+	/*
+	print "START\n";
+	
+	print(ap_read($file, 1, $bigEndian));
+	print "\n";
+	print(ap_read($file, 1, $bigEndian));
+	print "\n";
+	print(ap_read($file, 1, $bigEndian));
+	print "\n";
+	print(ap_read($file, 1, $bigEndian));
+	print "\n";
+	print(ap_read($file, 2, $bigEndian));
+	print "\n";
+	print(ap_read($file, 2, $bigEndian));
+	print "\n";
+	print(ap_read($file, 2, $bigEndian));
+	print "\n";
+	print(ap_read($file, 2, $bigEndian));
+	print "\n";
+	print(ap_read($file, 4, $bigEndian));
+	print "\n";
+	print(ap_read($file, 4, $bigEndian));
+	print "\n";
+	print(ap_read($file, 4, $bigEndian));
+	print "\n";
+	
+	fclose $file;
+	
+	return;
+	*/
+	
+	
+	// Check header
+	int $header1, $header2;
+	$header1 = ap_read($file, 1, $bigEndian);
+	$header2 = ap_read($file, 1, $bigEndian);
+	if ($header1 != 0x42 || $header2 != 0x4D) {
+		fclose $file;
+		error "ap_convertBMPToXPM - File is not a valid BMP file!";
+	}
+	
+	// File size (which we ignore)
+	ap_read($file, 4, $bigEndian);
+	// Reserved 1 (which we ignore)
+	ap_read($file, 2, $bigEndian);
+	// Reserved 2 (which we ignore)
+	ap_read($file, 2, $bigEndian);
+	// Offset (which we ignore)
+	ap_read($file, 4, $bigEndian);
+	
+	// Begin header
+	
+	// header size (which we ignore)
+	ap_read($file, 4, $bigEndian);
+	
+	int $width = ap_read($file, 4, $bigEndian);
+	int $height = ap_read($file, 4, $bigEndian);
+	int $planes = ap_read($file, 2, $bigEndian);
+	if ($planes != 1) {
+		fclose $file;
+		error "ap_convertBMPToXPM - Unsupported BMP file!";
+	}
+	int $bits = ap_read($file, 2, $bigEndian);
+	// We only support 24 bit BMPs, since that's the only kind Maya will produce with its hardware renderer
+	if ($bits != 24) {
+		fclose $file;
+		error "ap_convertBMPToXPM - BMP must be 24 bits per pixel!";
+	}
+	
+	int $compression = ap_read($file, 4, $bigEndian);
+	if ($compression != 0) {
+		fclose $file;
+		error "ap_convertBMPToXPM - Compressed BMP's not supported!";
+	}
+	
+	int $imageSize = ap_read($file, 4, $bigEndian);
+	
+	// pixels per meter (which we ignore)
+	ap_read($file, 4, $bigEndian);
+	ap_read($file, 4, $bigEndian);
+	
+	// number of colors (will be zero)
+	ap_read($file, 4, $bigEndian);
+	// number of important colors (will also be zero)
+	ap_read($file, 4, $bigEndian);
+	
+	
+	// The only way we can get the functionality of a sparse matrix in MEL is create a node with a multi attribute
+	string $node = `createNode transform -n "anz_pose_dumbTempNode"`;
+	addAttr -longName sparseData -at short -multi $node;
+	
+	
+	// Array of ASCII color values
+	string $colors[];
+	int $colorCount = 0;
+	int $colorGlyphCount = 92;
+	int $maxColors = $colorGlyphCount * $colorGlyphCount;
+	string $colorChars = " .XoO+@#$%&*=-;:>,<1234567890qwertyuipasdfghjklzxcvbnmMNBVCZASDFGHJKLPIUYTREWQ!~^/()_`'][{}|";
+	int $data, $glyph1, $glyph2;
+	
+	string $xpmDataLines[];
+	int $line = 0;
+	
+	
+	int $r, $g, $b, $colorIndex;
+	
+	for($y = 0; $y < $height; ++$y) {
+		$line = $height - $y - 1;
+		$xpmDataLines[$line] = "\"";
+		for($x = 0; $x < $width; ++$x) {
+			$b = ap_read($file, 1, $bigEndian);
+			$g = ap_read($file, 1, $bigEndian);
+			$r = ap_read($file, 1, $bigEndian);
+			
+			$colorIndex = $r * 65536 + $g * 256 + $b;
+			
+			if ($colorIndex < 0) {
+				print ("$r = " + $r + "\n");
+				print ("$g = " + $g + "\n");
+				print ("$b = " + $b + "\n");
+				fclose $file;
+				error "Something stupid happened!";
+			}
+			
+			$data = `getAttr anz_pose_dumbTempNode.sparseData[$colorIndex]`;
+			if ($data == 0) {
+				// First time we've encountered this color
+				
+				++$colorCount;
+				setAttr anz_pose_dumbTempNode.sparseData[$colorIndex] $colorCount;
+				
+				if ($colorCount >= $maxColors) {
+					fclose $file;
+					error "ap_convertBMPToXPM - BMP file has too many colors";
+				}
+				
+				$data = $colorCount;
+			}
+			
+			--$data;
+			$glyph2 = $data / $colorGlyphCount;
+			$glyph1 = $data - ($glyph2 * $colorGlyphCount);
+			$xpmDataLines[$line] = $xpmDataLines[$line] + `substring $colorChars ($glyph1+1) ($glyph1+1)`;
+			$xpmDataLines[$line] = $xpmDataLines[$line] + `substring $colorChars ($glyph2+1) ($glyph2+1)`;
+			
+		}
+		if ($y == ($height-1))
+			$xpmDataLines[$line] = $xpmDataLines[$line] + "\"};";
+		else
+			$xpmDataLines[$line] = $xpmDataLines[$line] + "\",\n";
+	}
+	
+	// We do this because BMP's store their graphics data as though they're flipped vertically
+	string $xpmData = "";
+	for($y = 0; $y < $height; ++$y) {
+		$xpmData += $xpmDataLines[$y];
+	}
+	
+	
+	fclose $file;
+	
+	// Create the xpm header
+	
+	string $xpmHeader = "/* XPM */\nstatic char * image_name[] = {\n/* columns rows colors chars-per-pixel */\n\"";
+	
+	string $existingColors[] = `listAttr -multi anz_pose_dumbTempNode.sparseData`;
+	string $strings[];
+	
+	$xpmHeader += $width;
+	$xpmHeader += " ";
+	$xpmHeader += $height;
+	$xpmHeader += " ";
+	$xpmHeader += size($existingColors);
+	$xpmHeader += " 2\",";
+	
+	for($colorString in $existingColors) {
+		$xpmHeader += "\n\"";
+		
+		$data = `getAttr ("anz_pose_dumbTempNode." + $colorString)`;
+		--$data;
+		$glyph2 = $data / $colorGlyphCount;
+		$glyph1 = $data - ($glyph2 * $colorGlyphCount);
+		$xpmHeader += `substring $colorChars ($glyph1+1) ($glyph1+1)`;
+		$xpmHeader += `substring $colorChars ($glyph2+1) ($glyph2+1)`;
+		
+		$xpmHeader += " c #";
+		
+		// Get index of this element
+		tokenize $colorString "[]" $strings;
+		$colorIndex = $strings[1];
+		
+		$r = $colorIndex / 65536;
+		$g = ($colorIndex - ($r * 65536)) / 256;
+		$b = $colorIndex - ($r * 65536) - ($g * 256);
+		
+		$xpmHeader += ap_byteToHex($r);
+		$xpmHeader += ap_byteToHex($g);
+		$xpmHeader += ap_byteToHex($b);
+		$xpmHeader += "\",";
+		
+	}
+	
+	delete anz_pose_dumbTempNode;
+	
+	string $newPath = dirname($path) + "/";
+	tokenize (basename($path, "")) "." $strings;
+	$newPath += $strings[0];
+	$newPath += ".xpm";
+	
+	$file = `fopen $newPath "w"`;
+	if ($file == 0)
+		error("ap_convertBMPToXPM - Couldn't open XPM file '" + $newPath + "' for writing");
+	
+	fprint $file $xpmHeader;
+	fprint $file "\n";
+	fprint $file $xpmData;
+	fclose $file;
+}
+

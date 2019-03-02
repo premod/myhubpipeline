@@ -1,0 +1,27 @@
+global proc deleteEmptyLayers()
+{
+	//// for Display Layers ////
+	string $eachDisplayLayer;
+	string $allLayers[] = `ls -typ "displayLayer"`;
+	for( $eachDisplayLayer in $allLayers )
+	{
+		string $layerSize[] = `editDisplayLayerMembers -q $eachDisplayLayer`;
+		if( `size($layerSize)` == "0" )
+		{
+			delete $eachDisplayLayer;
+		} 
+	}
+	
+	////for Render layers ////
+	string $eachRenderLayer;
+	string $allRenderLayers[] = `ls -typ "renderLayer"`;
+	for( $eachRenderLayer in $allRenderLayers )
+	{
+		string $lSize[] = `editRenderLayerMembers -q $eachRenderLayer`;
+		if(`size($lSize)` == 0 )
+		{
+			delete $eachRenderLayer;
+		}
+	}
+}
+

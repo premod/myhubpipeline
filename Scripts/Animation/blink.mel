@@ -1,0 +1,55 @@
+// SCRIPTS WRITTEN BY FJ PRABHU
+
+global proc blink () {
+openEye;
+currentTime (`currentTime -q` + 3);
+closeEye;
+currentTime (`currentTime -q` + 1);
+closeEye;
+currentTime (`currentTime -q` + 3);
+openEye;
+}
+
+proc string whichChar () {
+string $whichchar[] = `ls -sl`;
+string $buffer[];
+tokenize ($whichchar[0],":",$buffer);
+return $buffer[0];
+}
+
+global proc closeEye() {
+$char = whichChar();
+setAttr ($char+":RUprLidCircleCtrl.translateY") -0.9;
+setAttr ($char+":LUprLidCircleCtrl.translateY") -0.9;
+setAttr ($char+":RLwrLidCircleCtrl.translateY") 0.1;
+setAttr ($char+":LLwrLidCircleCtrl.translateY") 0.1;
+setAttr ($char+":Left_Eyebrow_boxControl.translateY") -0.1;
+setAttr ($char+":Right_Eyebrow_boxControl.translateY") -0.1;
+
+setKeyframe  ($char+":RUprLidCircleCtrl.translateY");
+setKeyframe  ($char+":LUprLidCircleCtrl.translateY");
+setKeyframe  ($char+":RLwrLidCircleCtrl.translateY");
+setKeyframe  ($char+":LLwrLidCircleCtrl.translateY");
+setKeyframe  ($char+":Left_Eyebrow_boxControl.translateY");
+setKeyframe  ($char+":Right_Eyebrow_boxControl.translateY");
+}
+
+global proc openEye() {
+$char = whichChar();
+$char = whichChar();
+setAttr ($char+":RUprLidCircleCtrl.translateY") 0;
+setAttr ($char+":LUprLidCircleCtrl.translateY") 0;
+setAttr ($char+":RLwrLidCircleCtrl.translateY") 0;
+setAttr ($char+":LLwrLidCircleCtrl.translateY") 0;
+setAttr ($char+":Left_Eyebrow_boxControl.translateY") 0;
+setAttr ($char+":Right_Eyebrow_boxControl.translateY") 0;
+
+setKeyframe  ($char+":RUprLidCircleCtrl.translateY");
+setKeyframe  ($char+":LUprLidCircleCtrl.translateY");
+setKeyframe  ($char+":RLwrLidCircleCtrl.translateY");
+setKeyframe  ($char+":LLwrLidCircleCtrl.translateY");
+setKeyframe  ($char+":Left_Eyebrow_boxControl.translateY");
+setKeyframe  ($char+":Right_Eyebrow_boxControl.translateY");
+}
+
+

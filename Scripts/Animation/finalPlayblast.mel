@@ -1,0 +1,67 @@
+global proc finalPlayblast()
+{
+	if ((`window -ex suffix`)==true)
+	deleteUI suffix;
+	string $window = `window -t "suffix" -s 0 -rtf 1 suffix`;
+	rowColumnLayout;
+	textFieldGrp -l "Filename Suffix" t10;
+
+	button -l "OK" -c "Playblast"  -h 30 -w 20;
+	
+	showWindow suffix;
+}
+
+global proc string calculation()
+{
+    
+    string $calc = `textFieldGrp -q -tx t10`;
+	print $calc;
+	return $calc;
+}
+    
+global proc Playblast()
+
+{ 
+	 
+	
+    string $allCams[] = `ls -et "camera"`;
+  
+    string $scene = `match "^[^\.]*" $scene`;
+    string $fullPath = `file -q -sceneName`;
+    string $nameTemp = `match ".*\\." $fullPath`; // path with "." at the end
+    string $name = `substitute "\\." $nameTemp ""`; // strip off "." from $nameTemp
+
+
+    //string $camerashapename = $allCams[1]; 
+    //string $panel = `getPanel -withFocus`;
+    //string $cameraName = `modelPanel -q -cam $panel`;
+ 
+    for($camera in $allCams) 
+        {
+                camera -e -dr on -ff "overscan" -overscan 1.1 $camera;
+                setAttr ($camera + ".displayGateMaskOpacity") 1;
+                setAttr ($camera + ".displayGateMaskColor") -type double3 0 0 0 ;
+                
+                
+                
+       }
+       
+                
+                 playblast  -fo -filename ($name + $scene + calculation()) -s ohNo -format movie -sequenceTime 0 -forceOverwrite -clearCache 1 -viewer 1 -showOrnaments 1 -os -fp 4 
+-percent 100 -compression "none" -quality 100 -widthHeight 1280 720  ;
+               
+          
+                
+          
+          for($cameraName in $allCams) 
+       {
+                camera -e -dr off -ff "overscan" -overscan 1.1  $cameraName ;
+                setAttr ($camera + ".displayGateMaskOpacity") 0;
+                setAttr ($camera + ".displayGateMaskColor") -type double3 0.5 0.5 0.5 ;
+       }      
+                
+        
+
+}
+
+finalPlayblast;

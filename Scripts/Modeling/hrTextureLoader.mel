@@ -1,0 +1,94 @@
+global proc hrTextureLoader()
+{
+	if (`window -q -ex hrTexLoaderWin`)deleteUI hrTexLoaderWin;
+	window -t "High Res Texture Loader" -s 0 hrTexLoaderWin;
+	columnLayout -adj true;
+	button -l "Store Shader Assignments" -c "writeShaderInfo";
+	button -l "Assign Shader Assignments" -c "readShaderInfo";
+	button -l "Delete Asset";
+	button -l "Delete Shader Assignments" -c "deleteShaderInfo";
+	button -l "Find obj's Without Material" -c "findWithoutMaterial";
+	window -e -wh 250 146 hrTexLoaderWin;
+	showWindow;
+}
+
+global proc writeShaderInfo()
+{
+	string $default[] = {"lambert1","particleCloud1"};
+	string $mat[] = `ls -typ "shadingEngine"`;
+	string $final[] = stringArrayRemove($default, $mat);
+	for($i=0; $i<size($final); $i++)
+	{
+		select -r ($final[$i]);
+		hyperShade -objects "";
+		string $list[] = `ls -sl`;
+		for($j=0; $j<size($list); $j++)
+		{
+			addAttr -ln ("Assigned"+$j) -dt "string" ($final[$i]);
+			setAttr -type "string" (($final[$i])+"."+"Assigned"+$j) ($list[$j]);
+			setAttr -l true (($final[$i])+"."+"Assigned"+$j);
+		}
+		select -cl;
+	} 
+	print "Added Successfully";
+}
+
+global proc readShaderInfo()
+{
+	string $default[] = {"lambert1","particleCloud1"};
+	string $mat[] = `ls -typ "shadingEngine"`;
+	string $final[] = stringArrayRemove($default, $mat);
+	for($i=0; $i<size($final); $i++)
+	{
+		select -r $final[$i];
+		hyperShade -objects "";
+		string $attr[] = `listAttr -l $final[$i]`;
+		for($j=0; $j<size($attr); $j++)
+		{
+			string $name = getAttr ($final[$i]+"."+"Assigned"+$j);
+			string $shaderName[] = `ls -r 1 ("*"+$name)`;
+			catch(`select -tgl ($shaderName[0])`);
+			catch(`sets -e -forceElement $final[$i]`);
+		}
+		select -cl;
+	}
+	print "Assigned Successfully"; 
+}
+
+global proc deleteShaderInfo()
+{
+	string $default[] = {"lambert1","particleCloud1"};
+	string $mat[] = `ls -typ "shadingEngine"`;
+	string $final[] = stringArrayRemove($default, $mat);
+	for($i=0; $i<size($final); $i++)
+	{
+		select -r $final[$i];
+		string $attr[] = `listAttr -l $final[$i]`;
+		for($j=0; $j<=size($attr); $j++)
+		{
+			catch(`select -r ($final[$i])`);
+			catch(`setAttr -l false (($final[$i])+"."+"Assigned"+$j)`);
+			catch(`deleteAttr (($final[$i])+"."+"Assigned"+$j)`);
+		}
+	}
+	print "Deleted Successfully";
+}
+
+global proc deleteMesh()
+{
+	string $polygons[] = `ls -typ "mesh"`;
+	for($i=0; $i<size($polygons); $i++)	
+	{
+		pickWalk -d up;
+		delete;
+	}
+	string $sets[] = `ls -set`;
+	delete $sets;
+}
+
+global proc findWithoutMaterial()
+{
+	select -r lambert1 ;
+	hyperShade -objects "";
+}
+

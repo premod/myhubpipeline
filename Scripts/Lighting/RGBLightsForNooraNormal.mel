@@ -1,0 +1,71 @@
+global proc RGBLightsForNooraNormal()
+{
+	
+	string $getNS[] = `ls -rf`;
+	string $buffer[];
+	$numTokens = `tokenize $getNS[0] " " $buffer`;
+	string $buffer1[];
+	$numTokens = `tokenize $buffer[0] "RN" $buffer1`;
+	string $all = $buffer1[0]+"Noora"; 
+	
+	shadingNode -asShader surfaceShader -n custRShader;
+	setAttr "custRShader.outColor" -type double3 1 0 0 ;
+	catch(` select -r ($all+":Face5")`);
+	hyperShade -assign custRShader ;
+	catch(`select -r ($all+":Shirt")`);
+	hyperShade -assign custRShader ;
+	catch(`select -r ($all+":Dana_Ibrahim_Bottons")`);	
+	hyperShade -assign custRShader ;
+	
+	select -r ($all+":Noora12") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Noora13") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Noora14") ;
+	hyperShade -assign custRShader ;
+	select -r ($all+":Noora11") ;
+	hyperShade -assign custRShader ;
+	
+
+	shadingNode -asShader surfaceShader -n custGShader;
+	setAttr "custGShader.outColor" -type double3 0 1 0 ;
+	catch(`select -r (($all+":Noora_Normal")+"|"+($all+":Hand"))`);
+	hyperShade -assign custGShader ;
+	catch(`select -r ($all+":Dana_Pant")`);
+	hyperShade -assign custGShader ;
+	select -r ($all+":Outter_eyeball1") ;
+	hyperShade -assign custGShader ;
+	select -r ($all+":Outter_eyeball") ;
+	hyperShade -assign custGShader ;
+
+
+	shadingNode -asShader surfaceShader -n custBShader;
+	setAttr "custBShader.outColor" -type double3 0 0 1 ;
+	catch(`select -r ($all+":Noora")`) ;
+	hyperShade -assign custBShader ;
+	catch(`select -r ($all+":Noora8")`);
+	hyperShade -assign custBShader ;
+	catch(`select -r ($all+":Noora25")`);
+	hyperShade -assign custBShader ;
+	catch(`select -r ($all+":Noora7")`);
+	hyperShade -assign custBShader ;
+	select -r ($all+":polySurface1") ;
+	hyperShade -assign custBShader ;
+	select -r ($all+":Noora2") ;
+	hyperShade -assign custBShader ;
+	select -cl;	
+
+	createRenderLayer -name ("Noora_Normal_RGB_Layer1");
+	editRenderLayerMembers Noora_Normal_RGB_Layer1 ($all+":Face5") (($all+":Noora_Normal")+"|"+($all+":Hand")) ($all+":Noora") ($all+":Noora8") ($all+":Noora25") ($all+":Noora7");
+
+	createRenderLayer -name ("Noora_Normal_RGB_Layer2");
+	editRenderLayerMembers Noora_Normal_RGB_Layer2 ($all+":Shirt") ($all+":Dana_Ibrahim_Bottons");
+
+	createRenderLayer -name ("Noora_Normal_RGB_Layer3");
+	editRenderLayerMembers Noora_Normal_RGB_Layer3 ($all+":Noora12") ($all+":Noora13") ($all+":Noora14") ($all+":Noora11") ; 
+	
+	createRenderLayer -name ("Noora_Normal_RGB_Layer4");
+	editRenderLayerMembers Noora_Normal_RGB_Layer4  ($all+":Outter_eyeball1") ($all+":Outter_eyeball") ($all+":polySurface1") ($all+":Noora2"); 
+}
+
+

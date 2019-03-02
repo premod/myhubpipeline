@@ -1,0 +1,35 @@
+global proc addAssetToLayer()
+{
+	string $ns[] = `namespaceInfo -lon`;
+	for($i=0; $i<size($ns); $i++)
+	{
+		catch(select ($ns[$i]+":World"));
+		catch(select ($ns[$i]+":world"));
+		catch(select ($ns[$i]+":All"));
+		catch(`createDisplayLayer -name $ns[$i]`);
+		select -cl;
+		print "Added to Layers";
+	}
+	delete UI1;
+	delete shared1;
+}
+
+/*global proc addAssetToLayer()
+{
+	string $files[] = `file -q -r`;
+	string $ns[] = `ls -rf`;
+	for($i=0; $i<size($files); $i++)
+	{
+		string $buffer[];
+		$numTokens = `tokenize $ns[$i] ":" $buffer`;
+		string $regularExpr = "RN";
+		string $all = `substitute $regularExpr $buffer[0] ""`;
+		print $all;
+		catch(select ($all+":World"));
+		catch(select ($all+":world"));
+		catch(`createDisplayLayer -name $all`);
+		//editDisplayLayerMembers -noRecurse ($all) `ls -selection`;
+		select -cl;
+		print "Add to Layers";
+	}
+}*/

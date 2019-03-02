@@ -1,0 +1,6 @@
+global proc openURLforArtistSignOff()
+{
+	string $userName = `getenv "USERNAME"`;
+	system("load" + ("http://sanserver/checklist/artistsignoff.aspx?"+"uid="+$userName));
+}
+

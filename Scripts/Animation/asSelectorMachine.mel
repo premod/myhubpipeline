@@ -1,0 +1,106 @@
+global proc asSelectorMachine ()
+{
+	if (`window -q -ex faceMachine`)deleteUI faceMachine;
+	window -t "Face Machine" -wh 328 347 faceMachine;
+	columnLayout -adj 1;
+	rowLayout -nc 2 -adj 1 -cat 1 right 0; setParent..;
+	formLayout faceMachineFormLayout;
+	group -em -name "FaceMachine";
+	iconTextButton -en 0 -w 320 -h 320 -i ("Q://CustomScripts//2009Scripts//Icons//face.bmp") "asSelectorMachineBGPicture";
+
+	button -l "RA" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,1)"  "asSelectorMachine:EyeBrow_Right_1:80:41";
+	button -l "RB" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,2)"  "asSelectorMachine:EyeBrow_Right_2:215:41";
+	button -l "RC" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,3)"  "asSelectorMachine:EyeBrow_Right_3:235:41";
+	
+	button -l "LA" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,4)"  "asSelectorMachine:EyeBrow_Left_1:80:41";
+	button -l "LB" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,5)"  "asSelectorMachine:EyeBrow_Left_2:215:41";
+	button -l "LC" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,6)"  "asSelectorMachine:EyeBrow_Left_3:235:41";
+	
+	button -l "NU" -h 17 -bgc 1 0.74 0.25 -c "faceMachine_Bind(2,7)"  "asSelectorMachine:Nose_Middle:80:41";
+	button -l "NR" -h 17 -bgc 1 0.74 0.25 -c "faceMachine_Bind(2,8)"  "asSelectorMachine:Nose_Left:215:41";
+	button -l "NL" -h 17 -bgc 1 0.74 0.25 -c "faceMachine_Bind(2,9)"  "asSelectorMachine:Nose_Right:235:41";
+	
+	button -l "MU" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,10)"  "asSelectorMachine:Mouth_Middle_Up:80:41";
+	button -l "MD" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,11)"  "asSelectorMachine:Mouth_Middle_Down:215:41";
+	button -l "MR" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,12)"  "asSelectorMachine:Mouth_Right:235:41";
+	button -l "ML" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,13)"  "asSelectorMachine:Mouth_Left:255:41";
+		
+	formLayout -e
+		-af "asSelectorMachine:EyeBrow_Right_1:80:41" left 170
+		-af "asSelectorMachine:EyeBrow_Right_1:80:41" top 85
+		-af "asSelectorMachine:EyeBrow_Right_2:215:41" left 200
+		-af "asSelectorMachine:EyeBrow_Right_2:215:41" top 80
+		-af "asSelectorMachine:EyeBrow_Right_3:235:41" left 230
+		-af "asSelectorMachine:EyeBrow_Right_3:235:41" top 85
+		
+		-af "asSelectorMachine:EyeBrow_Left_1:80:41" left 120
+		-af "asSelectorMachine:EyeBrow_Left_1:80:41" top 85
+		-af "asSelectorMachine:EyeBrow_Left_2:215:41" left 90
+		-af "asSelectorMachine:EyeBrow_Left_2:215:41" top 80
+		-af "asSelectorMachine:EyeBrow_Left_3:235:41" left 60
+		-af "asSelectorMachine:EyeBrow_Left_3:235:41" top 85
+		
+		-af "asSelectorMachine:Nose_Middle:80:41" left 145
+		-af "asSelectorMachine:Nose_Middle:80:41" top 150
+		-af "asSelectorMachine:Nose_Left:215:41" left 180
+		-af "asSelectorMachine:Nose_Left:215:41" top 170
+		-af "asSelectorMachine:Nose_Right:235:41" left 110
+		-af "asSelectorMachine:Nose_Right:235:41" top 170
+		
+		-af "asSelectorMachine:Mouth_Middle_Up:80:41" left 145
+		-af "asSelectorMachine:Mouth_Middle_Up:80:41" top 195
+		-af "asSelectorMachine:Mouth_Middle_Down:215:41" left 145
+		-af "asSelectorMachine:Mouth_Middle_Down:215:41" top 235
+		-af "asSelectorMachine:Mouth_Right:235:41" left 190
+		-af "asSelectorMachine:Mouth_Right:235:41" top 210
+		-af "asSelectorMachine:Mouth_Left:255:41" left 100
+		-af "asSelectorMachine:Mouth_Left:255:41" top 210	
+		
+		faceMachineFormLayout;
+	
+	showWindow;
+}
+
+global proc faceMachine_Bind(int $first,int $second)
+{
+	string $ext[] = {"RA","RB","RC","LA","LB","LC","NU","NR","NL","MU","MD","MR","ML"};
+	string $selVerts[] = `filterExpand -expand 1 -sm 31 `;
+	float $xyzPos[] = `xform -q -ws -a -t $selVerts[0]`;
+   	$x= $xyzPos[0];	$y= $xyzPos[1];	$z= $xyzPos[2];
+	switch ($first)
+	{
+		case 1:
+			string $jointName = ("EyeBrow_");
+			joint -p ($xyzPos[0]) ($xyzPos[1]) ($xyzPos[2]) -n ($jointName+$ext[$second-1]);
+			select -tgl $selVerts[0];
+			GrowPolygonSelectionRegion;
+			select -tgl ($jointName+$ext[$second-1]);
+			SmoothBindSkin;
+			parent -world ($jointName+$ext[$second-1]);
+			parent ($jointName+$ext[$second-1]) FaceMachine ;
+			select -cl;
+		break;
+		case 2:
+			string $jointName = ("Nose_");
+			joint -p ($xyzPos[0]) ($xyzPos[1]) ($xyzPos[2]) -n ($jointName+$ext[$second-1]);
+			select -tgl $selVerts[0];
+			GrowPolygonSelectionRegion;
+			select -tgl ($jointName+$ext[$second-1]);
+			SmoothBindSkin;
+			parent -world ($jointName+$ext[$second-1]);
+			parent ($jointName+$ext[$second-1]) FaceMachine ;
+			select -cl;
+		break;
+		case 3:
+			string $jointName = ("Mouth_");
+			joint -p ($xyzPos[0]) ($xyzPos[1]) ($xyzPos[2]) -n ($jointName+$ext[$second-1]);
+			select -tgl $selVerts[0];
+			GrowPolygonSelectionRegion;
+			select -tgl ($jointName+$ext[$second-1]);
+			SmoothBindSkin;
+			parent -world ($jointName+$ext[$second-1]);
+			parent ($jointName+$ext[$second-1]) FaceMachine ;
+			select -cl;
+		break;
+	}
+}

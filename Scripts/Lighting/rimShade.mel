@@ -1,0 +1,54 @@
+/* 
+       
+
+        Warning:- Only works in RenderLayer not in Display Layer
+        please be in RenderLayers and execute the script....
+        //======================================================================
+        Description:-
+        creates a RIM SHADER
+        and put the selected objects  in separate render layer overide
+        Techincal Inputs : sebastin.
+        code: stanley.joseph (stanlee@sanrasoft.com | stanlee.jo@gmail.com)
+*/
+
+
+
+
+
+global proc rimShade()
+{
+
+
+                
+        if(` pluginInfo -q -l rimShader ` == 1)
+        {
+        
+                string $selectObjects[]=`ls -sl`;
+                
+                if(`size $selectObjects`== 0){
+                error ">>>>>>>>>>>>>>>>>>>>please select Valid Objects >>>>>>>>>>>>>>>>>>>>>>>>>";
+                }
+                else {
+                $rimLayer = ` createRenderLayer -name "RIM_PASS" -number 1 -makeCurrent  -noRecurse $selectObjects`;
+                $rimShade = `shadingNode -asShader dt3d_rimShader -name "rimShader"`;
+                $rimShadeSG = `sets -renderable true -noSurfaceShader true -empty -name dt3d_rimShaderSG`;
+                connectAttr -force ( $rimShade + ".message" ) ( $rimShadeSG + ".miMaterialShader" ) ;
+			setAttr ($rimShade + ".color") -type double3 0 0 0 ;
+			setAttr ($rimShade + ".specularColor") -type double3 1 1 1 ;
+			setAttr ($rimShade + ".strength") 1;
+
+                
+                string $objInRimLayer[]   =  `layerEditorSelectObjects $rimLayer`;
+                
+                select $selectObjects;
+                sets -e -forceElement $rimShadeSG;
+                }
+        }
+        
+        
+        else {
+                warning ">>>>>>>Please load the rimShader.mll plugin & run the script <<<<<<<<<<<<<<<";
+        }
+        
+}
+

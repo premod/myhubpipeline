@@ -1,0 +1,25 @@
+global proc breakIncandence()
+{
+	for($eachMat in `ls -mat`)
+    	{
+		string $conns[] = `listConnections -p 1 -s 1 -d 0 $eachMat`;
+    		for ($conn in $conns)
+       	{
+       		string $buffer02[];
+        		tokenize($conn, ".", $buffer02);
+        		string $nodeName = $buffer02[0];
+        		string $nodeType[] = `nodeType -i $nodeName`;
+        		string $theDestination[] = `connectionInfo -destinationFromSource $conn`;
+			for($a in $theDestination)
+			{
+				string $incan[];
+   				tokenize($a, ".", $incan);
+				if($incan[1] == "incandescence")
+				{
+					disconnectAttr $conn $theDestination[0];
+				}
+			}
+		}
+	}
+}
+breakIncandence;

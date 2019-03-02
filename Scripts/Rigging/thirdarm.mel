@@ -1,0 +1,330 @@
+
+// Close the ThirdArm window
+global proc closeWindow()
+{
+	deleteUI thirdArmWindow;
+}
+
+// Set the names of the joints. Called by the "SET" buttons.
+global proc setJointName(string $TextField)
+{
+	// Name of the selected joint
+	string $JointName[] = `ls -hd 1 -type "joint" -sl`;
+	
+	// Check that a joint has been selected...
+	if ($JointName[0] == "")
+		error "No joint is selected. Make sure you have selected a joint before clicking SET.";
+		
+	// Check which button was hit
+	if ($TextField == "ikjoint")
+	{
+		// And update the text in the UI
+		eval("textFieldGrp -edit -text \"" + $JointName[0] + "\" ikJointName");
+	}
+	if ($TextField == "fkjoint")
+	{
+		eval("textFieldGrp -edit -text \"" + $JointName[0] + "\" fkJointName");
+	}
+	if ($TextField == "rajoint")
+	{
+		eval("textFieldGrp -edit -text \"" + $JointName[0] + "\" raJointName");
+	}
+	
+	// Check if we can enable the BLEND button.
+	enableBlendButton();
+}
+
+// Set the selected control curve.
+// This can be anything. Even geometry.
+global proc setControlCurve()
+{
+	// Selected object
+	string $cCurveName[] = `ls -hd 1 -sl`;
+	
+	// Check that an object has been selected...
+	if ($cCurveName[0] == "")
+		error "No control curve selected. Select an curve (object) before clicking SET.";
+		
+	// Update the text
+	eval("textFieldGrp -edit -text \"" + $cCurveName[0] + "\" ccName");
+	
+	// Check if we can enable the blend button.
+	enableBlendButton();
+}
+
+// Set the name fo the attribute.
+global proc setAttrName()
+{	
+	// Check if we can enable the blend button.
+	enableBlendButton();
+}
+
+// Enable the blend button.
+// IK, FK, and RA fields must be filled.
+global proc enableBlendButton()
+{
+	// Check if the nessesary fields are filled.
+	if (`textFieldGrp -query -text ikJointName` != "" &&
+		`textFieldGrp -query -text fkJointName` != "" &&
+		`textFieldGrp -query -text raJointName` != "")
+	{
+		button -edit -enable 1 blendButton;	// Enable.
+	} else {	// Otherwise...
+		button -edit -enable 0 blendButton;	// Disable.
+	}
+}
+
+// Clear information from the window controls.
+global proc clearWindow(int $includeUtilities)
+{
+	textFieldGrp -edit -text "" ikJointName;	// IK Field
+	textFieldGrp -edit -text "" fkJointName;	// FK Field
+	textFieldGrp -edit -text "" raJointName;	// RA Field
+	if ($includeUtilities)	// Check if we need to clear the utilities list
+	{
+		textScrollList -edit -removeAll utilityLister;	// Clear the list
+		textFieldGrp -edit -text "" ccName;	// Control curve field
+		textFieldGrp -edit -text "" attrName;	// Attribute name field.
+	}
+	enableBlendButton();	// Disable the blend button.
+}
+
+// Create the user interface.
+global proc drawThirdArmWindow()
+{
+	if (`window -exists thirdArmWindow`)
+		deleteUI thirdArmWindow;
+		
+	window -t "ThirdArm v0.2.5"
+		-widthHeight 320 420
+		-s 0
+		-toolbox 1
+		thirdArmWindow;
+		
+		columnLayout -rs 5 -adj 1;
+			rowLayout -adj 1 -nc 2 -cat 1 "left" 0 -cw 1 100 -cat 2 "both" 0 ikRow;
+				textFieldGrp -l "IK Joint:" -cat 1 "left" 0 -cw 1 70 -cw 2 140 -editable 0 -changeCommand "enableBlendButton" ikJointName;
+				button -l "Set" -align "center" -command "setJointName(\"ikjoint\")";
+				setParent ..;
+			rowLayout -adj 1 -nc 2 -cat 1 "left" 0 -cw 1 100 -cat 2 "both" 0 fkRow;
+				textFieldGrp -l "FK Joint:" -cat 1 "left" 0 -cw 1 70 -cw 2 140 -editable 0 -changeCommand "enableBlendButton" fkJointName;
+				button -l "Set" -align "center" -command "setJointName(\"fkjoint\")";
+				setParent ..;
+			rowLayout -adj 1 -nc 2 -cat 1 "left" 0 -cw 1 100 -cat 2 "both" 0 raRow;
+				textFieldGrp -l "RA Joint:" -cat 1 "left" 0 -cw 1 70 -cw 2 140 -editable 0 -changeCommand "enableBlendButton" raJointName;
+				button -l "Set" -align "center" -command "setJointName(\"rajoint\")";
+				setParent ..;
+			rowLayout -nc 2 -cat 1 "both" 0 -cat 2 "both" 0 utilityRow;
+				radioCollection;
+				radioButton -l "blendTwoAttr" -select blendTwoAttrRadio;
+				radioButton -l "blendColors" blendColorsRadio;
+				setParent ..;
+				
+			columnLayout -rs 10;
+				rowLayout -nc 2 -cat 1 "both" 0 -cat 2 "both" 0 buttonRow;
+					button -l "Blend" -align "center" -enable 0 -command "doBlend" blendButton;
+					setParent ..;
+				setParent..;
+			
+				frameLayout -l "Utility List" -w 300 utilityListLayout;
+					textScrollList -height 100 -selectCommand "listSelectionChange" utilityLister;
+					setParent ..;
+				rowLayout -nc 2 -cat 1 "both" 0 -cat 2 "both" 0 nodeControlRow;
+					button -l "Remove Node" -align "center" -enable 0 -command "removeNode" removeButton;
+					button -l "Add Node" -align "center" -enable 1 -command "addNode" addButton;
+					setParent ..;
+
+			rowLayout -adj 1 -nc 2 -cat 1 "left" 0 -cw 1 100 -cat 2 "both" 0 ccRow;
+				textFieldGrp -l "Control Curve:" -cat 1 "left" 0 -cw 1 70 -cw 2 140 -editable 0 -changeCommand "enableBlendButton" ccName;
+				button -l "Set" -align "center" -command "setControlCurve";
+				setParent ..;
+			rowLayout -adj 1 -nc 2 -cat 1 "left" 0 -cw 1 100 -cat 2 "both" 0 attrRow;
+				textFieldGrp -l "Attr Name:" -cat 1 "left" 0 -cw 1 70 -cw 2 140 -editable 1 -changeCommand "enableBlendButton" attrName;
+				button -l "Add Attribute" -align "center" -command "addControlAttr" addAttrButton;
+				setParent ..;
+
+			columnLayout -rs 10;
+				rowLayout -nc 2 -cat 1 "both" 0 -cat 2 "both" 0 buttonRow;
+					button -l "Close" -align "center" -command "closeWindow" closeButton;
+				
+		
+	showWindow thirdArmWindow;
+}
+
+// Add the attribute...
+global proc addControlAttr()
+{
+	// Make sure an attribute name has been given, and a control curve is selected...
+	if (`textFieldGrp -query -text ccName` == "")
+		error "Cannot add attribute: You must select a control curve.";
+		
+	if (`textFieldGrp -query -text attrName` == "")
+		error "Cannot add attribute: You must supply an attribute name to add to the control curve.";
+	
+	// Get the list of utility nodes from the utilities list.
+	string $utilityNodes[] = `textScrollList -query -allItems utilityLister`;
+	int $numberOfUtilities = `textScrollList -query -numberOfItems utilityLister`;	// Number of utilities
+	string $cCurve = `textFieldGrp -query -text ccName`;	// Control curve name
+	string $attrName = `textFieldGrp -query -text attrName`;	// Attribute name
+
+	// Which type of utilities were used.
+	if (`radioButton -query -select blendColorsRadio` == true)
+	{
+		select $cCurve;	// Curve
+		// Add the attribute
+		eval("addAttr -at \"float\" -maxValue 1 -minValue 0 -keyable 1 -shortName \"" + $attrName + "\"");
+
+		// Now loop through the utility nodes.
+		int $i;
+		for ($i = 0; $i < $numberOfUtilities; $i++)
+		{
+			// And connect the attribute to the appropriate attribute on the node.
+			connectAttr ($cCurve + "." + $attrName) ($utilityNodes[$i] + ".blender");
+		}
+	} else {
+		select $cCurve;
+		
+		eval("addAttr -at \"float\" -maxValue 1 -minValue 0 -keyable 1 -shortName \"" + $attrName + "\"");
+	
+		int $i;
+		for ($i = 0; $i < $numberOfUtilities; $i++)
+		{
+			connectAttr ($cCurve + "." + $attrName) ($utilityNodes[$i] + ".attributesBlender");
+		}
+	}
+	
+	clearWindow(true);	// Clear the window with utility list.
+}
+
+// The selection in the node list has changed
+global proc listSelectionChange()
+{
+	int $listIndex[] = `textScrollList -query -selectIndexedItem utilityLister`;
+	
+	if ($listIndex[0] > 0)
+		button -edit -enable 1 removeButton;
+	else
+		button -edit -enable 0 removeButton;
+}
+
+// Remove the selected node from the list...
+global proc removeNode()
+{
+	int $listIndex[] = `textScrollList -query -selectIndexedItem utilityLister`;	// Get the index number
+	textScrollList -edit -removeIndexedItem $listIndex[0] utilityLister; 	// remove the selected node.
+	listSelectionChange();		// Selection changed in the list.
+}
+
+// Add the selected node to the list...
+global proc addNode()
+{
+	string $newNodeName[1];	// Store the selection
+	if (`radioButton -query -select blendColorsRadio`)	// Get the needed node.
+	{
+		$newNodeName = `ls -hd 1 -type "blendColors" -sl`;		// Selected blendColors node
+		if ($newNodeName[0] == "")	// Check if a "blendColors" node was selected
+		{
+			error "Not a \"blendColors\" node. Please select the correct node";	// Error if not a blendColors node.
+		}
+	} else {
+		$newNodeName = `ls -hd 1 -type "blendTwoAttr" -sl`;	// Selected blendTwoAttr node		
+		if ($newNodeName[0] == "")	// Check if a "blendTwoAttr" node is selected
+		{
+			error "Not a \"blendTwoAttr\" node. Please select the correct node";
+				// error if not a "blendTwoAttr" node.
+		}
+	}
+		
+	textScrollList -edit -append $newNodeName[0] utilityLister;	// Add to list.
+}
+
+// Do blend using blendTwoAttr node
+global proc doBlendTwoAttr()
+{
+	// Get the name of the joints and curve.
+	string $ikJoint = `textFieldGrp -query -text ikJointName`;
+	string $fkJoint = `textFieldGrp -query -text fkJointName`;
+	string $raJoint = `textFieldGrp -query -text raJointName`;
+	string $cCurve = `textFieldGrp -query -text ccName`;
+
+	// Create first utility node.	
+	string $utilityNode1 = `createNode "blendTwoAttr"`;
+	setAttr ($utilityNode1 + ".attributesBlender") (0.5);	// Set the default attribute for the blender
+	
+	// Connect the joints "rotateX" to the utility node.
+	connectAttr ($ikJoint + ".rotateX") ($utilityNode1 + ".input[0]");
+	connectAttr ($fkJoint + ".rotateX") ($utilityNode1 + ".input[1]");
+	// Connect node output to the RA joint rotateX
+	connectAttr ($utilityNode1 + ".output") ($raJoint + ".rotateX");
+
+	// Add the utility to the node list.
+	textScrollList -edit -append $utilityNode1 utilityLister;
+	
+	//...repeat...
+	
+	string $utilityNode2 = `createNode "blendTwoAttr"`;
+	setAttr ($utilityNode2 + ".attributesBlender") (0.5);
+
+	connectAttr ($ikJoint + ".rotateY") ($utilityNode2 + ".input[0]");
+	connectAttr ($fkJoint + ".rotateY") ($utilityNode2 + ".input[1]");
+	connectAttr ($utilityNode2 + ".output") ($raJoint + ".rotateY");
+
+	textScrollList -edit -append $utilityNode2 utilityLister;
+
+	string $utilityNode3 = `createNode "blendTwoAttr"`;
+	setAttr ($utilityNode3 + ".attributesBlender") (0.5);
+
+	connectAttr ($ikJoint + ".rotateZ") ($utilityNode3 + ".input[0]");
+	connectAttr ($fkJoint + ".rotateZ") ($utilityNode3 + ".input[1]");
+	connectAttr ($utilityNode3 + ".output") ($raJoint + ".rotateZ");
+
+	textScrollList -edit -append $utilityNode3 utilityLister;
+		
+}
+
+// Do blend using blendColors node.
+global proc doBlendColors()
+{
+	string $ikJoint = `textFieldGrp -query -text ikJointName`;
+	string $fkJoint = `textFieldGrp -query -text fkJointName`;
+	string $raJoint = `textFieldGrp -query -text raJointName`;
+	string $cCurve = `textFieldGrp -query -text ccName`;
+
+	// The "blendColors" node can be used to blend all axises without the need for aditional nodes.	
+	$utilityNode = `shadingNode -au blendColors`;
+	
+	connectAttr ($ikJoint + ".rotateX") ($utilityNode + ".color1R");
+	connectAttr ($ikJoint + ".rotateY") ($utilityNode + ".color1G");
+	connectAttr ($ikJoint + ".rotateZ") ($utilityNode + ".color1B");
+	
+	connectAttr ($fkJoint + ".rotateX") ($utilityNode + ".color2R");
+	connectAttr ($fkJoint + ".rotateY") ($utilityNode + ".color2G");
+	connectAttr ($fkJoint + ".rotateZ") ($utilityNode + ".color2B");
+
+	connectAttr ($utilityNode + ".outputR") ($raJoint + ".rotateX");
+	connectAttr ($utilityNode + ".outputG") ($raJoint + ".rotateY");
+	connectAttr ($utilityNode + ".outputB") ($raJoint + ".rotateZ");
+	
+	textScrollList -edit -append $utilityNode utilityLister;
+}
+
+// Begin the blending...
+global proc doBlend()
+{
+	// Check which nodes are being used...
+	if (`radioButton -query -select blendTwoAttrRadio` == true)
+	{
+		doBlendTwoAttr();
+	} else {
+		doBlendColors();
+	}
+	
+	clearWindow(false);
+}
+
+// ThirdArm...
+global proc thirdarm()
+{
+    print "ThirdArm v0.1\n";
+    drawThirdArmWindow();
+}

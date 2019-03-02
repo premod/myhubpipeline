@@ -1,0 +1,19 @@
+global proc changeMaterialsToLambert()
+{
+	string $allMaterials[] = `ls -mat`;
+	for($each in $allMaterials)
+	{ 
+		if(($each == "lambert1") || ($each == "particleCloud1")) 
+		{
+			continue;
+		}
+		string $shaderNode = $each;
+		string $replaceType = "lambert";
+		string $replaceWith = `createNode $replaceType`;
+		catch(`replaceNode $shaderNode $replaceWith`);
+		showEditor $replaceWith;
+		catch(`delete $shaderNode`);
+		rename $replaceWith $shaderNode;
+	}
+}
+changeMaterialsToLambert;

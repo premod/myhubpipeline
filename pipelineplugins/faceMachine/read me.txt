@@ -1,0 +1,17 @@
+Thank you for purchasing The Face Machine!
+
+Once the Face Machine plug-in is installed, you'll need to tell Maya to load it by following these steps:
+
+1) Run Maya.
+
+2) Go to the Windows menu. Choose Settings/Preferences, then Plug-in Manager.
+
+3) Find "FaceMachine.mll" in the plug-ins list. The list is in alphabetical order, so you may need to scroll down.
+
+4) Click the "loaded" and "auto load" checkboxes next to "FaceMachine.mll"
+
+5) Enter your serial number when prompted. You should receive your serial number within 24 hours of your order. If not, please contact janet@anzovin.com.
+
+The Face Machine menu will appear. For more information on using The Face Machine, go to this menu, choose "About" and then "Documentation."
+
+If you are unable to install or load The Face Machine, please contact support@anzovin.com for assistence.

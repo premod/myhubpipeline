@@ -1,0 +1,21 @@
+global proc allChangeToWhite()
+{
+	string $getConfirm = `confirmDialog -title "Alert!" -message "All ur materials ill make white\n Are u sure ?" -button "Yah" -button "Exit"`;
+	if ($getConfirm=="Yah")
+	{
+		string $selMat[] = `ls -mat`;
+		string $selTex[] = `ls -tex`;
+		for($i=0; $i<size($selMat); $i++)
+		{
+			int $isConn = catch(`isConnected ($selTex[$i]+".outColor") ($selMat[$i]+".color")`);
+			if($isConn == 0)
+			{
+				catch(` setAttr ($selMat[$i]+".color") -type double3 1 1 1 `);
+			}
+		}
+	}
+	else
+	{
+		print "Not changed";
+	}
+}

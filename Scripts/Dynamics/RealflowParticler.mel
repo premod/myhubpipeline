@@ -1,0 +1,777 @@
+global string $paths[];
+global string $prefixes[];
+global int $begins[];
+global int $ends[];
+global int $offsets[];
+global int $minRanges[];
+global int $maxRanges[];
+global int $useRanges[];
+global int $clipRanges[];
+global int $loadViscosities[];
+global int $loadDensities[];
+global int $loadPressures[];
+global int $loadMasses[];
+global int $loadTemperatures[];
+global int $loadNormalVectors[];
+global int $loadForces[];
+global int $loadVorticities[];
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc RealflowParticler()
+{
+	global string $paths[];
+	global string $prefixes[];
+	global int $begins[];
+	global int $ends[];
+	global int $offsets[];
+	global int $minRanges[];
+	global int $maxRanges[];
+	global int $useRanges[];
+	global int $clipRanges[];
+	global int $loadViscosities[];
+	global int $loadDensities[];
+	global int $loadPressures[];
+	global int $loadMasses[];
+	global int $loadTemperatures[];
+	global int $loadNormalVectors[];
+	global int $loadForces[];
+	global int $loadVorticities[];
+
+	// Check if the browseFolder optionVar exists, if not create with the
+	// current folder path
+	///////////////////////////////////////////////////////////////////////////
+	if (`optionVar -q "browseFolderPar"` == 0)
+	{
+		optionVar -sv "browseFolderPar" `pwd`;
+	}
+
+	// Get the file selected
+	///////////////////////////////////////////////////////////////////////////
+	string $directorio = `optionVar -q "browseFolderPar"`;
+	string $resultado = `fileDialog -directoryMask $directorio`;
+
+	// If the result is empty means no file picked up
+	///////////////////////////////////////////////////////////////////////////
+	if ($resultado == "")
+	{
+		return;
+	}
+
+	// Check if the picked file is a valid .bin particle file
+	///////////////////////////////////////////////////////////////////////
+	int $valid = RealFlowParticlerCheckFormat ($resultado);
+	if (!$valid)
+	{
+		string $out = "Selected file is not a valid RealFlow particles .bin";
+		$out += " file. \n\n Maybe you are trying to load a mesh .bin file.\n";
+		ShowError ($out);
+		return;
+	}
+
+	// Extract the folder from the result
+	///////////////////////////////////////////////////////////////////////
+	string $dir= $resultado;
+	string $OriMenosRelleno= `substitute "/.*/" $dir ""`;	
+	string $buffer[];
+	$numTokens = tokenize ($dir, "/", $buffer);
+	if (`substring $dir 1 1` == "/")
+	{
+		$dir = "/";
+	}
+	else
+	{
+		$dir = "";
+	}
+	for ($i=0; $i<$numTokens-1; $i++)
+	{
+		$dir += $buffer[$i]+"/";
+	}
+
+	// Remember the folder contents for further sessions
+	///////////////////////////////////////////////////////////////////////
+	optionVar -sv "browseFolderPar" $dir;
+
+	// $dir variable contents the folder where we have to look for 
+	// particles sequences. Get the sequences
+	///////////////////////////////////////////////////////////////////////
+	string $seqs[] = RealFlowParticlerGetSeqs ($dir);
+
+	// The command gives and array of strings with the format:
+	// path1|prefix1|begin1|end1|path2|prefix2|begin2|end2...
+	// Split that array in 4 separate arrays
+	///////////////////////////////////////////////////////////////////////
+	int $i, $j;
+	for ($j = 0, $i = 0; $i < size ($seqs); $i+=4, $j++)
+	{
+		$paths[$j] = $seqs[$i];
+		$prefixes[$j] = $seqs[$i+1];
+		$begins[$j] = $seqs[$i+2];
+		$ends[$j] = $seqs[$i+3];
+	}
+
+	// Create the optioVar default values and fill the options arrays
+	///////////////////////////////////////////////////////////////////////
+	string $varName;
+	for ($i = 0; $i < size ($paths); $i++)
+	{
+		// Offset
+		$varName = $paths[$i]+$prefixes[$i]+"_offset";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 0;
+		$offsets[$i] = `optionVar -q $varName`;
+
+		// Range
+		$varName = $paths[$i]+$prefixes[$i]+"_minRange";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 0;
+		$minRanges[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_maxRange";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 0;
+		$maxRanges[$i] = `optionVar -q $varName`;
+
+		// Range check boxes
+		$varName = $paths[$i]+$prefixes[$i]+"_useRange";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 0;
+		$useRanges[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_clipRange";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 0;
+		$clipRanges[$i] = `optionVar -q $varName`;
+
+		// Load options
+		$varName = $paths[$i]+$prefixes[$i]+"_loadViscosity";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadViscosities[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_loadDensity";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadDensities[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_loadPressure";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadPressures[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_loadMass";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadMasses[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_loadTemperature";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadTemperatures[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_loadNormalVector";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadNormalVectors[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_loadForce";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadForces[$i] = `optionVar -q $varName`;
+		$varName = $paths[$i]+$prefixes[$i]+"_loadVorticity";
+		if (`optionVar -ex $varName` == 0)
+			optionVar -iv $varName 1;
+		$loadVorticity[$i] = `optionVar -q $varName`;		
+	}
+
+	// Build the window in order to let the user set which sequence wants
+	// to load and which parameters to use
+	///////////////////////////////////////////////////////////////////////
+	CreateUserWindow ();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc UpdateSeqsLayout ()
+{
+	int $width = `scrollLayout -q -width "SeqsScrollLayout"`;
+	int $widthPrefix = ($width - 240) * 0.38;
+	if ($widthPrefix <= 50)
+	{
+		$widthPrefix = 50;
+	}
+	int $widthPath = ($width - 240) * 0.62;
+	if ($widthPath <= 50)
+	{
+		$widthPath = 50;
+	}
+	rowColumnLayout -e 
+		-columnWidth 1 40
+		-columnWidth 2 $widthPrefix
+		-columnWidth 3 $widthPath
+		-columnWidth 4 40
+		-columnWidth 5 40
+		-columnWidth 6 80
+		"SeqsLayout";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc CreateUserWindow ()
+{
+	global string $paths[];
+	global string $prefixes[];
+	global int $begins[];
+	global int $ends[];
+	global int $minRanges[];
+	global int $maxRanges[];
+
+	// The window
+	///////////////////////////////////////////////////////////////////////////
+	window -w 590 -h 400 
+			-title "REALFLOW/WAVE Particle Loader" 
+			-sizeable true
+			-resizeToFitChildren true 
+			VentanaPParticleLoader;
+	
+   		columnLayout
+			-adjustableColumn true
+			-columnAttach "both" 3
+			-rs	10;
+	
+			scrollLayout 
+				-horizontalScrollBarThickness 16
+    			-verticalScrollBarThickness   16
+				-resizeCommand UpdateSeqsLayout
+				SeqsScrollLayout;
+    			rowColumnLayout -numberOfColumns 6
+					-columnWidth 1 40
+					-columnWidth 2 150
+					-columnWidth 3 240
+					-columnWidth 4 40
+					-columnWidth 5 40
+					-columnWidth 6 80
+					SeqsLayout;
+    				int $index;
+					text -label "Load";
+					text -label "Prefix";
+					text -label "Folder";
+					text -label "Begin";
+					text -label "End";
+					text -label "" -io;
+
+    				for ($index = 0; $index < size ($paths); $index++) 
+					{
+						string $varName = "loadSeqs_" + $index;
+						if (`optionVar -ex $varName` == 0)
+							optionVar -iv $varName 1;
+						checkBox -label " "
+							-al center
+							-value `optionVar -q $varName`
+							$varName;
+
+						text -label $prefixes[$index]
+							-al left;
+						text -label $paths[$index]
+							-al left;
+						text -label $begins[$index]
+							-al left;
+						text -label $ends[$index]
+							-al left;
+
+						string $command = "dlgOpions("+$index+")";
+						button -label "Options" -c $command;
+    				};
+					text -label "" -io;
+				setParent..;
+			setParent..;
+		setParent..;
+
+			string $form = `formLayout -numberOfDivisions 100`;
+				string $buttonHELP= `button -w 50 -h 25 -al "center" -label "HELP"`; 
+				string $buttonABOUT= `button -w 50 -h 25 -al "center" -label "ABOUT"`; 
+				string $buttonCANCEL= `button -w 50 -h 25 -al "center" -label "CANCEL"`; 
+				string $buttonOK= `button -w 50 -h 25 -al "center" -label "OK"`; 
+				button -edit -command ("MuestraLaAyudaParticleLoader") $buttonHELP;
+				button -edit -command ("MuestraAboutParticleLoader") $buttonABOUT;
+				button -edit -command ("procedoParticleLoader") $buttonOK;
+				button -edit -command ("OnButtonCancel") $buttonCANCEL;
+			setParent..;
+			
+			formLayout -edit        
+				-attachForm            $buttonCANCEL     "top"    5
+				-attachForm			   $buttonCANCEL     "bottom" 5 
+				-attachPosition        $buttonCANCEL     "right"  0 65
+				-attachPosition        $buttonCANCEL     "left"  0 50
+
+				-attachForm            $buttonOK     "top"    5
+				-attachControl		   $buttonOK	 "left"   5 $buttonCANCEL
+				-attachForm			   $buttonOK     "bottom" 5 
+				-attachForm		       $buttonOK     "right"  5
+
+				-attachForm            $buttonHELP     "top"    5
+				-attachForm			   $buttonHELP     "bottom" 5 
+				-attachPosition        $buttonHELP     "right"  0 15
+				-attachForm	           $buttonHELP     "left"  5
+
+				-attachForm            $buttonABOUT     "top"    5
+				-attachForm			   $buttonABOUT     "bottom" 5 
+				-attachControl	       $buttonABOUT     "left"  5 $buttonHELP
+				-attachPosition        $buttonABOUT     "right"  0 30
+			$form;
+
+	showWindow;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc dlgOpions (int $index)
+{
+	global string $paths[];
+	global string $prefixes[];
+	global int $minRanges[];
+	global int $maxRanges[];
+	global int $useRanges[];
+	global int $clipRanges[];
+	global int $loadViscosities[];
+	global int $loadDensities[];
+	global int $loadPressures[];
+	global int $loadMasses[];
+	global int $loadTemperatures[];
+	global int $loadNormalVectors[];
+	global int $loadForces[];
+	global int $loadVorticities[];
+
+	window -w 300 -h 400 -title "Options"
+		 -sizeable true 
+		 -resizeToFitChildren true 
+		 dlgOptions;
+		columnLayout
+			-adjustableColumn true
+			-rs	10;
+			rowLayout -numberOfColumns 2 -cw 1 200;
+				columnLayout -cat "left" 10;
+					string $varName = $paths[$index]+$prefixes[$index]+"_loadViscosity";
+					checkBox -label "LoadViscosity"
+						-align "left"
+						-value `optionVar -q $varName` loadViscosity;
+					$varName = $paths[$index]+$prefixes[$index]+"_loadDensity";
+					checkBox -label "LoadDensity"
+						-align "left"
+						-value `optionVar -q $varName` loadDensity;
+					$varName = $paths[$index]+$prefixes[$index]+"_loadPressure";
+					checkBox -label "LoadPressure"
+						-align "left"
+						-value `optionVar -q $varName` loadPressure;
+					$varName = $paths[$index]+$prefixes[$index]+"_loadMass";
+					checkBox -label "LoadMass"
+						-align "left"
+						-value `optionVar -q $varName` loadMass;
+					$varName = $paths[$index]+$prefixes[$index]+"_loadTemperature";
+					checkBox -label "LoadTemperature"
+						-align "left"
+						-value `optionVar -q $varName` loadTemperature;
+					$varName = $paths[$index]+$prefixes[$index]+"_loadNormalVector";
+					checkBox -label "LoadNormalVector"
+						-align "left"
+						-value `optionVar -q $varName` loadNormalVector;
+					$varName = $paths[$index]+$prefixes[$index]+"_loadForce";
+					checkBox -label "LoadForce"
+						-align "left"
+						-value `optionVar -q $varName` loadForce;
+					$varName = $paths[$index]+$prefixes[$index]+"_loadVorticity";
+					checkBox -label "LoadVorticity"
+						-align "left"
+						-value `optionVar -q $varName` loadVorticity;						
+				setParent..;
+				columnLayout -adjustableColumn true;
+					$varName = $paths[$index]+$prefixes[$index]+"_offset";
+					intFieldGrp -numberOfFields 1
+						-label "Offset"
+						-v1 `optionVar -q $varName`
+						-cw2 50 60 
+						-cal 1 "left"
+						-cal 2 "right" offset;
+					$varName = $paths[$index]+$prefixes[$index]+"_minRange";
+					string $varName2 = $paths[$index]+$prefixes[$index]+"_maxRange";
+					intFieldGrp -numberOfFields 2
+						-label "Range"
+						-v1 `optionVar -q $varName`
+						-v2 `optionVar -q $varName2`
+						-cw3 50 60 60 
+						-cal 1 "left"
+						-cal 3 "right" range;
+					string $varName = $paths[$index]+$prefixes[$index]+"_useRange";
+					checkBox -label "Use Range"
+						-align "left" 
+						-value `optionVar -q $varName` useRange;
+					string $varName = $paths[$index]+$prefixes[$index]+"_clipRange";
+					checkBox -label "Clip Range"
+						-align "left" 
+						-value `optionVar -q $varName` clipRange;
+				setParent..;
+			setParent..;
+		setParent..;
+
+		string $buttonOK= `button -w 50 -h 25 -al "center" -label "OK"`; 
+		string $command = "updateOptions("+$index+")";
+		button -edit -command $command $buttonOK;
+		
+	showWindow;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc updateOptions (int $index)
+{
+	global string $paths[];
+	global string $prefixes[];
+	global int $offsets[];
+	global int $minRanges[];
+	global int $maxRanges[];
+	global int $useRanges[];
+	global int $clipRanges[];
+	global int $loadViscosities[];
+	global int $loadDensities[];
+	global int $loadPressures[];
+	global int $loadMasses[];
+	global int $loadTemperatures[];
+	global int $loadNormalVectors[];
+	global int $loadForces[];
+	global int $loadVorticities[];
+
+	// Update the offsets array and the optionVar
+	///////////////////////////////////////////////////////////////////////////
+	$offsets[$index] = `intFieldGrp -q -v1 offset`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_offset";
+	optionVar -iv $varName `intFieldGrp -q -v1 offset`;
+
+	// Update the ranges arrays and the optionVars
+	///////////////////////////////////////////////////////////////////////////
+	$minRanges[$index] = `intFieldGrp -q -v1 range`;
+	$maxRanges[$index] = `intFieldGrp -q -v2 range`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_minRange";
+	optionVar -iv $varName `intFieldGrp -q -v1 range`;
+	$varName = $paths[$index]+$prefixes[$index]+"_maxRange";
+	optionVar -iv $varName `intFieldGrp -q -v2 range`;
+
+	// Update the range check boxes
+	///////////////////////////////////////////////////////////////////////////
+	$useRanges[$index] = `checkBox -q -v useRange`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_useRange";
+	optionVar -iv $varName `checkBox -q -v useRange`;
+	$clipRanges[$index] = `checkBox -q -v clipRange`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_clipRange";
+	optionVar -iv $varName `checkBox -q -v clipRange`;
+
+	// Update the load check boxes
+	///////////////////////////////////////////////////////////////////////////
+	$loadViscosities[$index] = `checkBox -q -v loadViscosity`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadViscosity";
+	optionVar -iv $varName `checkBox -q -v loadViscosity`;
+	$loadDensities[$index] = `checkBox -q -v loadDensity`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadDensity";
+	optionVar -iv $varName `checkBox -q -v loadDensity`;
+	$loadPressures[$index] = `checkBox -q -v loadPressure`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadPressure";
+	optionVar -iv $varName `checkBox -q -v loadPressure`;
+	$loadMasses[$index] = `checkBox -q -v loadMass`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadMass";
+	optionVar -iv $varName `checkBox -q -v loadMass`;
+	$loadTemperatures[$index] = `checkBox -q -v loadTemperature`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadTemperature";
+	optionVar -iv $varName `checkBox -q -v loadTemperature`;
+	$loadNormalVectors[$index] = `checkBox -q -v loadNormalVector`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadNormalVector";
+	optionVar -iv $varName `checkBox -q -v loadNormalVector`;
+	$loadForces[$index] = `checkBox -q -v loadForce`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadForce";
+	optionVar -iv $varName `checkBox -q -v loadForce`;
+	$loadVorticities[$index] = `checkBox -q -v loadVorticity`;
+	string $varName = $paths[$index]+$prefixes[$index]+"_loadVorticity";
+	optionVar -iv $varName `checkBox -q -v loadVorticity`;
+
+	// Remove the window
+	///////////////////////////////////////////////////////////////////////////
+	deleteUI -window dlgOptions;
+	refresh;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc MuestraLaAyudaParticleLoader ()
+{
+    window  -w 400 -h 175 -sizeable false -title "RealFlow Particle Loader HELP" VentanaAyuda2ParticleLoader;
+		columnLayout  
+			-adjustableColumn true 
+			-cat "both"		12 
+			-rs	10
+		Columna;
+			frameLayout -bs "etchedIn" -lv no -mw 5;
+				text 
+					-h 80
+					-w 150
+					-label "\n      Check the sequences you want to load and press the OK button.\n You can set the parameters per sequence pressing the OPTIONS button."
+					-align "left";
+				setParent..;
+			string $formula= `formLayout -numberOfDivisions 100 formula`;
+				string $botonOK= `button -w 50 -h 25 -al "center" -label "OK"`;
+				button -edit -c ("deleteUI VentanaAyuda2ParticleLoader") $botonOK;
+			formLayout -edit
+				-attachForm			$botonOK	"top"		5
+				-attachForm			$botonOK	"bottom"	5
+				-attachPosition		$botonOK	"right"		0 75
+				-attachPosition		$botonOK	"left"		0 25
+			$formula;
+	showWindow;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc ShowError (string $out)
+{
+    window  -w 400 -h 175 -sizeable false -title "RealFlowParticler Error" WinCheckFormatError;
+		columnLayout  
+			-adjustableColumn true 
+			-cat "both"		12 
+			-rs	10
+		Columna;
+			frameLayout -bs "etchedIn" -lv no -mw 5;
+				text 
+					-h 80
+					-w 150
+					-label	$out -align "left";
+				setParent..;
+			string $formula= `formLayout -numberOfDivisions 100 formula`;
+				string $botonOK= `button -w 50 -h 25 -al "center" -label "OK"`;
+				button -edit -c ("deleteUI WinCheckFormatError") $botonOK;
+			formLayout -edit
+				-attachForm			$botonOK	"top"		5
+				-attachForm			$botonOK	"bottom"	5
+				-attachPosition		$botonOK	"right"		0 75
+				-attachPosition		$botonOK	"left"		0 25
+			$formula;
+	showWindow;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc MuestraAboutParticleLoader ()
+{
+    window -w 500 -h 300 -title "About RealFlow MAYA plug-ins" -sizeable true VentanaAyuda3ParticleLoader;
+		columnLayout  
+			-adjustableColumn true 
+			-cat "both"		12 
+			-rs	10
+		Columna;
+			frameLayout -bs "etchedIn" -lv no -mw 5;
+				string $formula44= `formLayout -numberOfDivisions 100`; 
+					$userDirPL= "plug-ins\\rflogo.bmp";
+ 					string $dibujo44= `picture -image $userDirPL pictCntl`;
+					setParent..;
+				setParent..;
+			formLayout -edit 
+				-attachForm			$dibujo44		"left"		20
+				-attachForm			$dibujo44		"bottom"	7
+			$formula44;
+
+			string $formula= `formLayout -numberOfDivisions 100 formula`;
+				string $botonOK= `button -w 50 -h 25 -al "center" -label "OK"`;
+				button -edit -c ("deleteUI VentanaAyuda3ParticleLoader") $botonOK;
+			formLayout -edit
+				-attachForm			$botonOK	"top"		5
+				-attachForm			$botonOK	"bottom"	5
+				-attachPosition		$botonOK	"right"		0 75
+				-attachPosition		$botonOK	"left"		0 25
+			$formula;
+	showWindow;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc setAttributeNum (string $nodeName, string $attr, int $index, int $value)
+{
+	string $setAttrStr = "setAttr " + $nodeName + "." + $attr + "[" + $index + "]";
+	$setAttrStr += " " + $value;
+	eval ($setAttrStr);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc setAttributeStr (string $nodeName, string $attr, int $index, string $value)
+{
+	string $setAttrStr = "setAttr " + $nodeName + "." + $attr + "[" + $index + "]";
+	$setAttrStr += " -type \"string\" " + "\"" + $value + "\"";
+	eval ($setAttrStr);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc procedoParticleLoader () 
+{   
+	global string $paths[];
+	global string $prefixes[];
+	global int $begins[];
+	global int $ends[];
+	global int $offsets[];
+	global int $minRanges[];
+	global int $maxRanges[];
+	global int $useRanges[];
+	global int $clipRanges[];
+	global int $loadViscosities[];
+	global int $loadDensities[];
+	global int $loadPressures[];
+	global int $loadMasses[];
+	global int $loadTemperatures[];
+	global int $loadNormalVectors[];
+	global int $loadForces[];
+	global int $loadVorticities[];
+
+	// Create emitter node and build the particler shape node name
+	///////////////////////////////////////////////////////////////////////////
+	string $nombreEmitter = `createNode RealflowEmitter -name RealFlowEmitter`;
+
+	// Update the loading seq optionVars
+	///////////////////////////////////////////////////////////////////////////
+	for ($i=0;$i<size($paths);$i++)
+	{
+		string $varName = "loadSeqs_" + $i;
+		string $ctrlName = "loadSeqs_" + $i;
+		optionVar -iv $varName `checkBox -q -v $ctrlName`;
+	}
+
+	// Delete this window and refresh Maya in order to erase the window
+	///////////////////////////////////////////////////////////////////////////
+	deleteUI -window VentanaPParticleLoader;
+	refresh;
+
+	// Update the DG attributes
+	///////////////////////////////////////////////////////////////////////////
+	for ($i=0;$i<size($paths);$i++)
+	{
+		// Load Seqs
+		string $varName = "loadSeqs_" + $i;
+		$value = `optionVar -q $varName`;
+		setAttributeNum ($nombreEmitter, "LoadSeqs", $i, $value);
+
+		// Paths
+		$value = $paths[$i];
+		setAttributeStr ($nombreEmitter, "Paths", $i, $value);
+
+		// Prefixes
+		$value = $prefixes[$i];
+		setAttributeStr ($nombreEmitter, "Prefixes", $i, $value);
+
+		// Offsets
+		$value = $offsets[$i];
+		setAttributeNum ($nombreEmitter, "Offsets", $i, $value);
+
+		// Min Ranges
+		$value = $minRanges[$i];
+		setAttributeNum ($nombreEmitter, "MinRanges", $i, $value);
+
+		// Max Ranges		
+		$value = $maxRanges[$i];
+		setAttributeNum ($nombreEmitter, "MaxRanges", $i, $value);
+
+		// Begins
+		$value = $begins[$i];
+		setAttributeNum ($nombreEmitter, "Begins", $i, $value);
+
+		// Ends
+		$value = $ends[$i];
+		setAttributeNum ($nombreEmitter, "Ends", $i, $value);
+
+		// Check Boxes
+		$value = $clipRanges[$i];
+		setAttributeNum ($nombreEmitter, "ClipRanges", $i, $value);
+		$value = $useRanges[$i];
+		setAttributeNum ($nombreEmitter, "UseRanges", $i, $value);
+		$value = $loadViscosities[$i];
+		setAttributeNum ($nombreEmitter, "LoadViscosities", $i, $value);
+		$value = $loadDensities[$i];
+		setAttributeNum ($nombreEmitter, "LoadDensities", $i, $value);
+		$value = $loadPressures[$i];
+		setAttributeNum ($nombreEmitter, "LoadPressures", $i, $value);
+		$value = $loadMasses[$i];
+		setAttributeNum ($nombreEmitter, "LoadMasses", $i, $value);
+		$value = $loadTemperatures[$i];
+		setAttributeNum ($nombreEmitter, "LoadTemperatures", $i, $value);
+		$value = $loadNormalVectors[$i];
+		setAttributeNum ($nombreEmitter, "LoadNormalVectors", $i, $value);
+		$value = $loadForces[$i];
+		setAttributeNum ($nombreEmitter, "LoadForces", $i, $value);
+		$value = $loadVorticities[$i];
+		setAttributeNum ($nombreEmitter, "LoadVorticities", $i, $value);
+	}	
+
+	// Dir
+	setAttr -type "string" ($nombreEmitter + ".Dir") `optionVar -q "browseFolderPar"`;
+	// Number of sequences
+	int $numSeqs = `size($paths)`;
+	setAttr ($nombreEmitter + ".NumSeqs") $numSeqs;
+
+	// create particle object and connect to the plugin emitter node. Rename
+	// the particler Shape node
+	///////////////////////////////////////////////////////////////////////////
+	string $nombreParticles[]= `particle -name RealflowParticle`;
+	$nombreParticles[1] = `rename $nombreParticles[1] ($nombreParticles[0] + "_" + $nombreParticles[1])`;
+	connectDynamic -em $nombreEmitter $nombreParticles[0];
+	setAttr ($nombreParticles[0] + "|" + $nombreParticles[1] + ".emissionInWorld") off;
+
+	// Apply the command to this node in order to add the attributes needed
+	RealFlowParticlerAddAttrCmd ($nombreEmitter);
+
+	setAttr ($nombreParticles[0] + "|" + $nombreParticles[1] + ".lifespanMode") 3;
+	setAttr ($nombreParticles[0] + "|" + $nombreParticles[1] + ".conserve") 0;
+
+	// Free memory
+	///////////////////////////////////////////////////////////////////////////
+	FreeMemory ();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc OnButtonCancel ()
+{
+	// Free the arrays and set their size to 0
+	FreeMemory ();
+
+	// Remove the window
+	deleteUI VentanaPParticleLoader;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+global proc FreeMemory ()
+{
+	global string $paths[];
+	global string $prefixes[];
+	global int $begins[];
+	global int $ends[];
+	global int $offsets[];
+	global int $minRanges[];
+	global int $maxRanges[];
+	global int $useRanges[];
+	global int $clipRanges[];
+	global int $loadViscosities[];
+	global int $loadDensities[];
+	global int $loadPressures[];
+	global int $loadMasses[];
+	global int $loadTemperatures[];
+	global int $loadNormalVectors[];
+	global int $loadForces[];
+	global int $loadVorticities[];
+
+	clear ($paths);
+	clear ($prefixes);
+	clear ($begins);
+	clear ($ends);
+	clear ($offsets);
+	clear ($minRanges);
+	clear ($maxRanges);
+	clear ($useRanges);
+	clear ($clipRanges);
+	clear ($loadViscosities);
+	clear ($loadDensities);
+	clear ($loadPressures);
+	clear ($loadMasses);
+	clear ($loadTemperatures);
+	clear ($loadNormalVectors);
+	clear ($loadForces);
+	clear ($loadVorticities);
+}
+
+///////////////////////////////////////////////////////////////////////////////

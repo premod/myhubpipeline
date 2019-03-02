@@ -1,0 +1,14 @@
+global proc deleteEmptyUVSets(){
+string $list[] = `polyUVSet -q -auv`; 	
+for($i in $list){
+if($i == "map1")
+continue;
+else
+catch( `polyUVSet -d -uvSet $i` );
+}
+print ("--------------------------------------\n");
+print ("Empty UVSets deleted");
+print ("\n--------------------------------------\n");
+}
+
+

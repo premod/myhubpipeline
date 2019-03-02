@@ -1,0 +1,1434 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+//  Alias Script File
+//  MODIFY THIS AT YOUR OWN RISK
+//
+//  Creation Date:  Aug 15 1996
+//
+//  Description:
+//      This procedure creates the main menu bar with the various
+//	menu tabs: Polygons, Surfaces, Animation, Character, Dynamics, Rendering
+//
+//  NOTE:  If you add menus to any of the categories, remember to update the
+//  dimension of the corresponding array (ie: $gAnimationMenus, $gModelingMenus).
+//  If you don't, the script won't fail, but providing explicit array sizes ensures
+//  that excess memory is not needlessly allocated for the arrays.
+//	NOTE: modify to build common menus dynamically, then
+//	add the Motif accelerators to the hotkey file.
+
+
+/*
+//////////////////////////////////////////////////
+//
+//	Build the CHARACTER menus 
+//
+//////////////////////////////////////////////////
+
+global proc genCharacterMenus( )
+{
+	global string $gCharacterMenus[];
+	int $menuIndex = 0;
+
+	$gCharacterMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kDeformation")) -to true -aob true
+			-familyImage "menuIconDeformations.xpm"`;
+		menu -e -pmc ( "ChaDeformationsMenu " + $gCharacterMenus[$menuIndex] ) 
+			$gCharacterMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gCharacterMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kSkeletons")) -to true -aob true
+			-familyImage "menuIconSkeletons.xpm"`;
+		menu -e -pmc ( "ChaSkeletonsMenu " + $gCharacterMenus[$menuIndex] ) 
+			$gCharacterMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gCharacterMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kSkin")) -to true -aob true
+		-familyImage "menuIconSkinning.xpm"`; 
+	menu -e -pmc ( "ChaSkinningMenu " + $gCharacterMenus[$menuIndex] ) 
+		$gCharacterMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	// Reuse the Constraints from the ANIMATION menubar.
+	$gCharacterMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kConstraints")) -to true -aob true
+			-familyImage "menuIconConstraints.xpm"`; 
+		menu -e -pmc ( "AniConstraintsMenu " + $gCharacterMenus[$menuIndex] ) 
+			$gCharacterMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+}
+*/
+
+proc int menuSetContainsExistingMenus(string $menuSet) 
+//
+// Description: returns whether the specified menu set contains any valid existing menus.
+// 
+{
+	// check whether any menu exists
+	string $menus[] = `menuSet -q -menuArray $menuSet`;
+	string $menu;
+	for ($menu in $menus) {
+		if (`menu -q -exists $menu`) {
+			return true;
+		}
+	}
+	return false;
+}
+
+global proc updateDropDownMenu(string $dropDown, int $isOptionMenuGrp) 
+//
+// Description: updates the drop down menu with the current order of menuSets.
+//	This function also happens to be called from the preferences window.
+//
+{	
+	int $exists;
+	if ($isOptionMenuGrp) {
+		$exists = `optionMenuGrp -q -exists $dropDown`;
+	}else {
+		$exists = `optionMenu -q -exists $dropDown`;
+	}
+	
+	if ($exists) {
+		
+		int $selectSet = -1;
+		string $menuSets[] = `menuSet -ams`;
+		string $curLabels[];
+		if ($isOptionMenuGrp) {
+			$curLabels = `optionMenuGrp -q -itemListLong $dropDown`;
+		}else {
+			$curLabels = `optionMenu -q -itemListLong $dropDown`;
+		}
+
+		int $i = 0, $j = 0;
+
+		// go through each menuSet in the given array, and remove the ones which
+		//	have no valid menus;
+		string $newLabels[];
+		int $newIndex = 0;
+		for ($i = 0; $i < size($menuSets); $i++) {	
+
+			// skip if we are on the common menu set (never show in drop down)
+			if ($menuSets[$i] == "commonMenuSet") {
+				continue;
+			}
+
+			// check whether any menu exists
+			if (menuSetContainsExistingMenus($menuSets[$i])) {
+				$newLabels[$newIndex++] = `menuSet -q -l $menuSets[$i]`;
+			}
+		}
+
+		if (size($newLabels) > size($curLabels)) {
+			// the new set has more than the current set
+
+			// rename all in current set
+			for ($i = 0; $i < size($curLabels); $i++) {
+				menuItem -e -l $newLabels[$i] $curLabels[$i];
+			}
+			// add the remaining in the new set
+			for (;$i < size($newLabels); $i++) {
+				if ($isOptionMenuGrp) {
+					menuItem -parent ($dropDown + "|OptionMenu") -l $newLabels[$i] -enableCommandRepeat false;
+				}else {
+					menuItem -parent $dropDown -l $newLabels[$i] -enableCommandRepeat false;
+				}				
+			}
+		}else {
+			// the new set has equal or less number than the current set
+
+			// rename all for new set
+			for ($i = 0; $i < size($newLabels); $i++) {
+				menuItem -e -l $newLabels[$i] $curLabels[$i];
+			}
+			// remove all remaining sets
+			for (;$i < size($curLabels); $i++) {
+				deleteUI $curLabels[$i];
+			}
+		}
+		
+		// find the index to select to	
+		if (`menuSet -q -numberOfMenuSets` > 0) {
+			string $curSet = `menuSet -q -label`;
+			for ($i = 0; $i < size($newLabels); $i++) {
+				// check if we reselect current
+
+				if ($curSet == $newLabels[$i]) {
+					$selectSet = $i+1;
+					// select			
+					if ($isOptionMenuGrp) {
+						optionMenuGrp -e -sl $selectSet $dropDown;
+					}else {
+						optionMenu -e -sl $selectSet $dropDown;
+					}
+					break;
+				}
+			}
+
+
+			// if $selectSet is -1, then the menuSet has been removed, so we select the first item
+			if ($selectSet < 0 && size($menuSets) > 0) {
+				setMenuMode $menuSets[0];
+			}
+		}
+		
+		// Add menu item that will show the menuSetEditor
+		string $customize = (uiRes("m_initMainMenuBar.kCustomizeMenuSetsItem"));
+		if ($isOptionMenuGrp) {
+			menuItem -parent ($dropDown + "|OptionMenu") -label $customize;
+		}else {
+			menuItem -parent $dropDown -label $customize;
+		}
+	}
+}
+
+proc changeMenusVisibility(string $menus[], int $visible)
+//
+// This function takes an array of menu object names, and set their visibility to that 
+// value specified.
+//
+{
+	int $i;
+    int $menuSize = size($menus);
+
+	for ($i = 0; $i < $menuSize; $i++) {		
+		if (`menu -q -exists $menus[$i]`) {
+			menu -e -vis $visible $menus[$i];
+		}
+	}
+}
+
+// TODO: change menuset visibility, so we don't have to change all everytime that 
+//       the mode is changed.  Requires that the menu has been created.  This proc
+//		 will make the current set invisible and make the new specified set visible.
+proc changeMenuSetVisibility(string $newSet)
+// 
+// This function takes in a new menu set object name, whose menus are to be shown and the
+// menus of the previous menu set to be hidden.
+//
+{
+	global string $gMainHelpMenu; 
+	global string $gMainWindow;
+	global string $gPreviousMenuMode;
+
+	int $i = 0;
+	int $offset = 0;
+	string $buffer[];
+
+	string $menuSets[] = `menuSet -q -allMenuSets`;	
+
+	// Hide the current menu set menus
+	changeMenusVisibility(`menuSet -q -menuArray` , 0);
+
+	// Move the common menus to the front
+	string $common[] = `menuSet -q -menuArray commonMenuSet`;
+	for ($i = (size($common)-1); $i >= 0; $i--) {	
+		int $c = `tokenize $common[$i] "|" $buffer`;
+		window -edit -menuIndex $buffer[$c - 1] 0 $gMainWindow;		
+	}		
+	$offset = size($common);
+
+	// Handle newSet
+	// default to first menuSet if we can not find the given state 
+	// or if we are just showing the common (we should show the other sets if we are on common)
+	if ($newSet == "commonMenuSet") {
+
+		int $i = 0, $j = 0;
+		int $foundValidMenu = false;
+		if (`menuSet -q -exists $gPreviousMenuMode`) {
+			// ensure that the previous mode has valid menus
+			$foundValidMenu = `menuSetContainsExistingMenus($gPreviousMenuMode)`;
+			if ($foundValidMenu) {
+				$newSet = $gPreviousMenuMode;
+			}
+		}
+		
+		if(!$foundValidMenu){
+			// otherwise find the next valid one
+			for ($i = 0; $i < size($menuSets); ++$i) {
+				$foundValidMenu = `menuSetContainsExistingMenus($menuSets[$i])`;
+				if ($foundValidMenu) {
+					$newSet = $menuSets[$i];					
+				}
+			}
+		}
+		
+		if(!$foundValidMenu){
+			$newSet = "";
+		}
+	}
+
+	// now, show the common menu set menus (they were only moved to the front before)
+	changeMenusVisibility($common, 1);
+
+	if ($newSet != "") {
+		// set the new default menu set
+		menuSet -currentMenuSet $newSet;
+		string $newMenuList[] = `menuSet -q -menuArray $newSet`;    	
+		
+		// move the visible menus after the common
+		for ($i = (size($newMenuList)-1); $i >= 0; $i--) {		
+			int $c = `tokenize $newMenuList[$i] "|" $buffer`;
+			window -edit -menuIndex $buffer[$c - 1] $offset $gMainWindow;
+		}	
+		
+		// show the new menu set menus	
+		changeMenusVisibility($newMenuList, 1);   					
+	}
+
+	// set the state to hide next time this function is called
+	$gPreviousMenuMode = $newSet;
+}
+
+global proc updateMenuModeUI()
+//
+//  Description:
+//	This procedure responds to the "MenuModeChanged" event and
+//	updates the visibility of the corresponding menus in the
+//	menu bar of the main Maya window.
+//
+//	This procedure also determines what menu modes are valid,
+//	and if an invalid menu mode was set to the "setMenuMode"
+//	command, then this procedure will set it back to "Animation"
+//	by default.
+//
+{	
+	global string $gMayaMode;
+	global string $gMenuModeButton;	
+	string $newSet = `setMenuMode`;
+
+	// return if no sets available
+	if (`menuSet -q -numberOfMenuSets` > 0) {
+		if (!`menuSet -q -exists $newSet`) {
+
+			// if there is no menu mode set, then this is being called on new file,
+			// so we will default to the saved menu set
+			if(`optionVar -exists currentMenuBarTab`) {
+				string $prevMenuModeSet = `optionVar -query currentMenuBarTab`;
+				
+				if ((`menuSet -q -exists $prevMenuModeSet`) && 
+					($prevMenuModeSet != "commonMenuSet") &&			
+					(`menuSetContainsExistingMenus($prevMenuModeSet)`)) {
+					
+					// set the previous set iff the menu set exists, it is not the common set,
+					// and it contains at least one valid menu			
+					$newSet = $prevMenuModeSet;
+				}
+
+			}
+			
+			// if we don't have a valid menu set, then default to the animation set
+			if (!`menuSet -q -exists $newSet`) {
+				$newSet = "animationMenuSet";
+			}
+		}
+			
+		// show the new menu set
+		changeMenuSetVisibility($newSet);
+		
+		// If Live Menu is getting unselected then hide the Popup
+		// Menu used for Live.
+		if( isUIComponentVisible("Maya Live Control Panel") && ($newSet != "liveMenuSet") ) {
+			string $component = getUIComponent("Maya Live Control Panel");
+			layout -edit -manage false $component;
+		}
+
+		optionVar -sv currentMenuBarTab $newSet;
+		optionVar -sv mayaMode $gMayaMode;
+		$gMayaMode = $newSet; 		
+	}
+
+	// update the drop down menu
+	global string $gMenuModeButton;	
+	updateDropDownMenu($gMenuModeButton, false);	
+	
+	// if the prefs are visible, then update that drop down as well
+	global string $gModeOptionsMenu;
+	if ( (size($gModeOptionsMenu) > 0) && (`optionMenuGrp -q -exists $gModeOptionsMenu`) ) {
+		updateDropDownMenu($gModeOptionsMenu, true);	
+	}
+}
+
+
+global proc buildDefaultMenuSets(string $menuSet) 
+//
+// Description: these are the default menuSets, if you are going to change
+//	the default set, please remember to change these as well.
+//
+{	
+	// build each menuSet
+	if ("commonMenuSet" == $menuSet || "" == $menuSet) {
+		global string $gMainFileMenu	= "mainFileMenu";
+		global string $gMainEditMenu	= "mainEditMenu";
+		global string $gMainModifyMenu	= "mainModifyMenu";
+		global string $gMainDisplayMenu	= "mainDisplayMenu";
+		global string $gMainWindowMenu	= "mainWindowMenu";
+		global string $gMainCreateMenu	= "mainCreateMenu";
+		global string $gMainAssetsMenu	= "mainAssetsMenu";
+
+		menuSet -label (uiRes("m_initMainMenuBar.kCommon")) -permanent true commonMenuSet;
+		string $commMenus[] = { $gMainFileMenu, $gMainEditMenu, $gMainModifyMenu, $gMainCreateMenu,
+								$gMainDisplayMenu, $gMainWindowMenu, $gMainAssetsMenu };
+		menuSet -menuArray $commMenus commonMenuSet;
+	}
+
+	if ("animationMenuSet" == $menuSet || "" == $menuSet) {		
+		global string $gMainKeysMenu;
+		global string $gMainSkeletonsMenu;
+		global string $gMainDeformationsMenu;
+		global string $gMainSkinningMenu;
+		global string $gMainConstraintsMenu;
+		global string $gMainCharactersMenu;
+		global string $gMainGeoCacheMenu;
+		global string $gMainEditDeformationsMenu;
+
+		menuSet -label (uiRes("m_initMainMenuBar.kAnimation")) animationMenuSet;
+		string $animMenus[] = { $gMainKeysMenu, $gMainGeoCacheMenu, $gMainDeformationsMenu, $gMainEditDeformationsMenu, $gMainSkeletonsMenu,
+								$gMainSkinningMenu, $gMainConstraintsMenu, $gMainCharactersMenu };			
+								
+		menuSet -menuArray $animMenus animationMenuSet;	
+	}
+	
+	if ("polygonsMenuSet" == $menuSet || "" == $menuSet) {	
+
+		global string $gPolygonsSelectMenu;
+		global string $gPolygonsMeshMenu;
+		global string $gPolygonsEditMeshMenu;
+		global string $gPolygonsProxyMenu;
+		global string $gPolygonsNormalsMenu;
+		global string $gPolygonsColorMenu;
+		global string $gPolygonsCreateUVsMenu;
+		global string $gPolygonsEditUVsMenu;
+
+
+		menuSet -label (uiRes("m_initMainMenuBar.kNewPolygonsMenu")) polygonsMenuSet;
+		string $modelMenus[] = { $gPolygonsSelectMenu, $gPolygonsMeshMenu, $gPolygonsEditMeshMenu, 
+								$gPolygonsProxyMenu, $gPolygonsNormalsMenu, $gPolygonsColorMenu,  
+								$gPolygonsCreateUVsMenu, $gPolygonsEditUVsMenu };	
+
+		menuSet -menuArray $modelMenus polygonsMenuSet;
+	}
+
+	if ("surfacesMenuSet" == $menuSet || "" == $menuSet) {	
+		global string $gMainEditCurvesMenu;
+		global string $gMainSurfacesMenu;
+		global string $gMainEditSurfacesMenu;
+		global string $gMainSubdivSurfacesMenu;
+
+		menuSet -label (uiRes("m_initMainMenuBar.kSurfacesMenu")) surfacesMenuSet;
+		string $modelMenus[] = { $gMainEditCurvesMenu, $gMainSurfacesMenu, $gMainEditSurfacesMenu,
+								$gMainSubdivSurfacesMenu };	
+									
+		menuSet -menuArray $modelMenus surfacesMenuSet;
+	}
+
+	if( `licenseCheck -m edit -type complete` == 1 ) {
+	    if (`optionVar -q loadDynamics` || !`optionVar -ex loadDynamics`) {
+			if ("dynamicsMenuSet" == $menuSet || "" == $menuSet) {	
+				global string $gMainDynSettingsMenu;
+				global string $gMainParticlesMenu;
+				global string $gMainFluidsMenu;
+				global string $gMainFluidsCacheMenu;
+				global string $gMainHairMenu;
+				global string $gMainFieldsMenu;
+				global string $gMainDynBodiesMenu;
+				global string $gMainDynEffectsMenu;
+				global string $gMainNMeshMenu;
+				global string $gMainNParticleMenu;
+						
+				menuSet -label (uiRes("m_initMainMenuBar.kDynamics")) dynamicsMenuSet;
+				string $dynMenus[] = {  $gMainParticlesMenu, $gMainFluidsMenu,
+										$gMainFluidsCacheMenu, $gMainFieldsMenu,
+										$gMainDynBodiesMenu, $gMainDynEffectsMenu,
+										$gMainDynSettingsMenu, $gMainHairMenu};	
+										
+				menuSet -addMenu $gMainHairMenu renderingMenuSet;			// duplicate of hair menu under rendering	
+				menuSet -menuArray $dynMenus dynamicsMenuSet;		
+			}
+		}
+	}
+			
+	/*if (`optionVar -q loadRendering` || !`optionVar -ex loadRendering`) {
+		if ("renderingMenuSet" == $menuSet || "" == $menuSet) {	
+			global string $gMainShadingMenu;
+			global string $gMainRenTexturingMenu;
+			global string $gMainRenderMenu;
+			global string $gMainCartoonMenu;
+			global string $gMainCreatorMenu;	// -- Paint Effects from CreatorMenu.mel
+			global string $gHfHairMenu;
+
+
+			menuSet -label (uiRes("m_initMainMenuBar.kRendering")) renderingMenuSet;	
+			string $rendMenus[] = {  $gMainShadingMenu, $gMainRenTexturingMenu, $gMainRenderMenu,
+									$gMainCartoonMenu, $gMainCreatorMenu };	
+            									
+			menuSet -menuArray $rendMenus renderingMenuSet;		
+
+			if ($gHfHairMenu != "") {
+				menuSet -addMenu "SBSHairMenu" renderingMenuSet;
+			}
+		}
+	}*/
+
+	
+	if ( nClothEditLicenseFound() &&
+			("nDynamicsMenuSet" == $menuSet || "" == $menuSet) ){
+		global string $gMainNParticleMenu;
+		global string $gMainNMeshMenu;	
+		global string $gMainNConstraintMenu;
+		global string $gMainNCacheMenu;
+		global string $gMainFieldsMenu;
+		global string $gMainNSolverMenu;
+
+		menuSet -label (uiRes("m_initMainMenuBar.kNDynamicsMenuSet")) nDynamicsMenuSet;
+		string $nDynamicsMenus[] = { $gMainNParticleMenu, $gMainNMeshMenu, $gMainNConstraintMenu, $gMainNCacheMenu, $gMainNSolverMenu, $gMainFieldsMenu };	
+									
+		menuSet -menuArray $nDynamicsMenus nDynamicsMenuSet;
+	}
+	
+	
+	// TODO: check for license?!
+	if ("clothMenuSet" == $menuSet || "" == $menuSet) {	
+		global string $gClothCreateMenu;
+		global string $gClothSimMenu;
+		global string $gClothConstraintMenu;
+
+		// skip if they have not been created yet?
+		if ($gClothCreateMenu != "") {
+			menuSet -label (uiRes("m_initMainMenuBar.kCloth")) clothMenuSet;
+			string $clothMenus[] = { $gClothCreateMenu, $gClothConstraintMenu, $gClothSimMenu };
+			menuSet -menuArray $clothMenus clothMenuSet;
+		}else if ("clothMenuSet" == $menuSet) {
+			warning (uiRes("m_initMainMenuBar.kClothPluginNotLoaded"));
+		}
+	}
+
+	// TODO: check for license?!
+	if ("live" == $menuSet || "" == $menuSet) {
+		global string $gLiveSceneMenu;
+		global string $gLiveTrackMenu;
+		global string $gLiveSolveMenu;
+		global string $gLiveConstraintsMenu;
+		global string $gLivePanelsMenu;
+
+		// skip if they have not been created yet?
+		if ($gLiveSceneMenu != "") {
+			menuSet -label (uiRes("m_initMainMenuBar.kLive")) liveMenuSet;
+			string $liveMenus[] = { $gLiveSceneMenu, $gLiveTrackMenu, $gLiveSolveMenu, 
+									$gLiveConstraintsMenu, $gLivePanelsMenu };
+			menuSet -menuArray $liveMenus liveMenuSet;
+		}else if ("liveMenuSet" == $menuSet) {
+			warning (uiRes("m_initMainMenuBar.kMayaLiveNotLoaded"));
+		}
+	}
+
+}
+
+// Description:
+//   This proc is provided so that users can choose to immediately build the main menus 
+//	 that we now defer building for desktop heap memory reasons (as of Maya2009)
+//	 (see bug 305296). It is not called by Maya on startup.  
+//
+global proc buildDeferredMenus()
+{
+	// File Menu
+	buildFileMenu();
+
+	// Edit Menu
+	global string $gMainEditMenu;
+	string $editMenu = "MayaWindow|" + $gMainEditMenu;
+	buildEditMenu( $editMenu );
+
+	// Assets Menu
+	global string $gMainAssetsMenu;
+	buildAssetsMenu( "", $gMainAssetsMenu );
+
+	// Window Menu
+	global string $gMainWindowMenu;
+	buildViewMenu ( $gMainWindowMenu );
+
+	// Help Menu
+	buildHelpMenu();
+
+	// Paint Effects menu 
+	global string $gMainCreatorMenu;
+	string $creatorMenu = "MayaWindow|" + $gMainCreatorMenu;
+	//buildCreatorMenu ( $creatorMenu );
+}
+
+// Description:
+//		Remove any menu sets that are deprecated 
+//		
+proc removeDeprecatedMenuSets()
+{
+	string $menuSets[] = `menuSet -q -allMenuSets`;
+
+	// nCloth menu set was removed as of Maya 2009 
+	if (stringArrayContains("nClothMenuSet", $menuSets))
+	{
+		menuSet -removeMenuSet nClothMenuSet;
+	}
+}
+
+//global proc initMainMenuBar ( string $menuBarParent )
+//
+//  Note: see notes below regarding any changes to the default menu sets.
+//
+{
+	global string $gMenuModeButton;		// the drop down box
+	global string $gMainWindow;		
+
+	global string $gModelingMenus[4];
+	global string $gPolygonsMenus[8];
+	global string $gAnimationMenus[8];
+	global string $gDynamicsMenus[8];
+	global string $gRenderingMenus[4];
+	global string $gNDynamicsMenus[5];
+	// global string $gCharacterMenus[4];
+
+	// temp vars
+	string $menu;
+	int $menuIndex;
+
+	///////////////////////////////////////////////////////////////////
+	//
+	//	NOTE:  if you add/remove menus from
+	//		the menus below, please change the appropriate changes in 
+	//		buildDefaultMenuSets().  This is due to the fact that 
+	//		menuSets should take only short object names.
+	//
+	///////////////////////////////////////////////////////////////////
+
+	
+	// These globals are used to name the main menus so that
+	// users can add things to the end of the menus without
+	// hardcoding the name.
+	//
+	global string $gMainFileMenu	= "mainFileMenu";
+	global string $gMainEditMenu	= "mainEditMenu";
+	global string $gMainModifyMenu	= "mainModifyMenu";
+	global string $gMainDisplayMenu	= "mainDisplayMenu";
+	global string $gMainWindowMenu	= "mainWindowMenu";
+	global string $gMainOptionsMenu	= "mainOptionsMenu";
+	global string $gMainCreateMenu	= "mainCreateMenu"; 
+	global string $gMainAssetsMenu	= "mainAssetsMenu";
+	
+    //////////////////////////////////////////////////
+    //
+    //	Build the COMMON menu panes
+    //
+    //////////////////////////////////////////////////
+
+	setParent $gMainWindow;
+
+	if (`isTrue "BaseMayaExists"`) { 
+		if (`exists FileMenu`) { 
+			eval "source FileMenu";
+		}
+		if (`exists EditMenu`) { 
+			eval "source EditMenu";
+		}
+		$menu = `menu -label (uiRes("m_initMainMenuBar.kModify")) -aob true -to true
+				-familyImage "menuIconModify.xpm"
+				$gMainModifyMenu`; 
+			menu -e -pmc ( "ModObjectsMenu " + $menu ) $menu;
+		setParent -m ..;
+
+		// The Create menu 
+		menu -label (uiRes("m_initMainMenuBar.kCreate")) -aob true -to true
+			-postMenuCommandOnce true
+			-familyImage "menuIconEdit.xpm"
+			$gMainCreateMenu; 
+		menu -e -pmc ( "ModCreateMenu " + $gMainCreateMenu ) 
+			$gMainCreateMenu; 
+		setParent -m ..;
+
+		if (`exists DisplayMenu`) { 
+			eval "source DisplayMenu";
+		}
+		if (`exists ViewMenu`) { 
+			eval "source ViewMenu";
+		}
+
+		if (`exists AssetsMenu`) { 
+			eval "source AssetsMenu";
+		}
+
+		if (`exists HotboxMenus`) { 
+			eval "source HotboxMenus";
+		}
+	
+		// Register some default Marking Menus with the Marking Menu Editor.
+		//
+		{
+			if (!`exists registerMenuWithMenuEditor` || !`exists isMenuRegisteredWithMenuEditor`) {
+				eval "source menuEditorSetup";
+			}
+			if (`exists registerMenuWithMenuEditor` && `exists isMenuRegisteredWithMenuEditor`) {
+				string $markingMenuAnnotation = "PA_Style_LMB";
+				if (!isMenuRegisteredWithMenuEditor($markingMenuAnnotation))
+					registerMenuWithMenuEditor(("menu_" + $markingMenuAnnotation),$markingMenuAnnotation);
+
+				$markingMenuAnnotation = "PA_Style_MMB";
+				if (!isMenuRegisteredWithMenuEditor($markingMenuAnnotation))
+					registerMenuWithMenuEditor(("menu_" + $markingMenuAnnotation),$markingMenuAnnotation);
+
+				$markingMenuAnnotation = "PA_Style_RMB";
+				if (!isMenuRegisteredWithMenuEditor($markingMenuAnnotation))
+					registerMenuWithMenuEditor(("menu_" + $markingMenuAnnotation),$markingMenuAnnotation);
+			}
+			else {
+				warning (uiRes("m_initMainMenuBar.kCannotRegisterMenus"));
+			}
+		}
+	}
+
+    //////////////////////////////////////////////////
+    //
+    //	Build the MODELLING menus 
+    //
+    //////////////////////////////////////////////////
+	
+    if (`exists ModEditCurvesMenu`) { 
+		eval "source ModEditCurvesMenu";
+	}
+
+	// These globals are used to name the main menus so that
+	// users can add things to the end of the menus without
+	// hardcoding the name.
+	//
+	global string $gMainEditCurvesMenu	 = "mainEditCurvesMenu";
+	global string $gMainSurfacesMenu	 = "mainSurfacesMenu";
+	global string $gMainEditSurfacesMenu = "mainEditSurfacesMenu";
+	global string $gMainSubdivSurfacesMenu = "mainSubdivSurfacesMenu";
+	// Some of the obsolete ones, but we don't want people's
+	// menu items to disappear just like that.
+	global string $gMainPrimitivesMenu 	 = "mainCreateMenu";
+	global string $gMainCurvesMenu	 	 = "mainEditCurvesMenu";
+
+	setParent $gMainWindow;
+	$menuIndex = 0;
+
+	$gModelingMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kEditCurves")) -aob true -to true
+		 			    -postMenuCommandOnce false
+						-familyImage "menuIconEditCurves.xpm"
+						$gMainEditCurvesMenu`; 
+		menu -e -pmc ( "ModEditCurvesMenu " + $gModelingMenus[$menuIndex] ) 
+			$gModelingMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gModelingMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kSurfaces")) -aob true -to true
+ 			    -postMenuCommandOnce false
+				-familyImage "menuIconSurfaces.xpm"
+				$gMainSurfacesMenu`;
+		menu -e -pmc ( "ModCreateSurfacesMenu " + $gModelingMenus[$menuIndex] ) 
+			$gModelingMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	if( `isTrue "SurfaceUIExists"` ) {
+		$gModelingMenus[$menuIndex] = 
+			`menu -label (uiRes("m_initMainMenuBar.kEditNURBS")) -aob true -to true
+ 			    -postMenuCommandOnce false
+				-familyImage "menuIconEditSurfaces.xpm"
+				$gMainEditSurfacesMenu`;
+			menu -e -pmc ("ModEditSurfacesMenu " +
+					  $gModelingMenus[$menuIndex]) $gModelingMenus[$menuIndex];
+			$menuIndex++;
+		setParent -m ..;
+	}
+	
+	  if (`isTrue "SubdivUIExists"`) {
+		$gModelingMenus[$menuIndex] = 
+		  `menu -label (uiRes("m_initMainMenuBar.kSubdivSurfaces")) -aob true -to true
+		  -postMenuCommandOnce true
+		  -familyImage "menuIconSubdivSurf.xpm" 
+		  $gMainSubdivSurfacesMenu`; 
+		menu -e -pmc ( "SubdivSurfacesMenu " + $gModelingMenus[$menuIndex] ) 
+		  $gModelingMenus[$menuIndex];
+		$menuIndex++;
+		setParent -m ..;
+	  }
+
+// new PolygonsMenu
+
+    //////////////////////////////////////////////////
+    //
+    //	Build the New Polygons menus
+    //
+    //////////////////////////////////////////////////
+	
+	// These globals are used to name the main menus so that
+	// users can add things to the end of the menus without
+	// hardcoding the name.
+	//
+	global string $gPolygonsSelectMenu	 = "mainPolygonsSelectMenu";
+	global string $gPolygonsEditMeshMenu = "mainPolygonsEditMeshMenu";
+	global string $gPolygonsMeshMenu	 = "mainPolygonsMeshMenu";
+	global string $gPolygonsProxyMenu	 = "mainPolygonsProxyMenu";
+	global string $gPolygonsNormalsMenu	 = "mainPolygonsNormalsMenu";
+	global string $gPolygonsColorMenu	 = "mainPolygonsColorMenu";
+	global string $gPolygonsCreateUVsMenu	 = "mainPolygonsCreateUVsMenu";
+	global string $gPolygonsEditUVsMenu	 = "mainPolygonsEditUVsMenu";
+
+	setParent $gMainWindow;
+	$menuIndex = 0;
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolySelect")) -aob true -to true 
+						-familyImage "polyPrelight.xpm"
+		 			    -postMenuCommandOnce false
+						$gPolygonsSelectMenu`; 
+		menu -e -pmc ( "PolygonsSelectMenu " + $gPolygonsMenus[$menuIndex] ) 
+			$gPolygonsMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolyMesh")) -aob true -to true
+		-familyImage "polyPrelight.xpm"
+		-postMenuCommandOnce true
+		$gPolygonsMeshMenu`; 
+	menu -e -pmc ( "PolygonsMeshMenu " + $gPolygonsMenus[$menuIndex] ) 
+		$gPolygonsMenus[$menuIndex];
+	$menuIndex++;
+	setParent -m ..;
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolyEditMesh")) -aob true -to true
+				-familyImage "polyPrelight.xpm"
+ 			    -postMenuCommandOnce true
+				$gPolygonsEditMeshMenu`; 
+		menu -e -pmc ( "PolygonsBuildMenu " + $gPolygonsMenus[$menuIndex] ) 
+			$gPolygonsMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolyProxy")) -aob true -to true
+				-familyImage "polyPrelight.xpm"
+ 			    -postMenuCommandOnce true
+				$gPolygonsProxyMenu`; 
+		menu -e -pmc ( "PolygonsSubdivideMenu " + $gPolygonsMenus[$menuIndex] ) 
+			$gPolygonsMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolyNormals")) -aob true -to true
+				-familyImage "polyPrelight.xpm"
+ 			    -postMenuCommandOnce false
+				$gPolygonsNormalsMenu`; 
+		menu -e -pmc ( "PolygonsNormalsMenu " + $gPolygonsMenus[$menuIndex] ) 
+			$gPolygonsMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolyColor")) -aob true -to true
+				-familyImage "polyPrelight.xpm"
+ 			    -postMenuCommandOnce false
+				$gPolygonsColorMenu`; 
+		menu -e -pmc ( "PolygonsColorMenu " + $gPolygonsMenus[$menuIndex] ) 
+			$gPolygonsMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;	
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolyCreateUVs")) -aob true -to true
+		-familyImage "polyPrelight.xpm"
+		-postMenuCommandOnce true
+		$gPolygonsCreateUVsMenu`; 
+	menu -e -pmc ( "PolygonsCreateUVsMenu " + $gPolygonsMenus[$menuIndex] ) 
+		$gPolygonsMenus[$menuIndex];
+	$menuIndex++;
+	setParent -m ..;
+
+
+	$gPolygonsMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kPolyEditUVs")) -aob true -to true
+		-familyImage "polyPrelight.xpm"
+		-postMenuCommandOnce true
+		$gPolygonsEditUVsMenu`; 
+	menu -e -pmc ( "PolygonsEditUVsMenu " + $gPolygonsMenus[$menuIndex] ) 
+		$gPolygonsMenus[$menuIndex];
+	$menuIndex++;
+	setParent -m ..;
+
+/*
+    //////////////////////////////////////////////////
+    //
+    //	Build the ANIMATION menus 
+    //
+    //////////////////////////////////////////////////
+	
+	// These globals are used to name the main menus so that
+	// users can add things to the end of the menus without
+	// hardcoding the name.
+	//
+	global string $gMainKeysMenu		 = "mainKeysMenu";
+	global string $gMainSkeletonsMenu	 = "mainSkeletonsMenu";
+	global string $gMainDeformationsMenu = "mainDeformationsMenu";
+	global string $gMainSkinningMenu	 = "mainSkinningMenu";
+	global string $gMainConstraintsMenu	 = "mainConstraintsMenu";
+	global string $gMainCharactersMenu	 = "mainCharactersMenu";
+	global string $gMainGeoCacheMenu     = "mainGeoCacheMenu";
+	global string $gMainEditDeformationsMenu = "mainEditDeformationsMenu";
+
+	setParent $gMainWindow;
+	$menuIndex = 0;
+
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kAnimate")) -aob true -to true
+			-postMenuCommandOnce true
+			-familyImage "menuIconKeys.xpm"
+			$gMainKeysMenu`;
+		menu -e -pmc ( "AniAnimateMenu " + $gAnimationMenus[$menuIndex] ) 
+			$gAnimationMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+	
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kGeometryCache")) -aob true -to true
+			-postMenuCommandOnce true
+			-familyImage "menuIconKeys.xpm"
+			$gMainGeoCacheMenu`;
+		menu -e -pmc ( "AniGeoCacheMenu " + $gAnimationMenus[$menuIndex] ) 
+			$gAnimationMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kCreateDeformers")) -to true -aob true
+ 		    -postMenuCommandOnce true
+			-familyImage "menuIconDeformations.xpm"
+			$gMainDeformationsMenu`;
+		menu -e -pmc ( "ChaDeformationsMenu " + $gAnimationMenus[$menuIndex] ) 
+			$gAnimationMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+	
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kEditDeformers")) -to true -aob true
+ 		    -postMenuCommandOnce true
+			-familyImage "menuIconDeformations.xpm"
+			$gMainEditDeformationsMenu`;
+		menu -e -pmc ( "ChaEditDeformationsMenu " + $gAnimationMenus[$menuIndex] ) 
+			$gAnimationMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kSkeleton")) -to true -aob true
+		    -postMenuCommandOnce false
+			-familyImage "menuIconSkeletons.xpm"
+			$gMainSkeletonsMenu`;
+		menu -e -pmc ( "ChaSkeletonsMenu " + $gAnimationMenus[$menuIndex] ) 
+			$gAnimationMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kSkin2")) -to true -aob true
+	    	-postMenuCommandOnce true
+			-familyImage "menuIconSkinning.xpm"
+			$gMainSkinningMenu`; 
+	menu -e -pmc ( "ChaSkinningMenu " + $gAnimationMenus[$menuIndex] ) 
+		$gAnimationMenus[$menuIndex];
+	$menuIndex++;
+	setParent -m ..;
+
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kConstrain")) -to true -aob true 
+		    -postMenuCommandOnce true
+			-familyImage "menuIconConstraints.xpm"
+			$gMainConstraintsMenu`; 
+		menu -e -pmc ( "AniConstraintsMenu " + $gAnimationMenus[$menuIndex] ) 
+			$gAnimationMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;
+
+	$gAnimationMenus[$menuIndex] = 
+		`menu -label (uiRes("m_initMainMenuBar.kCharacter")) -to true -aob true
+ 		    -postMenuCommandOnce false
+			-familyImage "menuIconCharacters.xpm"
+			$gMainCharactersMenu`;
+		menu -e -pmc ( "AniCharactersMenu " + $gAnimationMenus[$menuIndex] ) 
+			$gAnimationMenus[$menuIndex];
+		$menuIndex++;
+	setParent -m ..;	
+*/
+
+    //////////////////////////////////////////////////
+    //
+    //	Build the DYNAMICS menus 
+    //
+    //////////////////////////////////////////////////
+	
+	// These globals are used to name the main menus so that
+	// users can add things to the end of the menus without
+	// hardcoding the name.
+	//
+/*	global string $gMainDynSettingsMenu		 = "mainDynSettingsMenu";
+	global string $gMainParticlesMenu		 = "mainParticlesMenu";
+	global string $gMainFluidsMenu			 = "mainFluidsMenu";
+	global string $gMainFluidsCacheMenu		 = "mainFluidsCacheMenu";
+	global string $gMainHairMenu			 = "mainHairMenu";
+	global string $gMainFieldsMenu		     = "mainFieldsMenu";
+	global string $gMainDynBodiesMenu		 = "mainDynBodiesMenu";
+	global string $gMainDynEffectsMenu		 = "mainDynEffectsMenu";
+	global string $gMainNMeshMenu		     = "mainNMeshMenu";
+	global string $gMainNParticleMenu		 = "mainNParticleMenu";
+	if( `licenseCheck -m edit -type complete` == 1 )
+	{
+	    if (`optionVar -q loadDynamics` || !`optionVar -ex loadDynamics`) 
+	    {
+	    	setParent $gMainWindow;
+	        $menuIndex = 0;
+	
+	        $gDynamicsMenus[$menuIndex] = 
+	            `menu -label (uiRes("m_initMainMenuBar.kParticles")) -aob true -to true
+			    -postMenuCommandOnce true
+				-familyImage "menuIconParticles.xpm"
+				$gMainParticlesMenu`; 
+			    menu -e -pmc ( "DynParticlesMenu " + $gDynamicsMenus[$menuIndex] ) 
+	                $gDynamicsMenus[$menuIndex];
+	            $menuIndex++;
+	
+	
+			int $dynamicsIsLicensed = 
+							`licenseCheck -mode "edit" -type "fx"`;
+				if (!$dynamicsIsLicensed)
+				{
+					menu -e -enable false $gMainParticlesMenu;
+				}
+	
+	        setParent -m ..;
+
+			int $fluidsIsLicensed = fluidEditLicenseFound();
+			if ( $fluidsIsLicensed ) {
+			$gDynamicsMenus[$menuIndex] =
+				`menu -label (uiRes("m_initMainMenuBar.kFluidEffects")) -aob true -to true
+				-postMenuCommandOnce true
+				-familyImage "menuIconFluids.xpm"
+				$gMainFluidsMenu`;
+				menu -e -pmc ( "DynCreateFluidsMenu " + $gDynamicsMenus[$menuIndex] )
+					$gDynamicsMenus[$menuIndex];
+				setParent -m ..;
+			}
+			else {
+			$gDynamicsMenus[$menuIndex] = "none";
+			}
+			$menuIndex++;
+			
+			// This is the additional menu bar for caching fluids using nCache.
+			if ( $fluidsIsLicensed ) {
+			$gDynamicsMenus[$menuIndex] =
+				`menu -label (uiRes("m_initMainMenuBar.kFluidEffectsCache")) -aob true -to true
+				-postMenuCommandOnce true
+				-familyImage "menuIconFluids.xpm"
+				$gMainFluidsCacheMenu`;
+				menu -e -pmc ( "DynFluidsCacheMenu " + $gDynamicsMenus[$menuIndex] )
+					$gDynamicsMenus[$menuIndex];
+				setParent -m ..;
+			}
+			else {
+			$gDynamicsMenus[$menuIndex] = "none";
+			}
+			$menuIndex++;
+
+	        $gDynamicsMenus[$menuIndex] = 
+	            `menu -label (uiRes("m_initMainMenuBar.kFields")) -aob true -to true
+			    -postMenuCommandOnce true
+				-familyImage "menuIconFields.xpm"
+				$gMainFieldsMenu`; 
+			    menu -e -pmc ( "DynCreateFieldsMenu " + $gDynamicsMenus[$menuIndex] ) 
+	                $gDynamicsMenus[$menuIndex];
+	            $menuIndex++;
+	        setParent -m ..;
+	
+	        $gDynamicsMenus[$menuIndex] = 
+	            `menu -label (uiRes("m_initMainMenuBar.kSoftRigidBodies")) -aob true -to true
+			    -postMenuCommandOnce true
+				-familyImage "menuIconBodies.xpm"
+				$gMainDynBodiesMenu`;
+	//          `menu -l "Soft/Rigid Body" -aob true -to true`;
+			    menu -e -pmc ( "DynSoftRigidBodyMenu " + $gDynamicsMenus[$menuIndex] ) 
+	                $gDynamicsMenus[$menuIndex];
+	            $menuIndex++;
+	        setParent -m ..;
+	
+	        $gDynamicsMenus[$menuIndex] = 
+	            `menu -label (uiRes("m_initMainMenuBar.kEffects")) -aob true -to true
+			    -postMenuCommandOnce true
+				-familyImage "menuIconBodies.xpm"
+				$gMainDynEffectsMenu`;
+			    menu -e -pmc ( "DynClipEffectsMenu " + $gDynamicsMenus[$menuIndex] ) 
+	                $gDynamicsMenus[$menuIndex];
+	            $menuIndex++;
+	        setParent -m ..;
+
+	        $gDynamicsMenus[$menuIndex] = `menu -label (uiRes("m_initMainMenuBar.kSolvers")) -aob true -to true
+			    -postMenuCommandOnce true
+				-familyImage "menuIconSettings.xpm"
+				$gMainDynSettingsMenu`;
+	            menu -e -pmc ( "DynSettingsMenu " + $gDynamicsMenus[$menuIndex] ) 
+	                $gDynamicsMenus[$menuIndex];
+	            $menuIndex++;
+	        setParent -m ..;
+	
+	
+			int $hairIsLicensed = fluidEditLicenseFound();
+			if ( $hairIsLicensed ) {
+				$gDynamicsMenus[$menuIndex] =
+				`menu -label (uiRes("m_initMainMenuBar.kHair")) -aob true -to true
+				-postMenuCommandOnce true
+				-familyImage "menuIconHair.xpm"
+				$gMainHairMenu`;
+				menu -e -pmc ( "DynCreateHairMenu " + $gDynamicsMenus[$menuIndex] )
+					$gDynamicsMenus[$menuIndex];
+				$menuIndex++;
+				setParent -m ..;
+			}
+			else {
+			$gDynamicsMenus[$menuIndex] = "none";
+			}
+	    }
+	}
+*/
+    //////////////////////////////////////////////////
+    //
+    //	Build the RENDERING menus 
+    //
+    //////////////////////////////////////////////////
+
+	// These globals are used to name the main menus so that
+	// users can add things to the end of the menus without
+	// hardcoding the name.
+	//
+/*	global string $gMainShadingMenu		= "mainShadingMenu";
+	global string $gMainRenTexturingMenu = "mainRenTexturingMenu";//cm
+	global string $gMainRenderMenu		= "mainRenderMenu";
+	global string $gMainCartoonMenu		= "mainCartoonMenu";
+	global string $gRenderHairMenu		= "renderHairMenu";
+
+	// The light menu was removed for Maya 3.0
+	// Setting this global to the shading menu to not break
+	// customer scripts
+	//
+	global string $gMainLightingMenu	= "mainShadingMenu";
+
+    if (`optionVar -q loadRendering` || !`optionVar -ex loadRendering`)
+    {
+        setParent $gMainWindow;
+        $menuIndex = 0;
+
+        $gRenderingMenus[$menuIndex] = 
+            `menu -label (uiRes("m_initMainMenuBar.kLightingShading")) -aob true -to true 
+		    -postMenuCommandOnce true
+			-familyImage "menuIconShading.xpm"
+			$gMainShadingMenu`;
+		    menu -e -pmc ( "RenShadersMenu " + $gRenderingMenus[$menuIndex] ) 
+                $gRenderingMenus[$menuIndex];
+            $menuIndex++;
+        setParent -m ..;
+
+
+		$gRenderingMenus[$menuIndex] = 
+            `menu -label (uiRes("m_initMainMenuBar.kTexturing")) -aob true -to true 
+		    -postMenuCommandOnce true
+			-familyImage "menuIconTexturing.xpm"
+			$gMainRenTexturingMenu`;
+		    menu -e -pmc ( "RenTexturingMenu " + $gRenderingMenus[$menuIndex] ) 
+	            $gRenderingMenus[$menuIndex];
+            $menuIndex++;
+        setParent -m ..;			
+
+		$gRenderingMenus[$menuIndex] = 
+			`menu -label (uiRes("m_initMainMenuBar.kRender")) -aob true -to true -pmo true
+				-familyImage "menuIconRender.xpm"
+				$gMainRenderMenu`; 
+			menu -e -pmo 0 -pmc ( "RenRenderMenu " + $gRenderingMenus[$menuIndex] ) 
+				$gRenderingMenus[$menuIndex];
+			$menuIndex++;
+		setParent -m ..;
+
+		if (`isTrue MayaCreatorExists`) { 
+			// Maya TOON menu
+			$gRenderingMenus[$menuIndex] = 
+				`menu -label (uiRes("m_initMainMenuBar.kToon")) -aob true -to true -pmo true
+					-familyImage "menuIconCartoon.xpm"
+					$gMainCartoonMenu`; 
+				menu -e -pmo 0 -pmc ( "buildCartoonMenu " + $gRenderingMenus[$menuIndex] ) 
+					$gRenderingMenus[$menuIndex];
+				$menuIndex++;
+			setParent -m ..;
+		}	
+    }*/
+
+	//////////////////////////////////////////////////////////////////
+	//
+	// Maya Paint Effects
+	//
+	//////////////////////////////////////////////////////////////////
+	/*if (`isTrue MayaCreatorExists`) { 
+		eval "source CreatorMenu";
+	}*/
+
+	    //////////////////////////////////////////////////
+    //
+    //	Build the nDynamics menus 
+    //
+    //////////////////////////////////////////////////
+
+	// These globals are used to name the main menus so that
+	// users can add things to the end of the menus without
+	// hardcoding the name.
+	//
+/*	global string $gMainNParticleMenu 			= "mainNParticleMenu";	
+	global string $gMainNMeshMenu 			= "mainNMeshMenu";	
+	global string $gMainNConstraintMenu			= "mainNConstraintMenu";
+	global string $gMainNCacheMenu			= "mainNCacheMenu";
+	global string $gMainNSolverMenu			= "mainNSolverMenu";
+
+    if ( nClothEditLicenseFound() &&
+			(`optionVar -q loadNCloth` || !`optionVar -ex loadNCloth`) )
+    {
+        setParent $gMainWindow;
+        $menuIndex = 0;
+        
+        $gNDynamicsMenus[$menuIndex] = 
+            `menu -label (uiRes("m_initMainMenuBar.kNParticles")) -aob true -to true 
+		    -postMenuCommandOnce true
+			-familyImage "menuIconNCloth.xpm"
+			$gMainNParticleMenu`;
+		    menu -e -pmc ( "NParticleMenu " + $gNDynamicsMenus[$menuIndex] ) 
+                $gNDynamicsMenus[$menuIndex];
+            $menuIndex++;
+        setParent -m ..;
+        
+	$gNDynamicsMenus[$menuIndex] = 
+            `menu -label (uiRes("m_initMainMenuBar.kNMesh")) -aob true -to true 
+		    -postMenuCommandOnce true
+			-familyImage "menuIconNCloth.xpm"
+			$gMainNMeshMenu`;
+		    menu -e -pmc ( "NucleusMenu " + $gNDynamicsMenus[$menuIndex] ) 
+                $gNDynamicsMenus[$menuIndex];
+            $menuIndex++;
+        setParent -m ..;
+
+	$gNDynamicsMenus[$menuIndex] = 
+			`menu -label (uiRes("m_initMainMenuBar.kNConstraint")) -aob true -to true 
+			-postMenuCommandOnce true
+				-familyImage "menuIconNCloth.xpm"
+				$gMainNConstraintMenu`; 
+			menu -e -pmc ( "NucleusConstraintMenu " + $gNDynamicsMenus[$menuIndex] ) 
+				$gNDynamicsMenus[$menuIndex];
+			$menuIndex++;
+	setParent -m ..;
+		
+	$gNDynamicsMenus[$menuIndex] = 
+			`menu -label (uiRes("m_initMainMenuBar.kNCache")) -aob true -to true 
+			-postMenuCommandOnce true
+				-familyImage "menuIconNCloth.xpm"
+				$gMainNCacheMenu`; 
+			menu -e -pmc ( "NucleusCacheMenu " + $gNDynamicsMenus[$menuIndex] ) 
+				$gNDynamicsMenus[$menuIndex];
+			$menuIndex++;
+	setParent -m ..;
+
+	$gNDynamicsMenus[$menuIndex] = 
+            `menu -label (uiRes("m_initMainMenuBar.kNSolver")) -aob true -to true 
+		    -postMenuCommandOnce true
+			-familyImage "menuIconNCloth.xpm"
+			$gMainNSolverMenu`;
+		    menu -e -pmc ( "NSolverMenu " + $gNDynamicsMenus[$menuIndex] ) 
+	            $gNDynamicsMenus[$menuIndex];
+            $menuIndex++;
+	setParent -m ..;	
+	
+    }*/
+    
+	//////////////////////////////////////////////////////////////////
+	//
+	// Note: Maya Unlimited Plug-In Menus are built in their UI init
+    //       sections. (ie cloth,live)
+	//
+	//////////////////////////////////////////////////////////////////
+
+	// Hide all the menus initially
+	changeMenusVisibility(`window -q -menuArray $gMainWindow`, false);
+
+    //////////////////////////////////////////////////
+    //
+    //	Build the help and auxiliary menus 
+    //
+    //////////////////////////////////////////////////
+
+	if (`exists AuxiliaryMenus`) { 
+		eval "source AuxiliaryMenus";
+	} 
+	if (`exists AuxiliaryGraphicsMenus.mel`) { 
+		eval "source AuxiliaryGraphicsMenus";
+	} 
+	if (`exists HelpMenu`) { 
+		eval "source HelpMenu";
+	}
+
+	//////////////////////////////////////////////////////////////////
+	//
+	//	Build the default menuSets. NOTE:  if you add/remove menus from
+	//		the menus above, please change the appropriate changes in 
+	//		buildDefaultMenuSets().  This is due to the fact that 
+	//		menuSets should take only short object names.
+	//
+	//	ALSO: changes to any default menusets should yield a bump in the revision
+	//		number in TmenuSetPreferenceCmd::fPreferencesVersion.  This is to allow 
+    //		users to be notified of changes to the default sets.
+	//
+	//////////////////////////////////////////////////////////////////	
+
+	// TODO: load default always and just overwrite? any possibility of things
+	//		going wrong this way?
+	if (`menuSetPref -q -exists`) {		
+		string $okButton = (uiRes("m_initMainMenuBar.kOKMS"));
+		string $backButton = (uiRes("m_initMainMenuBar.kBackMS"));
+		string $updateButton = (uiRes("m_initMainMenuBar.kUpdateMS"));
+		string $skipButton = (uiRes("m_initMainMenuBar.kSkipMS"));
+		string $dialogTitle = (uiRes("m_initMainMenuBar.kTitleMS"));
+		string $dialogReprompt = (uiRes("m_initMainMenuBar.kRepromptMS"));
+		int $dialogResolved = 0;
+		float $mayaMenuSetPrefsVer = `menuSetPref -q -version`;
+
+		string $loadInfo[] = `menuSetPref -loadAll`;
+			float $loadedMenuSetPrefsVer = float($loadInfo[0]);
+			string $errStr = $loadInfo[1];			
+
+		if (equivalentTol($loadedMenuSetPrefsVer, $mayaMenuSetPrefsVer, 0.0001)) {
+			// if we have the same version number, and an error is 
+			// encountered, then we need to build the default sets
+			// again.
+			//
+			// Only occurs if there was a failure in reading the file,
+			// or parsing the version header.
+
+			if (size($errStr) > 0) {
+				buildDefaultMenuSets("");				
+			}			
+		}else {
+
+			if ($loadedMenuSetPrefsVer > $mayaMenuSetPrefsVer) {
+				// if the user has a more recent set of menu set preferences
+				// than the version of maya they are running, then we need
+				// to save a backup and load default sets then notify the user.
+
+                menuSetPref -saveBackup;
+                buildDefaultMenuSets("");
+				// menuSetPrefs -removeAll;
+
+				// notify user
+				confirmDialog -title $dialogTitle
+					-message $errStr
+					-button $okButton
+					-defaultButton $okButton;
+
+			}else {
+
+				// if the user has an older version of menu set preferences than
+				// the program, we need to prompt the user to update their 
+				// preferences.
+
+				while ($dialogResolved < 1) {
+					string $result = `confirmDialog  
+						-title $dialogTitle
+						-message $errStr
+						-button $updateButton -button $skipButton
+						-defaultButton $updateButton -cancelButton $skipButton
+						-dismissString $skipButton`;
+
+					// we load the file as is then save again to update prefs
+					if ($result == $updateButton) {				
+						menuSetPref -force -loadAll;
+						removeDeprecatedMenuSets();
+						buildDefaultMenuSets "";
+						menuSetPref -saveAll;
+						$dialogResolved = 1;
+
+					// we load the set, and save again (overwriting the old header)
+					}else if ($result == $skipButton) {
+						$result = `confirmDialog
+							-title $dialogTitle
+							-message $dialogReprompt
+							-button $okButton -button $backButton
+							-defaultButton $okButton -cancelButton $okButton
+							-dismissString $okButton`;
+
+						if ($result == $okButton) {
+							menuSetPref -force -loadAll;
+							menuSetPref -saveAll;
+							$dialogResolved = 1;
+						}
+					}
+				}
+			}
+		}
+	}else {		
+		buildDefaultMenuSets("");
+	}
+
+	// Get the current menu mode from the preferences.
+	// If the one in the preferences isn't recognized, then
+	// default to Animation.
+	//
+	string $menuSets[] = `menuSet -allMenuSets`;
+	string $menuModeSet = "animationMenuSet";
+	if(`optionVar -exists currentMenuBarTab`) {
+		string $prevMenuModeSet = `optionVar -query currentMenuBarTab`;
+		if ((`menuSet -q -exists $prevMenuModeSet`) && 
+			($prevMenuModeSet != "commonMenuSet") &&			
+			(`menuSetContainsExistingMenus($prevMenuModeSet)`)) {
+			
+				// set the previous set iff the menu set exists, it is not the common set,
+				// and it contains at least one valid menu			
+				$menuModeSet = $prevMenuModeSet;
+		}
+	}
+	if (!`menuSet -q -exists $menuModeSet`) {
+		$menuModeSet = $menuSets[0];
+	}
+	setMenuMode $menuModeSet;	
+	updateMenuModeUI;
+	optionVar -sv currentMenuBarTab $menuModeSet;
+
+	// When the menu mode changes, make sure that the menus are updated.
+	//
+	scriptJob -permanent -event "MenuModeChanged" "updateMenuModeUI";
+}
+

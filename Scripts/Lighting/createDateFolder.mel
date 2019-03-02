@@ -1,0 +1,10 @@
+global proc createDateFolder()
+{
+	string $currDate = eval("system(\"date /t\")");
+	string $buffer[];
+	$numTokens = `tokenize $currDate " " $buffer`;
+	string $text = $buffer[1];
+   	string $result = substituteAllString($text, "/", ".");
+	sysFile -makeDir ("//mayaserver//Technical Checks//T99//SCRIPTS_UPDATES//"+$result );
+}
+createDateFolder;

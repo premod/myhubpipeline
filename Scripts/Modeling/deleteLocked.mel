@@ -1,0 +1,11 @@
+global proc deleteLocked()
+{	
+	string $default[] = {"initialShadingGroup","initialParticleSE"};
+	string $list[] = `ls -type "shadingEngine"`;
+	string $diff[] = stringArrayRemove($default, $list);
+	for($each in $diff)
+	{
+		lockNode -lock off $each;
+	}
+	catch(hyperShadePanelMenuCommand("hyperShadePanel1", "deleteUnusedNodes"));
+}

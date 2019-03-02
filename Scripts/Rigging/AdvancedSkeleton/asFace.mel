@@ -1,0 +1,3281 @@
+//     AdvancedSkeleton
+//     Version 3.6
+// 
+// 
+// AdvancedSkeleton is is a collection of Maya tools for doing character setup.
+//   
+// INSTALLATION: 
+// Run the SETUP file (setup.exe) 
+// Choose the Destination Folder.
+// NOTE: destination folder must be your Maya user directory 
+// eg: C:\Users\$user\Documents\maya\2011\
+// Continue installation.
+// Start Maya. 
+// Now you will find a new Shelf called 'advancedSkeleton':  
+// 
+// For detailed instructions go to: www.animationstudios.com.au
+// 
+// Copyright (C)2011 Animation Studios
+// 
+// email: support@animationstudios.com.au
+// Last Modified 8/02/2011
+
+global proc asScriptLocator (){}
+
+global proc string asScriptLocation ()
+{
+string $whatIs=`whatIs asScriptLocator`;
+string $fullPath=`substring $whatIs 25 999`;
+string $buffer[];
+int $numTok=`tokenize $fullPath "/" $buffer`;
+int $numLetters=size($fullPath);
+int $numLettersLastFolder=size($buffer[$numTok-1]);
+string $scriptLocation=`substring $fullPath 1 ($numLetters-$numLettersLastFolder)`;
+return $scriptLocation;
+}
+
+global proc asFace ()
+{
+string $asScriptLocation=`asScriptLocation`;
+string $sourceAsProcedures=("source \""+$asScriptLocation+"asProcedures.mel\"");
+if (!`exists asCharSize`)
+	eval ($sourceAsProcedures);
+
+if (!`optionVar -ex asFsGeometryTextField`)
+	optionVar -sv asFsGeometryTextField "";
+if (!`optionVar -ex asFsHeadJointTextField`)
+	optionVar -sv asFsHeadJointTextField "Head_M";
+if (!`optionVar -ex asFsJawJointTextField`)
+	optionVar -sv asFsJawJointTextField "Jaw_M";
+if (!`optionVar -ex asFsJawControlTextField`)
+	optionVar -sv asFsJawControlTextField "FKExtraJaw_M";
+if (!`optionVar -ex asFsEyeJoint_LTextField`)
+	optionVar -sv asFsEyeJoint_LTextField "Eye_L";
+if (!`optionVar -ex asFsEyeJoint_RTextField`)
+	optionVar -sv asFsEyeJoint_RTextField "Eye_R";
+if (!`optionVar -ex asFsSkinClusterTextField`)
+	optionVar -sv asFsSkinClusterTextField "";
+if (!`optionVar -ex asFsAllFaceGeoTextField`)
+	optionVar -sv asFsAllFaceGeoTextField "";
+
+
+if (`window -q -ex faceSetup`)
+	deleteUI faceSetup;
+window -w 370 -h 400 faceSetup;
+formLayout asFsFormLayout;
+
+	scrollLayout -w 50 -h 550 asFsScrollLayout1;
+	columnLayout -adj 1 asFsColumnLayout1;
+	frameLayout -w 340 -cll 1 -cl 1 -l "Start:";
+	columnLayout;
+	text -l "- First bind the head and jaw (and teeth,toungue & eyes)";
+	text -l "  (No need for precise jaw weighing of the lips)";
+	text -l "- Then proceed with the steps below.";
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Face Geo" -c "asChooseInput asFsGeometryTextField";
+		textField -w 100 -ed 0 -tx `optionVar -q asFsGeometryTextField` asFsGeometryTextField;
+		setParent..;
+	rowLayout -nc 3 -cw 1 120;
+		button -w 120 -l "Choose All Face Geo" -c "asChooseInput asFsAllFaceGeoTextField";
+		textField -w 100 -ed 0 -tx `optionVar -q asFsAllFaceGeoTextField` asFsAllFaceGeoTextField;
+		text -l "(hair,eyes,teeth,etc.)";
+		setParent..;
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Head Joint" -c "asChooseInput asFsHeadJointTextField";
+	textField -w 100 -ed 0 -tx `optionVar -q asFsHeadJointTextField` asFsHeadJointTextField;
+		setParent..;
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Jaw Joint" -c "asChooseInput asFsJawJointTextField";
+		textField -w 100 -ed 0 -tx `optionVar -q asFsJawJointTextField` asFsJawJointTextField;
+		setParent..;
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Jaw Control" -c "asChooseInput asFsJawControlTextField";
+		textField -w 100 -ed 0 -tx `optionVar -q asFsJawControlTextField` asFsJawControlTextField;
+		setParent..;
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Eye_L Joint" -c "asChooseInput asFsEyeJoint_LTextField";
+		textField -w 100 -ed 0 -tx `optionVar -q asFsEyeJoint_LTextField` asFsEyeJoint_LTextField;
+		setParent..;
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Eye_R Joint" -c "asChooseInput asFsEyeJoint_RTextField";
+		textField -w 100 -ed 0 -tx `optionVar -q asFsEyeJoint_RTextField` asFsEyeJoint_RTextField;
+		setParent..;
+
+	checkBox -m 1 -l advanced -onc "columnLayout -e -m 1 asFsAdvancedinputColumnLayout" -ofc "columnLayout -e -m 0 asFsAdvancedinputColumnLayout";
+	columnLayout -m 0 asFsAdvancedinputColumnLayout;
+	textField -w 150 -m 1 -tx `optionVar -q asFsSkinClusterTextField` asFsSkinClusterTextField;
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Lid_R Pivot" -c "asChooseInput asFsEyeLidPivot_RTextField";
+		textField -w 60 -ed 0 -tx "" asFsEyeLidPivot_RTextField;
+		setParent..;
+	rowLayout -nc 2 -cw 1 120;
+		button -w 120 -l "Choose Lid_L Pivot" -c "asChooseInput asFsEyeLidPivot_LTextField";
+		textField -w 60 -ed 0 -tx "" asFsEyeLidPivot_LTextField;
+		setParent..;
+
+		setParent..;
+		setParent..;
+		setParent..;
+
+	frameLayout -w 340 -cll 1 -cl 1 -l "Loops:";
+	columnLayout;
+	text -l "-Select EdgeLoops:";
+	text -l "      (optional: also select vert for start of loop)";
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "Outer EyeLid" -c "asCreateFaceFitJointsFromEdgeLoop EyeOuter 0.001 21";
+		button -w 20 -l "?" -c "asFaceHelpImage EyeOuter";
+		setParent..;
+	rowLayout -nc 3 -cw 1 125 -cw 2 23;
+		button -w 120 -l "Next EyeLid" -c "asCreateFaceFitJointsFromEdgeLoop EyeMiddle 0.001 22";
+		textField -w 20 -tx "A" asFSEyeMiddlePrefixTextField;
+		button -w 20 -l "?" -c "asFaceHelpImage EyeMiddle";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "Inner EyeLid" -c "asCreateFaceFitJointsFromEdgeLoop EyeInner 0.001 25";
+		button -w 20 -l "?" -c "asFaceHelpImage EyeInner";
+		setParent..;
+/*
+	separator -w 340 -h 10;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "Outer Lips" -c "asCreateFaceFitJointsFromEdgeLoop LipOuter 0.22 21";
+		button -w 20 -l "?" -c "asFaceHelpImage LipOuter";
+		setParent..;
+	rowLayout -nc 3 -cw 1 125 -cw 2 23;
+		button -w 120 -l "Next Lips" -c "asCreateFaceFitJointsFromEdgeLoop LipMiddle 0.01 22";
+		textField -w 20 -tx "A" asFSLipMiddlePrefixTextField;
+		button -w 20 -l "?" -c "asFaceHelpImage LipMiddle";
+		setParent..;
+*/
+	setParent..;
+	setParent..;
+
+	frameLayout -w 340 -cll 1 -cl 1 -l "Vertices:";
+	columnLayout;
+	text -l "-Select Vertices:";
+
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "mouthUpper" -c "asCreateFaceFitJoint mouthUpper 0.45 10";
+		button -w 20 -l "?" -c "asFaceHelpImage mouthUpper";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "mouthLower" -c "asCreateFaceFitJoint mouthLower 0.45 10";
+		button -w 20 -l "?" -c "asFaceHelpImage mouthLower";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "mouthCorner" -c "asCreateFaceFitJoint mouthCorner 0.45 10";
+		button -w 20 -l "?" -c "asFaceHelpImage mouthCorner";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "mouthSneer" -c "asCreateFaceFitJoint mouthSneer 0.4 10";
+		button -w 20 -l "?" -c "asFaceHelpImage mouthSneer";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "mouthGnarl" -c "asCreateFaceFitJoint mouthGnarl 0.4 10";
+		button -w 20 -l "?" -c "asFaceHelpImage mouthGnarl";
+		setParent..;
+	separator -w 340 -h 10;
+
+
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "noseTip" -c "asCreateFaceFitJoint noseTip 0.5 10";
+		button -w 20 -l "?" -c "asFaceHelpImage noseTip";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "noseCorner" -c "asCreateFaceFitJoint noseCorner 0.2 10";
+		button -w 20 -l "?" -c "asFaceHelpImage noseCorner";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "cheek" -c "asCreateFaceFitJoint cheek 0.4 10";
+		button -w 20 -l "?" -c "asFaceHelpImage cheek";
+		setParent..;
+	separator -w 340 -h 10;
+
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "eyeBrow0" -c "asCreateFaceFitJoint eyeBrow0 0.6 10";
+		button -w 20 -l "?" -c "asFaceHelpImage eyeBrow0";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "eyeBrow1" -c "asCreateFaceFitJoint eyeBrow1 0.6 10";
+		button -w 20 -l "?" -c "asFaceHelpImage eyeBrow1";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "eyeBrow2" -c "asCreateFaceFitJoint eyeBrow2 0.6 10";
+		button -w 20 -l "?" -c "asFaceHelpImage eyeBrow2";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "eyeBrow3" -c "asCreateFaceFitJoint eyeBrow3 0.6 10";
+		button -w 20 -l "?" -c "asFaceHelpImage eyeBrow3";
+		setParent..;
+	setParent..;
+	setParent..;
+
+	frameLayout -w 340 -cll 1 -cl 1 -l "Vertices(2):";
+	columnLayout;
+	text -l "- *Optional Cartoon face controls:";
+	text -l "- Select Vertices:";
+	rowLayout -nc 4 -cw4 110 70 70 70;
+		separator -st "none";
+		button -w 80 -l "eyeShaper3" -c "asCreateFaceFitJoint eyeShaper3 0.4 9";
+		setParent..;
+	rowLayout -nc 4 -cw4 50 120 70 70;
+		separator -st "none";
+		button -w 80 -l "eyeShaper2" -c "asCreateFaceFitJoint eyeShaper2 0.4 9";
+		button -w 80 -l "eyeShaper4" -c "asCreateFaceFitJoint eyeShaper4 0.4 9";
+		separator -st "none";
+		setParent..;
+	rowLayout -nc 4 -cw4 70 60 80 70;
+		button -w 80 -l "eyeShaper1" -c "asCreateFaceFitJoint eyeShaper1 0.4 9";
+		separator -st "none";
+		button -w 20 -l "?" -c "asFaceHelpImage eyeShapers";
+		button -w 80 -l "eyeShaper5" -c "asCreateFaceFitJoint eyeShaper5 0.4 9";
+		setParent..;
+	rowLayout -nc 4 -cw4 50 120 70 70;
+		separator -st "none";
+		button -w 80 -l "eyeShaper8" -c "asCreateFaceFitJoint eyeShaper8 0.4 9";
+		button -w 80 -l "eyeShaper6" -c "asCreateFaceFitJoint eyeShaper6 0.4 9";
+		separator -st "none";
+		setParent..;
+	rowLayout -nc 4 -cw4 110 70 70 70;
+		separator -st "none";
+		button -w 80 -l "eyeShaper7" -c "asCreateFaceFitJoint eyeShaper7 0.4 9";
+		setParent..;
+	setParent..;
+	setParent..;
+
+	frameLayout -w 340 -cll 1 -cl 1 -l "Squash Regions:";
+	columnLayout;
+	text -l "- *Optional Cartoon face controls:";
+	text -l "- Create Locators, and position (up/down) correctly:";
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "UnderChin Locator" -c "asFaceCreateRegionLocator underChin";
+		button -w 20 -l "?" -c "asFaceHelpImage underChin";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "UnderEye Locator" -c "asFaceCreateRegionLocator underEye";
+		button -w 20 -l "?" -c "asFaceHelpImage underEye";
+		setParent..;
+	rowLayout -nc 2 -cw 1 150;
+		button -w 120 -l "OverEye Locator" -c "asFaceCreateRegionLocator overEye";
+		button -w 20 -l "?" -c "asFaceHelpImage overEye";
+		setParent..;
+	setParent..;
+	setParent..;
+
+text -l ">Now build the face, (\"Build FaceSetup\" button below):";
+
+	frameLayout -w 340 -cll 1 -cl 1 -l "Tweaks:" -pec "int $h=1;if (`getModifiers`%2) $h=100;columnLayout -e -h $h asFaceDirectionRadisuColumnLayout;";
+	columnLayout;
+	text "Move any of the \"B\" control, then";
+	button -l "Convert selected Control to SoftMod" -c "asFaceConvertControlToSoftMod";
+	text -l "Move around the SoftMod, and tweak falloffRadius etc, then:";
+
+	columnLayout -h 1 -w 340 asFaceDirectionRadisuColumnLayout;
+		rowLayout -nc 2 -cw2 50 30;
+			floatField -ed 0 -w 50 -pre 2 asFaceDirWgtsUpFloatField;
+			button -w 30 -l "up" -c "asFaceGetDirWght Up";
+			setParent..;
+		rowLayout -nc 2 -cw2 50 30;
+			floatField -ed 0 -w 50 -pre 2 asFaceDirWgtsLeftFloatField;
+			button -w 30 -l "left" -c "asFaceGetDirWght Left";
+			setParent..;
+		rowLayout -nc 2 -cw2 50 30;
+			floatField -ed 0 -w 50 -pre 2 asFaceDirWgtsRightFloatField;
+			button -w 30 -l "right" -c "asFaceGetDirWght Right";
+			setParent..;
+		rowLayout -nc 2 -cw2 50 30;
+			floatField -ed 0 -w 50 -pre 2 asFaceDirWgtsDownFloatField;
+			button -w 30 -l "down" -c "asFaceGetDirWght Down";
+			setParent..;
+		setParent..;
+
+	button -l "Convert SoftMod back to Control" -c "asFaceConvertSoftModToControl 1";
+	separator -w 340;
+	text "manually create a new softMod, then";
+	button -l "Create new Control from selected SoftMod" -c "asFaceConvertSoftModToControl 0";
+	separator -w 340;
+	text -l "If you manually paint or tweak cluster weights, then";
+	button -l "Mirror ClusterWeights" -c asFaceMirrorAllClusterWeights;
+	setParent..;
+	setParent..;
+
+	frameLayout -w 340 -cll 1 -cl 1 -l "SDK:";
+	columnLayout;
+	text -l "- Set Driven Key, behaviour of mouth controller.";
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "mouth.tx -1 (smile)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 mouth_M tx -1";
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 mouth_M tx -1";
+		setParent..;
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "mouth.tx +1 (kiss)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 mouth_M tx 1";;
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 mouth_M tx 1";
+		setParent..;
+/*
+	separator -w 340;
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "eyeBrow.ty +1 (suprised)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 eyeBrow_R ty 1";
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 eyeBrow_R ty 1";
+		setParent..;
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "eyeBrow.ty -1 (angry)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 eyeBrow_R ty -1";
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 eyeBrow_R ty -1";
+		setParent..;
+*/
+/*
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "eyeBrow.tx +1 (worried)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 eyeBrow_R tx 1";
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 eyeBrow_R tx 1";
+		setParent..;
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "eyeBrow.tx -1 (?)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 eyeBrow_R tx -1";
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 eyeBrow_R tx -1";
+		setParent..;
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "eyeBrow.rz +1 (sad)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 eyeBrow_R rz 1";
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 eyeBrow_R rz 1";
+		setParent..;
+	rowLayout -nc 4 -cw 1 110 -cw 2 50 -cw 3 80;
+		text "eyeBrow.rz -1 (cranky)";
+		button -w 50 -l "Go" -c "asFaceSdk 0 eyeBrow_R rz -1";
+		text " -> Tweak -> ";
+		button -w 50 -l "Set" -c "asFaceSdk 1 eyeBrow_R rz -1";
+		setParent..;
+*/
+
+	button -l "Mirror SDK and set infinity>Linear" -c asFaceMirrorSdkAndSetInfinity;
+	setParent..;
+	setParent..;
+
+	frameLayout -w 340 -cll 1 -cl 1 -l "Util:";
+	columnLayout;
+	button -l "Go to Build Pose" -c "asFaceGoToBuildPose";
+//	button -l "Copy jointVtxPosition" -c "asFaceJointToVtxCopy";
+//	button -l "Paste jointVtxPosition"  asFSJointToVtxPasteButton;
+	setParent..;
+	setParent..;
+	setParent..;
+	setParent..;
+	setParent..;
+	columnLayout asFsColumnLayout2;
+	separator -w 340 -h 10;
+	rowLayout -nc 2 -cw2 130 10 ;
+		separator -st none;
+		checkBox -m 0 -v 1 -l "Rebuild Connections" asFSRebuildConnections;
+		setParent..;
+	rowLayout -nc 4 -cw4 10 110 30 100 asFsRowLayout;
+		separator -st "none";
+		button -c asFaceToggleFaceFitSkeleton -l "Toggle Fit/Advanced";
+		separator -st "none";
+		button -l "(Re) Build FaceSetup" -c "asFaceReBuild";
+
+
+formLayout -e
+	-af asFsScrollLayout1 "right" 0
+	-af asFsScrollLayout1 "left" 0
+	-af asFsScrollLayout1 "top" 0
+	-ac asFsScrollLayout1 "bottom" 0 asFsColumnLayout2 
+	-af asFsColumnLayout2 "bottom" 0
+	asFsFormLayout;
+
+showWindow;
+}
+
+global proc asFaceConvertSoftModToControl (int $convertingBack)
+{
+global string $gSelect;
+string $sel[]=`ls -sl`;
+float $pos[3],$posSoftMod[3],$posControl[3],$currentT[3],$currentR[3],$currentS[3];
+float $dirWghtsUp=`floatField -q -v asFaceDirWgtsUpFloatField`;
+float $dirWghtsLeft=`floatField -q -v asFaceDirWgtsLeftFloatField`;
+float $dirWghtsRight=`floatField -q -v asFaceDirWgtsRightFloatField`;
+float $dirWghtsDown=`floatField -q -v asFaceDirWgtsDownFloatField`;
+if ($dirWghtsUp==$dirWghtsLeft==$dirWghtsRight==$dirWghtsDown)
+	$dirWeights=0;
+else
+	$dirWeights=1;
+string $tempString[],$historyList[];
+int $multiply;
+int $autoKeyState=`autoKeyframe -q -state`;
+string $fitJoint,$restoreCmd,$setAttrCmdExtra;
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+for ($i=0;$i<size($sel);$i++)
+	if (`gmatch $sel[$i] "*Handle*"`)
+		$sel[0]=$sel[$i];
+
+if ($convertingBack)
+	{
+	if (!`gmatch $sel[0] "convertedSoftModHandle_*"`)
+		error "convertedSoftModHandle not selected";
+	}
+else
+	{
+	string $allBefore[]=`ls`;
+	if (!`gmatch $sel[0] "softMod*"`)
+		error "Selection is not a new SoftMod, name does not match \"softMod*\"";
+	if (`promptDialog -t "New Control" -m "Enter Name:" -b "OK" -b "Cancel" -db "OK" -cb "Cancel" -ds "Cancel"`!="OK")
+		return;
+	$fitJoint=`promptDialog -query -text`;
+	if (`objExists $fitJoint` || $fitJoint=="")
+		error "not a unique name";
+	setToolTo $gSelect;
+	$sel[0]=`rename $sel[0] ("convertedSoftModHandle_"+$fitJoint+"_R")`;
+	$tempString=`listConnections ("convertedSoftModHandle_"+$fitJoint+"_R.worldMatrix[0]")`;
+	rename $tempString[0] ("convertedSoftMod_"+$fitJoint+"_R");
+
+	$currentT=`getAttr ("convertedSoftModHandle_"+$fitJoint+"_R.t")`;
+	$currentR=`getAttr ("convertedSoftModHandle_"+$fitJoint+"_R.r")`;
+	$currentS=`getAttr ("convertedSoftModHandle_"+$fitJoint+"_R.s")`;
+	setAttr -type float3 ("convertedSoftModHandle_"+$fitJoint+"_R.t") 0 0 0;
+	setAttr -type float3 ("convertedSoftModHandle_"+$fitJoint+"_R.r") 0 0 0;
+	setAttr -type float3 ("convertedSoftModHandle_"+$fitJoint+"_R.s") 1 1 1;
+	$posSoftMod=`xform -q -ws -piv ("convertedSoftModHandle_"+$fitJoint+"_R")`;
+	curve -n tempCurve -d 1 -p $posSoftMod[0] $posSoftMod[1] $posSoftMod[2] -p $posSoftMod[0] $posSoftMod[1] $posSoftMod[2] -k 0 -k 1;
+	select -r tempCurve;
+	select -add $geometry;
+	CreateWrap;
+
+	$posControl=`xform -q -ws -t tempCurve.cv[0]`;
+	createNode -n tempTransform transform;
+	xform -ws -t $posControl[0] $posControl[1] $posControl[2] tempTransform;
+	select tempTransform;
+	asCreateFaceFitJoint $fitJoint `getAttr ("convertedSoftMod_"+$fitJoint+"_R.falloffRadius")` 10;
+	softCluster $fitJoint $fitJoint 1 "_R";
+	
+	//Mirror pose before doing left to ensure identical attachment
+	string $restoreCmd=`asFaceMirror`;
+	softCluster $fitJoint $fitJoint -1 "_L";
+	$setAttrCmdExtra="xform -a -os -t 0 0 0 -ro 0 0 0 -s 1 1 1 "+$fitJoint+"_R;xform -a -os -t 0 0 0 -ro 0 0 0 -s 1 1 1 "+$fitJoint+"_L;";
+
+	eval ($restoreCmd);
+	if ($autoKeyState)
+		autoKeyframe -state 1;
+
+	delete tempCurve tempTransform;
+	setAttr ("convertedSoftModHandle_"+$fitJoint+"_R.t") $currentT[0] $currentT[1] $currentT[2] ("convertedSoftModHandle_"+$fitJoint+"_R");
+	setAttr ("convertedSoftModHandle_"+$fitJoint+"_R.r") $currentR[0] $currentR[1] $currentR[2] ("convertedSoftModHandle_"+$fitJoint+"_R");
+	setAttr ("convertedSoftModHandle_"+$fitJoint+"_R.s") $currentS[0] $currentS[1] $currentS[2] ("convertedSoftModHandle_"+$fitJoint+"_R");
+	//add to faceBuildPose
+	setAttr -type "string" faceBuildPose.udAttr (`getAttr faceBuildPose.udAttr`+$setAttrCmdExtra);
+
+	//FaceAllset
+	string $allAfter[]=`ls`;
+	string $allNew[];
+	for ($i=0;$i<size($allAfter);$i++)
+		if (!`stringArrayCount $allAfter[$i] $allBefore`)
+			if ($allAfter[$i]!="FaceAllSet")
+				$allNew[size($allNew)]=$allAfter[$i];
+	sets -add FaceAllSet $allNew;
+	sets -remove FaceAllSet `listRelatives -ad FaceFitSkeleton`;
+	}
+
+float $t[3]=`xform -q -ws -piv $sel[0]`;
+float $r[3]=`xform -q -ws -ro $sel[0]`;
+float $s[3]=`xform -q -r -s $sel[0]`;
+setAttr -type float3 ($sel[0]+".t") 0 0 0;
+setAttr -type float3 ($sel[0]+".r") 0 0 0;
+setAttr -type float3 ($sel[0]+".s") 1 1 1;
+tokenize $sel[0] "_" $tempString;
+if ($convertingBack)
+	$fitJoint=$tempString[1];
+string $side="_"+$tempString[2];
+$pos=`xform -q -ws -t $fitJoint`;
+string $softMod=`substitute "convertedSoftModHandle" $sel[0] "convertedSoftMod"`;
+string $cluster=$fitJoint+"Cluster"+$side;
+float $falloffRadius=`getAttr ($softMod+".falloffRadius")`;
+if ($dirWeights)
+	{
+	if ($dirWghtsUp>$falloffRadius)	$falloffRadius=$dirWghtsUp;
+	if ($dirWghtsLeft>$falloffRadius)	$falloffRadius=$dirWghtsLeft;
+	if ($dirWghtsRight>$falloffRadius)	$falloffRadius=$dirWghtsRight;
+	if ($dirWghtsDown>$falloffRadius)	$falloffRadius=$dirWghtsDown;
+	}
+float $falloffMode=`getAttr ($softMod+".falloffMode")`;
+setAttr ($fitJoint+".falloffRadius") $falloffRadius;
+setAttr ($fitJoint+".falloffMode") $falloffMode;
+
+select $geometry;
+polySelectConstraint -m 3 -t 1 -d 1 -db 0 $falloffRadius -dp $pos[0] $pos[1] $pos[2];
+$vtxs=`ls -sl -fl`;
+polySelectConstraint -m 0;
+
+percent -v 0 $cluster $geometry;
+asFaceSoftModToCluster $softMod $cluster $vtxs;
+delete $softMod;
+if ($convertingBack)
+	asFaceMirrorClusterWeights ($fitJoint+$side);
+xform -ws -t $t[0] $t[1] $t[2] -ro $r[0] $r[1] $r[2] -s $s[0] $s[1] $s[2] ($fitJoint+$side);
+select ($fitJoint+$side);
+
+floatField -e -v 0 asFaceDirWgtsUpFloatField;
+floatField -e -v 0 asFaceDirWgtsLeftFloatField;
+floatField -e -v 0 asFaceDirWgtsRightFloatField;
+floatField -e -v 0 asFaceDirWgtsDownFloatField;
+}
+
+global proc asFaceConvertControlToSoftMod ()
+{
+string $sel[]=`ls -sl`;
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+if (!`isConnected faceCtrlB.drawInfo ($sel[0]+".drawOverride")`)
+	error "Selected object is not a faceCtrlB control";
+string $tempString[];
+tokenize $sel[0] "_" $tempString;
+string $fitJoint=$tempString[0];
+string $side="_"+$tempString[1];
+if ($side=="_L")
+	error "must be Right side";
+float $falloffRadius=`getAttr ($fitJoint+".falloffRadius")`;
+float $falloffMode=`getAttr ($fitJoint+".falloffMode")`;
+
+float $t[3]=`xform -q -ws -t $sel[0]`;
+float $r[3]=`xform -q -ws -ro $sel[0]`;
+float $s[3]=`xform -q -r -s $sel[0]`;
+setAttr -type float3 ($sel[0]+".t") 0 0 0;
+setAttr -type float3 ($sel[0]+".r") 0 0 0;
+setAttr -type float3 ($sel[0]+".s") 1 1 1;
+float $pos[3]=`xform -q -ws -t $sel[0]`;
+select -r $geometry;
+string $tempString[]=`softMod -falloffMode 1 -falloffAroundSelection 0`;
+string $softMod=`rename $tempString[0] ("convertedSoftMod_"+$sel[0])`;
+string $softModHandle=`rename $tempString[1] ("convertedSoftModHandle_"+$sel[0])`;
+setAttr ($softMod+".falloffRadius") $falloffRadius;
+setAttr ($softMod+".falloffMode") $falloffMode;
+setAttr -type float3 ($softModHandle+"Shape.origin") ($pos[0]) $pos[1] $pos[2];
+setAttr ($softMod+".falloffCenter") ($pos[0]) $pos[1] $pos[2];
+xform -piv ($pos[0]) $pos[1] $pos[2] $softModHandle;
+xform -ws -t ($t[0]-$pos[0]) ($t[1]-$pos[1]) ($t[2]-$pos[2]) -ro $r[0] $r[1] $r[2] -s $s[0] $s[1] $s[2] $softModHandle;
+
+float $radiusUp,$radiusLeft,$radiusRight,$radiusDown;
+if (`attributeExists radiusUp $fitJoint`)
+	{
+	$radiusUp=`getAttr ($fitJoint+".radiusUp")`;
+	$radiusLeft=`getAttr ($fitJoint+".radiusLeft")`;
+	$radiusRight=`getAttr ($fitJoint+".radiusRight")`;
+	$radiusDown=`getAttr ($fitJoint+".radiusDown")`;
+	}
+else
+	$radiusUp=$radiusLeft=$radiusRight=$radiusDown=$falloffRadius;
+floatField -e -v $radiusUp asFaceDirWgtsUpFloatField;
+floatField -e -v $radiusLeft asFaceDirWgtsLeftFloatField;
+floatField -e -v $radiusRight asFaceDirWgtsRightFloatField;
+floatField -e -v $radiusDown asFaceDirWgtsDownFloatField;
+
+select $softModHandle;
+}
+
+global proc asFaceGetDirWght (string $direction)
+{
+string $sel[]=`ls -sl`;
+for ($i=0;$i<size($sel);$i++)
+	if (`gmatch $sel[$i] "*Handle*"`)
+		$sel[0]=$sel[$i];
+if (!`gmatch $sel[0] "convertedSoftModHandle_*"`)
+	error "convertedSoftModHandle not selected";
+string $softMod=`substitute "convertedSoftModHandle" $sel[0] "convertedSoftMod"`;
+float $falloffRadius=`getAttr ($softMod+".falloffRadius")`;
+floatField -e -v $falloffRadius ("asFaceDirWgts"+$direction+"FloatField");
+
+string $tempString[];
+string $directions[]={"Up","Left","Right","Down"};
+tokenize $sel[0] "_" $tempString;
+string $fitJoint=$tempString[1];
+if (!`attributeExists radiusUp $fitJoint`)
+	for ($i=0;$i<size($directions);$i++)
+		addAttr -k 1 -ln ("radius"+$directions[$i]) -at double -dv `floatField -q -v ("asFaceDirWgts"+$directions[$i]+"FloatField")` $fitJoint;
+
+setAttr ($fitJoint+".radius"+$direction) $falloffRadius;
+
+//$falloffRadius==largest dirWght radius
+if (`attributeExists radiusUp $fitJoint`)
+	for ($i=0;$i<size($directions);$i++)
+		if (`floatField -q -v ("asFaceDirWgts"+$directions[$i]+"FloatField")`>$falloffRadius)
+			$falloffRadius=`floatField -q -v ("asFaceDirWgts"+$directions[$i]+"FloatField")`;
+setAttr ($fitJoint+".falloffRadius") $falloffRadius;
+}
+
+global proc asFaceSoftRegions ()
+{
+if (!`objExists underChinLocator`)
+	return;
+string $headJoint=`textField -q -tx asFsHeadJointTextField`;
+string $skinCluster=`textField -q -tx asFsSkinClusterTextField`;
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+$eyeJointL=`textField -q -tx asFsEyeJoint_LTextField`;
+$eyeJointR=`textField -q -tx asFsEyeJoint_RTextField`;
+float $scale=`asFaceGetScale`;
+int $numVtxs[];
+float $value,$min,$max;
+float $pos[3],$pos2[3];
+string $name;
+string $tempString[],$allFaceGeo[];
+if (!`objExists SquashLocator`)
+	{
+	$pos=`xform -q -ws -t underChinLocator`;
+	spaceLocator -n SquashLocator;
+	parent SquashLocator FaceFitSkeleton;
+	xform -ws -t $pos[0] ($pos[1]-($scale*0.1)) $pos[2] SquashLocator;
+	}
+string $locators[]={"underChinLocator","underEyeLocator","overEyeLocator"};
+string $allFaceGeoString=`textField -q -tx asFsAllFaceGeoTextField`;
+tokenize $allFaceGeoString $tempString;
+for ($i=0;$i<size($tempString);$i++)
+	$allFaceGeo[$i]=$tempString[$i];
+
+select $allFaceGeo;
+select -add `listConnections faceCtrlA.drawInfo`;
+$tempString=`lattice  -divisions 2 10 2 -objectCentered true  -ldv 2 2 2`;
+rename $tempString[0] "ffdHead";
+rename $tempString[1] "latticeHead";
+rename $tempString[2] "latticeBaseHead";
+$tempString=`listConnections ffdHead.message`;
+rename $tempString[0] "latticeHeadSet";
+$pos=`xform -q -ws -t underChinLocator`;
+$pos2=`xform -q -ws -t $eyeJointL`;
+float $latticeScale=($pos2[1]-$pos[1])*3.6;
+
+setAttr ffdHead.outsideLattice 1;
+setAttr -type float3 latticeHead.t 0 0 0;
+setAttr -type float3 latticeBaseHead.t 0 0 0;
+setAttr -type float3 latticeHead.s $latticeScale $latticeScale $latticeScale;
+setAttr -type float3 latticeBaseHead.s $latticeScale $latticeScale $latticeScale;
+createNode -n latticeHeadGroupOffset transform;
+createNode -n latticeHeadGroup transform;
+parent latticeHeadGroup latticeHeadGroupOffset;
+parent latticeHead latticeBaseHead latticeHeadGroup;
+
+setAttr -type float3 latticeHeadGroupOffset.t $pos[0] $pos[1] $pos[2];
+setAttr latticeHeadGroupOffset.ty $pos2[1];
+parent latticeHeadGroupOffset RegionSetup;
+parent latticeBaseHead FollowHead;
+
+//remove body vtx from deformset, so that head rotations does not leak headsquash to body
+int $numVtxs[]=`polyEvaluate -v $geometry`;
+$pos=`xform -q -ws -t underChinLocator`;
+float $chinHeight=$pos[1];
+for ($i=0;$i<$numVtxs[0];$i++)
+	{
+	$pos=`xform -q -ws -t ($geometry+".vtx["+$i+"]")`;
+	if ($pos[1]<$chinHeight)
+		sets -remove latticeHeadSet ($geometry+".vtx["+$i+"]");
+	}
+
+//latticeHeadClusters
+string $cluster,$clusterHandle,$clusterHandleShape,$clusterGroupParts,$clusterGroupId,$clusterSet;
+string $tempString[];
+for ($i=0;$i<10;$i++)
+	{	
+	select -r latticeHead.pt[0:1][$i][0:4];
+
+	$tempString=`cluster -n ("maskCluster"+$i) -envelope 1`;
+	$cluster=$tempString[0];
+	$clusterHandle=$tempString[1];
+	$tempString=`listRelatives -s $clusterHandle`;
+	$clusterHandleShape=$tempString[0];
+	$tempString=`listConnections ($cluster+".input[0].inputGeometry")`;
+	$clusterGroupParts=$tempString[0];
+	$tempString=`listConnections ($cluster+".input[0].groupId")`;
+	$clusterGroupId=$tempString[0];
+	$tempString=`listConnections ($cluster+".message")`;
+	$clusterSet=$tempString[0];
+	}
+for ($i=9;$i>0;$i--)
+	parent ("maskCluster"+$i+"Handle") ("maskCluster"+($i-1)+"Handle");
+parent maskCluster0Handle FollowHead;
+
+sphere -n mask -ch 0;
+sets -add "FaceControlSet" mask;
+editDisplayLayerMembers -noRecurse faceCtrlA mask;
+setAttr ("mask.ry") 80;
+string $tempString[]=`listRelatives -s mask`;
+string $tempString2[]=`listConnections -p 1 ($tempString[0]+".instObjGroups[0]")`;
+disconnectAttr ($tempString[0]+".instObjGroups[0]") $tempString2[0];
+setAttr ($tempString[0]+".overrideEnabled") 1;
+float $scale=`asFaceGetScale`;
+setAttr ($tempString[0]+".overrideColor") 22;
+xform -ws -s ($scale*0.3) ($scale*0.3) ($scale*0.3) mask;
+makeIdentity -a 1 -t 0 -r 1 -s 1 mask;
+createNode -n maskOffset transform;
+parent mask maskOffset;
+parent maskOffset RegionControls;
+$temp=`xform -q -ws -piv maskCluster5Handle`;
+xform -ws -t ($scale*5) $temp[1] $temp[2] maskOffset;
+
+createNode -n ("maskClusterUnitConversionX") unitConversion;
+setAttr ("maskClusterUnitConversionX.conversionFactor") -0.3;
+connectAttr mask.tx ("maskClusterUnitConversionX.input");
+createNode -n ("maskClusterUnitConversionZ") unitConversion;
+setAttr ("maskClusterUnitConversionZ.conversionFactor") 0.3;
+connectAttr mask.tz ("maskClusterUnitConversionZ.input");
+for ($i=2;$i<10;$i++)
+	{
+	connectAttr ("maskClusterUnitConversionX.output") ("maskCluster"+$i+"Handle.rz");
+	connectAttr ("maskClusterUnitConversionZ.output") ("maskCluster"+$i+"Handle.rx");
+	}
+
+
+//squashHead
+select -r latticeHead.pt[0:1][2:9][0:1] ;
+$tempString=`nonLinear -type squash  -lowBound -1 -highBound 1 -startSmoothness 0 -endSmoothness 0 -maxExpandPos 0.5 -expand 1 -factor 0`;
+rename $tempString[0] squashHead;
+rename $tempString[1] squashHeadHandle;
+setAttr squashHeadHandle.ty $pos2[1];
+parent squashHeadHandle maskCluster2Handle;
+setAttr squashHead.factor 1;
+float $posSquashA[]=`xform -q -ws -t latticeHead.pt[0][2][0]`;
+setAttr squashHead.factor -1;
+float $posSquashB[]=`xform -q -ws -t latticeHead.pt[0][2][0]`;
+setAttr squashHead.factor 0;
+connectAttr mask.ty squashHead.factor;
+setDrivenKeyframe -currentDriver squashHead.factor -value 0 -driverValue 0 maskCluster2Handle.ty;
+setDrivenKeyframe -currentDriver squashHead.factor -value ($pos[1]-$posSquashB[1]) -driverValue -1 maskCluster2Handle.ty;
+setDrivenKeyframe -currentDriver squashHead.factor -value ($pos[1]-$posSquashA[1]) -driverValue 1 maskCluster2Handle.ty;
+setAttr maskCluster2Handle_translateY.preInfinity 1;
+setAttr maskCluster2Handle_translateY.postInfinity 1;
+keyTangent -e -l 0 -outTangentType linear -in 1 maskCluster2Handle_translateY;
+keyTangent -inTangentType linear -in 2 maskCluster2Handle_translateY;
+keyTangent -index 0 -inAngle 0.870355 -outAngle 0.931878 maskCluster2Handle_translateY ;
+keyTangent -index 1 -inAngle 3.364446 maskCluster2Handle_translateY ;
+}
+
+global proc asFaceCreateRegionLocator (string $region)
+{
+string $headJoint=`textField -q -tx asFsHeadJointTextField`;
+float $temp[3]=`xform -q -ws -t $headJoint`;
+if (`objExists ($region+"Locator")`)
+	delete ($region+"Locator");
+spaceLocator -n ($region+"Locator");
+parent ($region+"Locator") FaceFitSkeleton;
+xform -ws -t $temp[0] $temp[1] $temp[2] ($region+"Locator");
+float $ty;
+float $scale=`asFaceGetScale`;
+if ($region=="underChin")
+	$ty=$scale*-1.3;
+if ($region=="underEye")
+	$ty=$scale*1.1;
+if ($region=="overEye")
+	$ty=$scale*3.5;
+move -r 0 $ty 0 ($region+"Locator");
+}
+
+global proc asFaceDeleteSoftModHistory ()
+{
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+string $history[]=`listHistory $geometry`;
+for ($i=0;$i<size($history);$i++)
+	if (`gmatch $history[$i] "softMod*"`)
+		if (`objExists $history[$i]`)
+			delete $history[$i];
+}
+
+global proc asFaceMirrorSdkAndSetInfinity ()
+{
+//MirrorSDK
+string $drivens[]=`listConnections faceCtrlDriven.drawInfo`;
+string $animCurves[],$tempString[];
+string $side,$connectionOutPlug,$connectionInPlug,$oppositeConnectionOutPlug,$oppositeConnectionInPlug,$newAnimCurve;
+for ($i=0;$i<size($drivens);$i++)
+	{
+	tokenize $drivens[$i] "_" $tempString;
+	$side="_"+$tempString[1];
+	if ($side!="_R")
+		continue;
+	$animCurves=`listConnections -scn 1 -s 1 -d 0 -type animCurve $drivens[$i]`;
+	for ($y=0;$y<size($animCurves);$y++)
+		if (!`gmatch $animCurves[$y] "*_R*"`)
+			$animCurves[$y]=`rename $animCurves[$y] ($animCurves[$y]+"_R")`;
+	for ($y=0;$y<size($animCurves);$y++)
+		{
+		$newAnimCurve=`substitute "_R" $animCurves[$y] "_L"`;
+		$tempString=`listConnections -p 1 ($animCurves[$y]+".output")`;
+		$connectionOutPlug=$tempString[0];
+		$oppositeConnectionOutPlug=`substitute "_R" $connectionOutPlug "_L"`;
+		$tempString=`listConnections -p 1 ($animCurves[$y]+".input")`;
+		$connectionInPlug=$tempString[0];
+		$oppositeConnectionInPlug=`substitute "_R" $connectionInPlug "_L"`;
+
+		$tempString=`listConnections ($animCurves[$y]+".input")`;
+		$driver=`substitute "_R" $tempString[0] ""`;
+
+		if (`objExists $newAnimCurve`)
+			delete $newAnimCurve;
+
+		duplicate -n $newAnimCurve $animCurves[$y];
+		connectAttr ($newAnimCurve+".output") $oppositeConnectionOutPlug;
+		connectAttr -f $connectionInPlug ($newAnimCurve+".input");
+
+		select -cl;
+		if (`gmatch $newAnimCurve "*_translateX*"`)
+			{
+			selectKey -add -k $newAnimCurve;
+			scaleKey -iub false -ts 1 -tp 0 -fs 1 -fp 0 -vs -1 -vp 0 -animation keys;
+			}
+		if (`gmatch $newAnimCurve "*_rotateY*"`)
+			{
+			selectKey -add -k $newAnimCurve;
+			scaleKey -iub false -ts 1 -tp 0 -fs 1 -fp 0 -vs -1 -vp 0 -animation keys;
+			}
+		if (`gmatch $newAnimCurve "*_rotateZ*"`)
+			{
+			selectKey -add -k $newAnimCurve;
+			scaleKey -iub false -ts 1 -tp 0 -fs 1 -fp 0 -vs -1 -vp 0 -animation keys;
+			}
+		}
+	}
+
+//Infinity
+string $sdkControls[]=`listConnections -s 0 -d 1 faceCtrlDriven.drawInfo`;
+string $jawControl=`textField -q -tx asFsJawControlTextField`;
+if (`objExists ($jawControl+"_aimConstraint")`)
+	$sdkControls[size($sdkControls)]=($jawControl+"_aimConstraint");
+string $animCurves[];
+for ($i=0;$i<size($sdkControls);$i++)
+	{
+	$animCurves=`listConnections -scn 1 -s 1 -d 0 -type animCurve $sdkControls[$i]`;
+	for ($y=0;$y<size($animCurves);$y++)
+		{
+		setAttr ($animCurves[$y]+".preInfinity") 1;
+		setAttr ($animCurves[$y]+".postInfinity") 1;
+		}
+	}
+}
+
+global proc asFaceToggleFaceFitSkeleton ()
+{
+if (!`objExists FaceMotionSystem`)
+	return;
+setAttr -l 0 FaceFitSkeleton.visibility;
+setAttr -l 1 FaceFitSkeleton.visibility (!`getAttr FaceFitSkeleton.visibility`);
+setAttr FaceMotionSystem.visibility (!`getAttr FaceMotionSystem.visibility`);
+}
+
+global proc asFaceGoToBuildPose ()
+{
+eval `getAttr faceBuildPose.udAttr`;
+}
+
+global proc asFaceJointToVtxCopy ()
+{
+int $vtx;
+float $pos[];
+string $cmd;
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+string $joints[]=`listRelatives -c -type joint FaceFitSkeleton`;
+createNode -n closestSampler closestPointOnMesh;
+string $tempString[]=`listRelatives -ni -s $geometry`;
+connectAttr -f ($tempString[0]+".outMesh") closestSampler.inMesh;
+
+for ($i=0;$i<size($joints);$i++)
+	{
+	$pos=`xform -q -ws -t $joints[$i]`;
+	setAttr -type float3 closestSampler.inPosition $pos[0] $pos[1] $pos[2];
+	$vtx=`getAttr closestSampler.result.closestVertexIndex`;
+	$cmd+="asFaceSnapJoint "+$joints[$i]+" "+$geometry+".vtx["+$vtx+"];";
+	}
+delete closestSampler;
+button -e -en 1 -c $cmd asFSJointToVtxPasteButton;
+print ("Joints realation to vertex copied\n");
+}
+
+global proc asFaceSnapJoint (string $joint, string $objVtx)
+{
+float $pos[]=`xform -q -ws -t $objVtx`;
+xform -ws -t $pos[0] $pos[1] $pos[2] $joint;
+}
+
+global proc string asFaceNrToLetter (int $nr)
+{
+string $letter;
+if ($nr==0) $letter="";
+if ($nr==1) $letter="A";
+if ($nr==2) $letter="B";
+if ($nr==3) $letter="C";
+if ($nr==4) $letter="D";
+if ($nr==5) $letter="E";
+if ($nr==6) $letter="F";
+if ($nr==7) $letter="G";
+if ($nr==8) $letter="H";
+if ($nr==9) $letter="I";
+return $letter;
+}
+
+global proc int asFaceLetterToNr (string $letter)
+{
+int $nr;
+if ($letter=="") $nr=0;
+if ($letter=="A") $nr=1;
+if ($letter=="B") $nr=2;
+if ($letter=="C") $nr=3;
+if ($letter=="D") $nr=4;
+if ($letter=="E") $nr=5;
+if ($letter=="F") $nr=6;
+if ($letter=="G") $nr=7;
+if ($letter=="H") $nr=8;
+if ($letter=="I") $nr=9;
+return $nr;
+}
+
+global proc asFaceAddJoints (string $region)
+{
+string $sel[]=`ls -sl`;
+int $upperLowerFactor,$vtx,$middleRowNr;
+string $ms;
+string $tempString[];
+int $rowNum=`intField -q -v ("asFs"+$region+"MiddleNum")`;
+int $pointSnap=`checkBox -q -v ("asFs"+$region+"MiddlePointSnap")`;
+string $upperLower;
+int $color;
+float $mag;
+float $pos[3],$posInner[3],$posOuter[3];
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+
+$tempString=`listRelatives -c -type joint FaceFitSkeleton`;
+for ($joint in $tempString)
+	if (`gmatch $joint ("*"+$region+"Middle*")`)
+		delete $joint;
+
+createNode -n closestSampler closestPointOnMesh;
+string $tempString[]=`listRelatives -ni -s $geometry`;
+connectAttr -f ($tempString[0]+".outMesh") closestSampler.inMesh;
+
+for ($i=1;$i<99;$i++)
+	{
+	for ($upperLowerFactor=1;$upperLowerFactor>-2;$upperLowerFactor=$upperLowerFactor-2)
+		{
+		if ($upperLowerFactor==1)
+			$upperLower="upper";
+		else
+			$upperLower="lower";
+	if (!`objExists ($upperLower+$region+"Inner"+$i)`)
+		break;
+
+		for ($y=1;$y<$rowNum+1;$y++)
+			{
+			select FaceFitSkeleton;
+			$ms=`asFaceNrToLetter $y`;
+			$color=24+$y;
+			asFaceCreateFitJoint ($upperLower+$region+"Middle"+$ms+$i) 0.02 $color;
+			pointConstraint ($upperLower+$region+"Inner"+$i) ($upperLower+$region+"Outer"+$i) ($upperLower+$region+"Middle"+$ms+$i);
+			setAttr ($upperLower+$region+"Middle"+$ms+$i+"_pointConstraint1."+$upperLower+$region+"Inner"+$i+"W0") ($y*(1.0/($rowNum+1)));
+			setAttr ($upperLower+$region+"Middle"+$ms+$i+"_pointConstraint1."+$upperLower+$region+"Outer"+$i+"W1") (1-($y*(1.0/($rowNum+1))));
+			delete ($upperLower+$region+"Middle"+$ms+$i+"_pointConstraint1");
+			setAttr ($upperLower+$region+"Middle"+$ms+$i+".overrideEnabled") 1;
+			setAttr ($upperLower+$region+"Middle"+$ms+$i+".overrideColor") $color;
+	
+			if ($pointSnap)
+				{
+				$pos=`xform -q -ws -t ($upperLower+$region+"Middle"+$ms+$i)`;
+				setAttr -type float3 closestSampler.inPosition $pos[0] $pos[1] $pos[2];
+				if ($region=="Lip")
+					{
+					//lip bulge
+					$posInner=`xform -q -ws -t ($upperLower+$region+"Inner"+$i)`;
+					$posOuter=`xform -q -ws -t ($upperLower+$region+"Outer"+$i)`;
+					$mag=`mag <<($posOuter[0]-$posInner[0]),($posOuter[1]-$posInner[1]),($posOuter[2]-$posInner[2])>>`;
+					setAttr -type float3 closestSampler.inPosition $pos[0] $pos[1] ($pos[2]+($mag/4.0));
+					}
+				$vtx=`getAttr closestSampler.result.closestVertexIndex`;
+				select ($geometry+".vtx["+$vtx+"]");
+				$pos=`xform -q -ws -t`;
+				xform -ws -t $pos[0] $pos[1] $pos[2] ($upperLower+$region+"Middle"+$ms+$i);
+				}
+			}
+		}
+	}
+delete closestSampler;
+select -cl;
+for ($i=1;$i<size($sel);$i++)
+	if (`objExists $sel[$i]`)
+		select -add $sel[$i];
+}
+
+global proc asChooseInput (string $textField)
+{
+string $txt;
+string $sel[]=`ls -sl -type transform`;
+if (!size($sel))
+	error "Nothing Selected";
+$txt=$sel[0];
+
+if (`gmatch $textField "*All*"`)
+	if (size($sel)>1)
+		for ($i=1;$i<size($sel);$i++)
+			$txt+=" "+$sel[$i];
+
+textField -e -tx $txt $textField;
+optionVar -sv $textField $txt;			
+
+if ($textField=="asFsGeometryTextField")
+	{
+	string $tempString[]=`listHistory $sel[0]`;
+	for ($i=0;$i<size($tempString);$i++)
+		if (`objectType $tempString[$i]`=="skinCluster")
+			{
+			textField -e -tx $tempString[$i] asFsSkinClusterTextField;
+			optionVar -sv asFsSkinClusterTextField $tempString[$i];
+			}
+	}
+}
+
+global proc asFacePreBuildCheck ()
+{
+string $skinCluster=`textField -q -tx asFsSkinClusterTextField`;
+if (!`objExists $skinCluster`)
+	error "skinCluster not found";
+}
+
+global proc asFaceReBuild ()
+{
+string $allSetMembers[],$faceControlSetMembers[];
+string $headJoint=`textField -q -tx asFsHeadJointTextField`;
+string $jawJoint=`textField -q -tx asFsJawJointTextField`;
+string $jawControl=`textField -q -tx asFsJawControlTextField`;
+
+asFacePreBuildCheck;
+
+if (`objExists FaceMotionSystem`)
+	{
+	//RE build
+	if (`objExists ($jawJoint+"_aimConstraint")`)
+		delete ($jawJoint+"_aimConstraint");
+
+	$skinCluster=`textField -q -tx asFsSkinClusterTextField`;
+	$tempString=`listRelatives -ad -type joint "FaceMotionSystem"`;
+	for ($node in $tempString)
+		if (size(`listConnections ($node+".worldMatrix[0]")`))
+			skinCluster -e -ri $node $skinCluster;
+	$allSetMembers=`sets -q FaceAllSet`;
+	$allSetMembers[size($allSetMembers)]="FaceAllSet";
+	$allSetMembers[size($allSetMembers)]="FaceControlSet";
+
+	//Pre rebuild - connections
+	string $cmds[],$connections[],$connectionsObj[];
+	$faceControlSetMembers=`sets -q FaceControlSet`;
+	for ($i=0;$i<size($faceControlSetMembers);$i++)
+		{
+		//incoming connections
+		$connections=`listConnections -p 1 -c 1 -s 1 -d 0 $faceControlSetMembers[$i]`;
+		$connectionsObj=`listConnections -c 1 -s 1 -d 0 $faceControlSetMembers[$i]`;
+		for ($y=0;$y<size($connections);$y=$y+2)
+			{
+		if (`sets -im FaceAllSet $connectionsObj[$y+1]`)
+			continue;
+			if (`gmatch $connectionsObj[$y+1] ($headJoint+"*")` || `gmatch $connectionsObj[$y+1] ($jawControl+"*")`)
+				continue;
+			$cmds[size($cmds)]="connectAttr -f "+$connections[$y+1]+" "+$connections[$y]+";";
+			}
+		//Outgoing connections
+		$connections=`listConnections -p 1 -c 1 -s 0 -d 1 $faceControlSetMembers[$i]`;
+		$connectionsObj=`listConnections -c 1 -s 0 -d 1 $faceControlSetMembers[$i]`;
+		for ($y=0;$y<size($connections);$y=$y+2)
+			{
+			if (`sets -im FaceAllSet $connectionsObj[$y+1]`)
+				continue;
+			if (`gmatch $connections[$y] "*instObjGroups*"` || `gmatch $connections[$y+1] "*instObjGroups*"`)
+				continue;
+			$cmds[size($cmds)]="connectAttr -f "+$connections[$y]+" "+$connections[$y+1]+";";
+			}
+		}
+
+	//prefix_
+	for ($i=0;$i<size($allSetMembers);$i++)
+		if (`objExists $allSetMembers[$i]`)
+			$allSetMembers[$i]=`rename $allSetMembers[$i] ("prefix_"+$allSetMembers[$i])`;
+		else
+			$allSetMembers[$i]="";
+
+	asFaceBuild;
+
+	//Post rebuild - incoming connections
+	for ($cmd in $cmds)
+		if (catchQuiet (`eval ($cmd)`)) warning ("Failed: "+$cmd+"\n");
+
+	for ($i=0;$i<size($allSetMembers);$i++)
+		if (`objExists $allSetMembers[$i]`)
+			delete $allSetMembers[$i];
+	}
+else
+	asFaceBuild;
+}
+
+global proc asFaceBuild ()
+{
+string $allBefore[]=`ls`;
+int $upperLowerFactor,$lip2Nr,$hasEye,$numLip;
+float $outMidDist,$distance,$previousDistance,$dv,$oneToHalfHist;
+float $scale=`asFaceGetScale`;
+float $posA[3],$posB[3],$posC[3];
+float $rotFactor[],$divY[],$divZ[],$pos[];
+string $side,$ctrlSide,$oppositeCtrlSide,$eyeJoint,$eyeLidPivot,$upperLower,$upperLowerOpposite,$iom,$jointName,$innerMiddle;
+string $vtxs[],$tempString[],$tempString2[],$points[],$sdkCurves[];
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+string $skinCluster=`textField -q -tx asFsSkinClusterTextField`;
+string $headJoint=`textField -q -tx asFsHeadJointTextField`;
+string $jawJoint=`textField -q -tx asFsJawJointTextField`;
+string $jawControl=`textField -q -tx asFsJawControlTextField`;
+
+
+string $asScriptLocation=`asScriptLocation`;
+string $sourceAsProcedures=("source \""+$asScriptLocation+"asProcedures.mel\"");
+if (!`exists asCharSize`)
+	eval ($sourceAsProcedures);
+
+//determine $numEye
+for ($i=1;$i<99;$i++)
+		if (!`objExists ("upperEyeInner"+$i)`)
+			break;
+int $numEye=$i-1;
+for ($y=1;$y<99;$y++)
+		{
+		$joint="upperEyeMiddle"+`asFaceNrToLetter $y`+"1";
+		if (!`objExists $joint`) break;
+		}
+int $numEyeMiddleRows=$y-1;
+
+//determine $numLip
+for ($i=0;$i<99;$i++)
+		if (!`objExists ("upperLipOuter"+$i)`)
+			break;
+int $numLipUpper=$i-1;
+for ($i=0;$i<99;$i++)
+		if (!`objExists ("lowerLipOuter"+$i)`)
+			break;
+int $numLipLower=$i-1;
+for ($y=1;$y<99;$y++)
+		{
+		$joint="upperLipMiddle"+`asFaceNrToLetter $y`+"0";
+		if (!`objExists $joint`) break;
+		}
+int $numLipMiddleRows=$y-1;
+
+global string $gMainProgressBar;
+evalDeferred ("progressBar -e -ep "+$gMainProgressBar);
+
+createNode -n FaceMotionSystem transform;
+parent FaceMotionSystem FaceGroup;
+
+int $upperHookCtrlNr=4;
+int $lowerHookCtrlNr=3;
+
+if (`objExists upperEyeInner1`)
+	$hasEye=1;
+
+createNode -n faceCtrlDriven displayLayer;
+setAttr faceCtrlDriven.color 4;
+select -cl;
+createDisplayLayer -name faceCtrlB -number 1 -nr;
+setAttr faceCtrlB.color 10;
+createDisplayLayer -name faceCtrlA -number 2 -nr;
+setAttr faceCtrlA.color 17;
+
+
+//top level nodes
+createNode -n EyeSetup transform;
+parent EyeSetup FaceMotionSystem;
+createNode -n LipSetup transform;
+parent LipSetup FaceMotionSystem;
+createNode -n LipJoints transform;
+parent LipJoints LipSetup;
+createNode -n LipLocators transform;
+parent  LipLocators LipSetup;
+createNode -n LipSurfaces transform;
+parent LipSurfaces LipSetup;
+createNode -n LipClusters transform;
+parent  LipClusters LipSetup;
+setAttr LipSetup.v 0;
+setAttr EyeSetup.v 0;
+addAttr -k 1 -ln "upperClose_R" -at double EyeSetup;
+addAttr -k 1 -ln "upperClose_L" -at double EyeSetup;
+addAttr -k 1 -ln "lowerClose_R" -at double EyeSetup;
+addAttr -k 1 -ln "lowerClose_L" -at double EyeSetup;
+addAttr -k 1 -ln "upperFollowAmount_L" -dv 0.5 -at double EyeSetup;
+addAttr -k 1 -ln "upperFollowAmount_R" -dv 0.5 -at double EyeSetup;
+addAttr -k 1 -ln "upperFollowOffset_L" -at double EyeSetup;
+addAttr -k 1 -ln "upperFollowOffset_R" -at double EyeSetup;
+addAttr -k 1 -ln "lowerFollowAmount_L" -dv -0.2 -at double EyeSetup;
+addAttr -k 1 -ln "lowerFollowAmount_R" -dv -0.2 -at double EyeSetup;
+addAttr -k 1 -ln "lowerFollowOffset_L" -at double EyeSetup;
+addAttr -k 1 -ln "lowerFollowOffset_R" -at double EyeSetup;
+
+addAttr -k 1 -ln "upperCloseBulge_L" -dv 0.5 -at double EyeSetup;
+addAttr -k 1 -ln "upperOpenBulge_L" -dv 0.5 -at double EyeSetup;
+addAttr -k 1 -ln "upperCloseBulge_R" -dv 0.5 -at double EyeSetup;
+addAttr -k 1 -ln "upperOpenBulge_R" -dv 0.5 -at double EyeSetup;
+addAttr -k 1 -ln "lowerCloseBulge_L" -dv -0.2 -at double EyeSetup;
+addAttr -k 1 -ln "lowerOpenBulge_L" -dv -0.2 -at double EyeSetup;
+addAttr -k 1 -ln "lowerCloseBulge_R" -dv -0.2 -at double EyeSetup;
+addAttr -k 1 -ln "lowerOpenBulge_R" -dv -0.2 -at double EyeSetup;
+
+createNode -n SdkSetup transform;
+parent SdkSetup FaceMotionSystem;
+createNode -n ControlsSetup transform;
+parent ControlsSetup FaceMotionSystem;
+createNode -n RegionSetup transform;
+parent RegionSetup FaceMotionSystem;
+createNode -n FollowHead transform;
+parent FollowHead RegionSetup;
+parentConstraint $headJoint FollowHead;
+scaleConstraint $headJoint FollowHead;
+createNode -n Acontrols transform;
+createNode -n Bcontrols transform;
+createNode -n RegionControls transform;
+parent Acontrols Bcontrols RegionControls ControlsSetup;
+createNode -n Brs transform;
+parent Brs Bcontrols;
+parentConstraint -mo $headJoint Acontrols;
+scaleConstraint $headJoint Acontrols;
+parentConstraint -mo $headJoint RegionControls;
+scaleConstraint $headJoint RegionControls;
+orientConstraint -mo $headJoint Brs;
+scaleConstraint -mo $headJoint Brs;
+parentConstraint $headJoint EyeSetup;
+scaleConstraint $headJoint EyeSetup;
+
+//Create needed highlevelcontrol fitjoints
+createNode -n closestSampler closestPointOnMesh;
+createNode -n closestSurfaceSampler closestPointOnSurface;
+$tempString=`listRelatives -ni -s $geometry`;
+connectAttr -f ($tempString[0]+".outMesh") closestSampler.inMesh;
+
+string $mouthCornerJoint="mouthCorner";
+for ($i=1;$i<99;$i++)
+	if (`objExists ("upperLipOuter"+$i)`)
+		$mouthCornerJoint="upperLipOuter"+$i;
+
+//Lid
+if (`objExists ("upperEyeInner"+($numEye/2))`)
+	{
+	$pos=`xform -q -ws -t ("upperEyeInner"+($numEye/2))`;
+	setAttr -type float3 closestSampler.inPosition $pos[0] $pos[1] $pos[2];
+	string $vtx=`getAttr closestSampler.result.closestVertexIndex`;
+	select ($geometry+".vtx["+$vtx+"]");
+	if (!`objExists upperLid`)
+		asCreateFaceFitJoint upperLid 0 22;
+	$pos=`xform -q -ws -t ("lowerEyeInner"+($numEye/2))`;
+	setAttr -type float3 closestSampler.inPosition $pos[0] $pos[1] $pos[2];
+	string $vtx=`getAttr closestSampler.result.closestVertexIndex`;
+	select ($geometry+".vtx["+$vtx+"]");
+	if (!`objExists lowerLid`)
+		asCreateFaceFitJoint lowerLid 0 22;
+	}
+
+//L/R EyeSetup
+spaceLocator -n tempAimAtLoc;
+for ($b=1;$b>-2;$b=$b-2)
+	{
+	if (!`objExists upperEyeInner1`)
+		continue;
+	if ($b==1) $side="_R"; else $side="_L";
+	$eyeJoint=`textField -q -tx ("asFsEyeJoint"+$side+"TextField")`;
+
+	float $pos[3]=`xform -q -ws -t $eyeJoint`;
+	float $rot[3]=`xform -q -ws -ro $eyeJoint`;
+	$eyeLidPivot=`textField -q -tx ("asFsEyeLidPivot"+$side+"TextField")`;
+	if ($eyeLidPivot!="")
+		$pos=`xform -q -ws -t $eyeLidPivot`;
+
+	createNode -n ("EyeSetup"+$side) transform;
+	parent ("EyeSetup"+$side) EyeSetup;
+	xform -ws -t $pos[0] $pos[1] $pos[2] ("EyeSetup"+$side);
+	xform -ws -ro $rot[0] $rot[1] $rot[2] ("EyeSetup"+$side);
+	setAttr ("EyeSetup"+$side+".rotateOrder") `getAttr ($eyeJoint+".rotateOrder")`;
+	createNode -n ("EyeOrientOffset"+$side) transform;
+	parent ("EyeOrientOffset"+$side) ("EyeSetup"+$side);
+	xform -ws -t $pos[0] $pos[1] $pos[2] ("EyeOrientOffset"+$side);
+	if ($side=="_R")
+		delete `pointConstraint upperEyeInner1 ("upperEyeInner"+$numEye) tempAimAtLoc`;
+	else
+		setAttr tempAimAtLoc.tx (`getAttr tempAimAtLoc.tx `*-1);
+	delete `aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "scene" tempAimAtLoc ("EyeOrientOffset"+$side)`;
+ 	}
+delete tempAimAtLoc;
+
+asFaceCreateDistanceMessure;
+select -cl;
+
+sets -name FaceAllSet;
+sets -name FaceControlSet;
+if (`objExists "Sets"`)
+	{
+	sets -add "Sets" FaceAllSet;
+	sets -add "Sets" FaceControlSet;
+	}
+
+
+//duplicate FaceFitSkeletonJoints - Eye & Lip
+string $fitJoints[]=`listRelatives -c -type joint FaceFitSkeleton`;
+for ($b=1;$b>-2;$b=$b-2)
+	{
+	for ($i=0;$i<size($fitJoints);$i++)
+		{
+		if (!(`gmatch $fitJoints[$i] "*Eye*"` || `gmatch $fitJoints[$i] "*Lip*"`))
+			continue;
+		//determine $side
+		$pos=`xform -q -ws -t $fitJoints[$i]`;
+		if ($pos[0]<-0.001) $side="_R"; else $side="_M"; if ($b==-1 && $side=="_R") $side="_L"; if ($b==-1 && $side=="_M") continue;
+
+		duplicate -n ($fitJoints[$i]+$side) $fitJoints[$i];
+		if (size(`listRelatives -ad ($fitJoints[$i]+$side)`))
+			delete `listRelatives -ad -f ($fitJoints[$i]+$side)`;
+		xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] ($fitJoints[$i]+$side);
+		setAttr ($fitJoints[$i]+$side+".overrideEnabled") 0;
+		setAttr -k 0 ($fitJoints[$i]+$side+".falloffRadius");
+		setAttr -k 0 ($fitJoints[$i]+$side+".falloffMode");
+		setAttr -k 0 ($fitJoints[$i]+$side+".interpolation");
+		if (`gmatch $fitJoints[$i] "*Eye*"`)
+			parent ($fitJoints[$i]+$side) ("EyeSetup"+$side);
+		if (`gmatch $fitJoints[$i] "*Lip*"`)
+			parent ($fitJoints[$i]+$side) LipSetup;
+		}
+	}
+
+//Setup Eye
+for ($b=1;$b>-2;$b=$b-2)
+	{
+	if ($b==1) $side="_R"; else $side="_L";
+
+	if (!`objExists upperEyeInner1`)
+		continue;
+	progressBar -e -ep $gMainProgressBar;
+	progressBar -e -st ("Building Eye "+$side) -bp -ii 0 -min 0 -max ($numEye*2) $gMainProgressBar;
+	for ($upperLowerFactor=1;$upperLowerFactor>-2;$upperLowerFactor=$upperLowerFactor-2)
+		{
+		if ($upperLowerFactor==1) {$upperLower="upper"; $upperLowerOpposite="lower";}
+		else {$upperLower="lower"; $upperLowerOpposite="upper";}
+
+		delete `pointConstraint ($upperLower+"EyeInner"+($numEye/2)) faceBuildEndPoint`; 
+		delete `pointConstraint ($upperLower+"EyeInner"+"1") faceBuildStartPoint`; 
+		$oneToHalfHist=`getAttr faceBuildDistShape.distance`;
+
+		for ($i=1;$i<($numEye+1);$i++)
+			{
+			if (!`objExists ($upperLower+"EyeInner"+$i+$side)` || !`objExists ($upperLowerOpposite+"EyeInner"+$i+$side)`)
+				continue;
+
+			//inner/middle(s) loop, $ms=middleRowSuffix
+			for ($y=0;$y<($numEyeMiddleRows+1);$y++)
+				{
+				$ms=`asFaceNrToLetter $y`;
+				if ($y==0)
+					$innerMiddle="Inner";
+				else
+					$innerMiddle="Middle";
+
+
+				//determine $side
+				$pos=`xform -q -ws -t ($upperLower+"EyeInner"+$i)`;
+				if ($pos[0]<-0.001) $side="_R"; else $side="_M"; if ($b==-1 && $side=="_R") $side="_L"; if ($b==-1 && $side=="_M") continue;
+				//progress
+				if (`progressBar -q -ic $gMainProgressBar`) return;progressBar -e -s 1 $gMainProgressBar;
+	
+				$eyeJoint=`textField -q -tx ("asFsEyeJoint"+$side+"TextField")`;
+	
+				//setup inner/outer
+				pointConstraint ($upperLower+"EyeInner"+$i+$side) faceBuildStartPoint; 
+				pointConstraint ($upperLowerOpposite+"EyeInner"+$i+$side) faceBuildEndPoint;
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"Offset"+$ms+$i+$side) transform;
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"CloseZ"+$ms+$i+$side) transform;
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"CloseY"+$ms+$i+$side) transform;
+				parent ($upperLower+"Eye"+$innerMiddle+"CloseY"+$ms+$i+$side) ("EyeOrientOffset"+$side);
+				parent ($upperLower+"Eye"+$innerMiddle+"Offset"+$ms+$i+$side) ($upperLower+"Eye"+$innerMiddle+"CloseY"+$ms+$i+$side);
+				parent ($upperLower+"Eye"+$innerMiddle+"CloseZ"+$ms+$i+$side) ($upperLower+"Eye"+$innerMiddle+"Offset"+$ms+$i+$side);
+
+				$pos=`xform -q -ws -t ($upperLower+"Eye"+$innerMiddle+$ms+$i)`;
+				xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] ($upperLower+"Eye"+$innerMiddle+"CloseY"+$ms+$i+$side);
+				setAttr -type float3 ($upperLower+"Eye"+$innerMiddle+"CloseY"+$ms+$i+$side+".t") 0 0 0;
+				setAttr -type float3 ($upperLower+"Eye"+$innerMiddle+"CloseY"+$ms+$i+$side+".r") 0 0 0;
+	
+				delete `aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "object" -worldUpObject ($upperLowerOpposite+"Eye"+$innerMiddle+$ms+$i+$side) ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side) ($upperLower+"Eye"+$innerMiddle+"Offset"+$ms+$i+$side)`;
+				parent ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side) ($upperLower+"Eye"+$innerMiddle+"CloseZ"+$ms+$i+$side);
+		
+				//$rotFactor[$i]
+				if ($b==1 && $innerMiddle=="Inner")
+					{
+					$previousDistance=999;
+					for ($deg=0;$deg<99;$deg++)
+						{
+						setAttr ($upperLower+"EyeInnerCloseZ"+$i+$side+".rotateZ") ($deg);
+						$distance=`getAttr faceBuildDistShape.distance`;
+						$absDistance=abs($distance);
+						if ($absDistance>$previousDistance)
+							break;
+						$previousDistance=$absDistance;
+						$rotFactor[$i]=$deg;
+						}
+					}
+				delete `listRelatives -c -type transform faceBuildStartPoint`;
+				delete `listRelatives -c -type transform faceBuildEndPoint`;
+	
+				//$div
+				delete `pointConstraint ($upperLower+"Eye"+$innerMiddle+$ms+($numEye/2)) faceBuildEndPoint`; 
+				delete `pointConstraint ($upperLower+"Eye"+$innerMiddle+$ms+$i) faceBuildStartPoint`; 
+				if ($innerMiddle=="Inner")
+					{
+					$divY[$i]=1-(`getAttr faceBuildDistShape.distance`/$oneToHalfHist);
+					$divZ[$i]=1;
+					}
+				else
+					{
+					delete `pointConstraint ($upperLower+"EyeInner"+$i+$side) faceBuildStartPoint`; 
+					delete `pointConstraint ($upperLower+"EyeMiddle"+$ms+$i+$side) faceBuildEndPoint`; 
+					$inMidDist=`getAttr faceBuildDistShape.distance`;
+					delete `pointConstraint ($upperLower+"EyeOuter"+$i+$side) faceBuildStartPoint`; 
+					$outMidDist=`getAttr faceBuildDistShape.distance`;
+					$divZ[$i]=$outMidDist/($inMidDist+$outMidDist);
+					$divY[$i]=$divY[$i]*$divZ[$i];
+					}
+
+				addAttr -dv $divY[$i] -k 1 -ln "divY" -at double ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side);
+				addAttr -dv $divZ[$i] -k 1 -ln "divZ" -at double ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side);
+				addAttr -dv 1 -k 1 -ln "closeBulge" -at double ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side);
+				addAttr -dv 1 -k 1 -ln "openBulge" -at double ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side);	
+
+				if ($innerMiddle=="Inner")
+					{
+					//Close
+					createNode -n ($upperLower+"EyeInnerDenormal"+$i+$side+"MultiplyDivide") multiplyDivide;
+					setAttr ($upperLower+"EyeInnerDenormal"+$i+$side+"MultiplyDivide.input2Y") ($upperLowerFactor*-1*$rotFactor[$i]); 
+					setAttr ($upperLower+"EyeInnerDenormal"+$i+$side+"MultiplyDivide.input2Z") $rotFactor[$i]; 
+			
+					//Follow
+					createNode -n ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage") plusMinusAverage;
+					connectAttr ("EyeSetup."+$upperLower+"Close"+$side) ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage.input3D[0].input3Dz");
+					connectAttr ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage.output3Dy") ($upperLower+"EyeInnerDenormal"+$i+$side+"MultiplyDivide.input1Y");
+					connectAttr ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage.output3Dz") ($upperLower+"EyeInnerDenormal"+$i+$side+"MultiplyDivide.input1Z");
+		
+					createNode -n ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide") multiplyDivide;
+					connectAttr ($eyeJoint+".ry") ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide.input1Y");
+					connectAttr ($eyeJoint+".rz") ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide.input1Z");
+					connectAttr ("EyeSetup."+$upperLower+"FollowAmount"+$side) ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide.input2Y");
+					connectAttr ("EyeSetup."+$upperLower+"FollowAmount"+$side) ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide.input2Z");
+					createNode -n ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide2") multiplyDivide;
+					connectAttr ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide.outputY") ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide2.input1Y");
+					connectAttr ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide.outputZ") ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide2.input1Z");
+					setAttr ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide2.input2Y") -0.02;
+					setAttr ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide2.input2Z") -0.02;
+					connectAttr ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide2.outputY") ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage.input3D[1].input3Dy");
+					connectAttr ($upperLower+"EyeInnerFollow"+$i+$side+"MultiplyDivide2.outputZ") ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage.input3D[1].input3Dz");
+					connectAttr ("EyeSetup."+$upperLower+"FollowOffset"+$side) ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage.input3D[2].input3Dz");
+					}
+	
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"Div"+$ms+$i+$side+"MultiplyDivide") multiplyDivide;
+				connectAttr ($upperLower+"EyeInnerDenormal"+$i+$side+"MultiplyDivide.outputY") ($upperLower+"Eye"+$innerMiddle+"Div"+$ms+$i+$side+"MultiplyDivide.input1Y");
+				connectAttr ($upperLower+"EyeInnerDenormal"+$i+$side+"MultiplyDivide.outputZ") ($upperLower+"Eye"+$innerMiddle+"Div"+$ms+$i+$side+"MultiplyDivide.input1Z");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".divY") ($upperLower+"Eye"+$innerMiddle+"Div"+$ms+$i+$side+"MultiplyDivide.input2Y");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".divZ") ($upperLower+"Eye"+$innerMiddle+"Div"+$ms+$i+$side+"MultiplyDivide.input2Z");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"Div"+$ms+$i+$side+"MultiplyDivide.outputY") ($upperLower+"Eye"+$innerMiddle+"CloseY"+$ms+$i+$side+".ry");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"Div"+$ms+$i+$side+"MultiplyDivide.outputZ") ($upperLower+"Eye"+$innerMiddle+"CloseZ"+$ms+$i+$side+".rz");
+
+				//Bulge (Close=Z, Open=Y)
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"PlusMinusAverage") plusMinusAverage;
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDivide") multiplyDivide;
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"CloseZ"+$ms+$i+$side+".rz") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDivide.input1Z");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"CloseZ"+$ms+$i+$side+".rz") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDivide.input1Y");
+				connectAttr ("EyeSetup."+$upperLower+"CloseBulge"+$side) ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDivide.input2Z");
+				connectAttr ("EyeSetup."+$upperLower+"OpenBulge"+$side) ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDivide.input2Y");
+	
+				//Bulge per joint (PJ)
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ") multiplyDivide;
+				setAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".closeBulge") (`clamp 0 (0.02-(0.02/$numEye*1.75)) ((1-(abs($i-($numEye/2.0))/($numEye/2.0)))*0.02)`);
+				setAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".openBulge") (-1*`getAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".closeBulge")`);
+				connectAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".closeBulge") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.input1Z");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".openBulge") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.input1Y");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDivide.outputZ") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.input2Z");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDivide.outputY") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.input2Y");
+//				connectAttr ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.outputZ") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"PlusMinusAverage.input3D[0].input3Dz");
+//				connectAttr ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.outputY") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"PlusMinusAverage.input3D[1].input3Dz");
+				setAttr ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"PlusMinusAverage.input3D[0].input3Dz") `getAttr ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".tx")`;
+				//BulgeCondition
+				createNode -n ($upperLower+"Eye"+$innerMiddle+"BulgeCondition"+$ms+$i+$side) condition;
+				setAttr ($upperLower+"Eye"+$innerMiddle+"BulgeCondition"+$ms+$i+$side+".operation") 2;
+				connectAttr -f ($upperLower+"Eye"+$innerMiddle+"CloseZ"+$ms+$i+$side+".rz") ($upperLower+"Eye"+$innerMiddle+"BulgeCondition"+$ms+$i+$side+".firstTerm");
+				connectAttr -f ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.outputZ") ($upperLower+"Eye"+$innerMiddle+"BulgeCondition"+$ms+$i+$side+".colorIfTrueR");
+				connectAttr -f ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"MultiplyDividePJ.outputY") ($upperLower+"Eye"+$innerMiddle+"BulgeCondition"+$ms+$i+$side+".colorIfFalseR");
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"BulgeCondition"+$ms+$i+$side+".outColorR") ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"PlusMinusAverage.input3D[1].input3Dz");
+
+				connectAttr ($upperLower+"Eye"+$innerMiddle+"Bulge"+$ms+$i+$side+"PlusMinusAverage.output3Dz") ($upperLower+"Eye"+$innerMiddle+$ms+$i+$side+".tx");
+
+				//innerExtras
+				if ($innerMiddle=="Inner")
+					{
+					if (`objExists ($upperLower+"EyeInnerExtraA"+$i+$side)`)
+						parent ($upperLower+"EyeInnerExtraA"+$i+$side) ($upperLower+"EyeInner"+$i+$side);
+					if (`objExists ($upperLower+"EyeInnerExtraB"+$i+$side)`)
+						parent ($upperLower+"EyeInnerExtraB"+$i+$side) ($upperLower+"EyeInner"+$i+$side);
+					}
+				}
+			}
+		}
+	}
+
+for ($b=1;$b>-2;$b=$b-2)
+	{
+	progressBar -e -ep $gMainProgressBar;
+	progressBar -e -st "SoftClusters" -bp -ii 0 -min 0 -max `size($fitJoints)` $gMainProgressBar;
+
+	//Setup Default(10)
+	for ($i=0;$i<size($fitJoints);$i++)
+		{
+		if (`getAttr ($fitJoints[$i]+".overrideColor")`!=10)
+			continue;
+		//determine $side
+		$pos=`xform -q -ws -t $fitJoints[$i]`;
+		if ($pos[0]<-0.001) $side="_R"; else $side="_M"; if ($b==-1 && $side=="_R") $side="_L"; if ($b==-1 && $side=="_M") continue;
+
+		//Lips
+		softCluster $fitJoints[$i] $fitJoints[$i] $b $side;
+		}
+
+	//Setup Softs(9)
+	for ($i=0;$i<size($fitJoints);$i++)
+		{
+		if (`getAttr ($fitJoints[$i]+".overrideColor")`!=9)
+			continue;
+		//determine $side
+		$pos=`xform -q -ws -t $fitJoints[$i]`;
+		if ($pos[0]<-0.001) $side="_R"; else $side="_M"; if ($b==-1 && $side=="_R") $side="_L"; if ($b==-1 && $side=="_M") continue;
+
+		//Lips
+		softCluster $fitJoints[$i] $fitJoints[$i] $b $side;
+		}
+	}
+
+
+//mouth Control
+string $mouthLowerJoint="mouthLower";
+if (`objExists lowerLipOuter0`)
+	$mouthLowerJoint="lowerLipOuter0";
+asFaceFramedControl "mouth" "_M" 1 1;
+setAttr -l 1 -k 0 mouth_M.tz;setAttr -l 1 -k 0 mouth_M.rx;setAttr -l 1 -k 0 mouth_M.ry;setAttr -l 1 -k 0 mouth_M.rz;setAttr -l 1 -k 0 mouth_M.sx;setAttr -l 1 -k 0 mouth_M.sy;setAttr -l 1 -k 0 mouth_M.sz;
+$pos=`xform -q -ws -piv $mouthLowerJoint`;
+xform -ws -t ($scale*3) ($pos[1]+($scale/2.0)) $pos[2] mouthFrameOffset_M;
+
+//mouth -> jawOpen
+setDrivenKeyframe -currentDriver mouth_M.ty ($jawControl+".rz");
+setAttr mouth_M.ty -1;
+setAttr ($jawControl+".rz") 25;
+setDrivenKeyframe -currentDriver mouth_M.ty ($jawControl+".rz");
+setAttr mouth_M.ty 0;
+
+//eyeBrow Control
+if (`objExists "eyeBrow"`)
+	{
+	for ($b=1;$b>-2;$b=$b-2)
+		{
+		if ($b==1) $side="_R"; else $side="_L";
+
+		asFaceCreateNurbsCtrl "eyeBrow" $side "A";
+		}
+	}
+
+//Eye - skinning
+string $motionJoints[]=`listRelatives -ad -type joint FaceMotionSystem`;
+string $skinClusterCmd="skinCluster -e -dr 4 -lw true -wt 0";
+for ($i=0;$i<size($motionJoints);$i++)
+	{
+	if (`progressBar -q -ic $gMainProgressBar`) return;progressBar -e -s 1 $gMainProgressBar;
+
+	$skinClusterCmd+=" -ai "+$motionJoints[$i];
+	if (`gmatch $motionJoints[$i] "*_L"`)
+		continue;
+	}
+$skinClusterCmd+=" "+$skinCluster;
+if (size($motionJoints))
+	eval $skinClusterCmd;
+
+/*
+//skinCluster de-normalize
+setAttr ($skinCluster+".normalizeWeights") 0;
+setAttr ($skinCluster+".envelope") 0;
+*/
+
+//skinCluster assign weights using softMod
+progressBar -e -ep $gMainProgressBar;
+progressBar -e -st ("adjusting skin weights") -bp -ii 0 -min 0 -max `max 1 (size($motionJoints))` $gMainProgressBar;
+for ($i=0;$i<size($motionJoints);$i++)
+	{
+	if (`progressBar -q -ic $gMainProgressBar`) return;progressBar -e -s 1 $gMainProgressBar;
+	setAttr ($motionJoints[$i]+".lockInfluenceWeights") 0;
+	if (`gmatch $motionJoints[$i] "*_L"`)
+		continue;
+	if (`gmatch $motionJoints[$i] "*upperLipOuter*"`)
+		asFaceSkinAreaBySoftMod $geometry $skinCluster $motionJoints[$i] $motionJoints[$i] `getAttr ($motionJoints[$i]+".falloffRadius")` `getAttr ($motionJoints[$i]+".falloffMode")` 1;
+	else if (`gmatch $motionJoints[$i] "*Eye*"` || `gmatch $motionJoints[$i] "*Lip*"`)
+		asFaceSkinAreaByVolume $geometry $skinCluster $motionJoints[$i] $motionJoints[$i] `getAttr ($motionJoints[$i]+".falloffRadius")` `getAttr ($motionJoints[$i]+".falloffMode")` 1;
+	if (`gmatch $motionJoints[$i] "*Lip*"`)
+		{
+		tokenize $motionJoints[$i] "_" $tempString;
+		$points=`ls -type joint ($tempString[0]+"_pt*")`;
+		}
+	}
+
+/*
+//skinCluster normalize
+select -cl;
+joint -n tempJoint;
+skinCluster -e  -dr 4 -lw true -wt 0 -ai tempJoint $skinCluster;
+setAttr ($skinCluster+".normalizeWeights") 1;
+int $numVtxs[]=`polyEvaluate -v $geometry`;
+skinPercent -tv tempJoint 0 $skinCluster ($geometry+".vtx[0:"+$numVtxs[0]+"]");
+setAttr ($skinCluster+".envelope") 1;
+delete tempJoint;
+*/
+
+//skinCluster assign weights - round 2 to get full weight on excact alignment
+for ($i=0;$i<size($motionJoints);$i++)
+	if (`gmatch $motionJoints[$i] "*Lip*"`)
+		asFaceSkinAreaByVolume $geometry $skinCluster $motionJoints[$i] $motionJoints[$i] 0.01 0 1;
+
+//Eye Setup
+if ($hasEye)
+	{
+	delete `pointConstraint ("upperEyeInner"+($numEye/2)) faceBuildStartPoint`;
+	delete `pointConstraint ("lowerEyeInner"+($numEye/2)) faceBuildEndPoint`;
+	float $upperLowerDistance=`getAttr faceBuildDistShape.distance`*-1;
+	for ($upperLowerFactor=1;$upperLowerFactor>-2;$upperLowerFactor=$upperLowerFactor-2)
+		{
+		if ($upperLowerFactor==1)
+			{$upperLower="upper";$dv=0.5;}
+		else
+			{$upperLower="lower";$dv=-0.2;}
+		
+		for ($b=1;$b>-2;$b=$b-2)
+			{
+			if ($b==1) $side="_R"; else $side="_L";
+		
+			asFaceCreateNurbsCtrl ($upperLower+"Lid") $side "A";
+			setAttr -l 1 -k 0 ($upperLower+"Lid"+$side+".rx");
+			setAttr -l 1 -k 0 ($upperLower+"Lid"+$side+".ry");
+			setAttr -l 1 -k 0 ($upperLower+"Lid"+$side+".sx");
+			setAttr -l 1 -k 0 ($upperLower+"Lid"+$side+".sy");
+			setAttr -l 1 -k 0 ($upperLower+"Lid"+$side+".sz");
+
+			if ($side=="_L")
+				setDrivenKeyframe -currentDriver ($upperLower+"LidPlusMinusAverageMirrorT"+$side+".output3Dy") ("EyeSetup."+$upperLower+"Close"+$side);
+			else
+				setDrivenKeyframe -currentDriver ($upperLower+"Lid"+$side+".ty") ("EyeSetup."+$upperLower+"Close"+$side);
+			setAttr ($upperLower+"Lid"+$side+".ty") ($upperLowerDistance*$upperLowerFactor);
+			setAttr ("EyeSetup."+$upperLower+"Close"+$side) 1;
+			if ($side=="_L")
+				setDrivenKeyframe -currentDriver ($upperLower+"LidPlusMinusAverageMirrorT"+$side+".output3Dy") ("EyeSetup."+$upperLower+"Close"+$side);
+			else
+				setDrivenKeyframe -currentDriver ($upperLower+"Lid"+$side+".ty") ("EyeSetup."+$upperLower+"Close"+$side);
+			setAttr ($upperLower+"Lid"+$side+".ty") 0;
+			$sdkCurves=`listConnections -s 1 -d 0 -type animCurve ("EyeSetup."+$upperLower+"Close"+$side)`;
+			for ($i=0;$i<size($sdkCurves);$i++)
+				{
+				setAttr ($sdkCurves[$i]+".preInfinity") 1;
+				setAttr ($sdkCurves[$i]+".postInfinity") 1;
+				}
+		
+			//cbb
+//			setAttr ($upperLower+"Lid_RPointOnCurveInfo.turnOnPercentage") 1;
+//			setAttr ($upperLower+"Lid_RPointOnCurveInfo.parameter") 1;
+		
+			addAttr -k 1 -ln ("followAmount") -dv $dv -at double ($upperLower+"Lid"+$side);
+			addAttr -k 1 -ln ("followOffset") -at double ($upperLower+"Lid"+$side);
+			connectAttr ($upperLower+"Lid"+$side+"."+"followAmount") ("EyeSetup."+$upperLower+"FollowAmount"+$side);
+			connectAttr ($upperLower+"Lid"+$side+"."+"followOffset") ("EyeSetup."+$upperLower+"FollowOffset"+$side);
+			addAttr -k 1 -ln ("closeBulge") -at double ($upperLower+"Lid"+$side);
+			addAttr -k 1 -ln ("openBulge") -at double ($upperLower+"Lid"+$side);
+			connectAttr ($upperLower+"Lid"+$side+"."+"closeBulge") ("EyeSetup."+$upperLower+"CloseBulge"+$side);
+			connectAttr ($upperLower+"Lid"+$side+"."+"openBulge") ("EyeSetup."+$upperLower+"OpenBulge"+$side);
+			//eyeLidRotZ
+			for ($i=1;$i<($numEye+1);$i++)
+				{
+			if (!`objExists ($upperLower+"EyeInner"+$i+$side)` || !`objExists ($upperLowerOpposite+"EyeInner"+$i+$side)` || !`objExists ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage")`)
+					continue;
+				createNode -n ($upperLower+"EyeRzMultiplyDivide"+$i+$side) multiplyDivide;
+				$factor=1-($i/($numEye/2.0));
+				$factor=$factor/-100.0;
+				if ($upperLower=="lower")
+					$factor=$factor*-1;
+				setAttr ($upperLower+"EyeRzMultiplyDivide"+$i+$side+".input1Z") $factor;
+				connectAttr ($upperLower+"Lid"+$side+".rz") ($upperLower+"EyeRzMultiplyDivide"+$i+$side+".input2Z");
+				connectAttr ($upperLower+"EyeRzMultiplyDivide"+$i+$side+".outputZ") ($upperLower+"EyeInnerFollow"+$i+$side+"PlusMinusAverage.input3D[3].input3Dz");
+				}
+			}
+		}
+	}
+
+
+
+//Setup Lip
+int $hasLip=1;
+if (!`objExists upperLipOuter0`)
+	$hasLip=0;
+int $nr;
+string $parentCmd,$crvCmd,$cluster,$clusterHandle,$clusterHandleShape,$clusterGroupParts,$clusterGroupId,$clusterSet,$jointSide;
+string $tempTrns[],$clusters[];
+if ($hasLip)
+	{
+	createNode -n LipAllClusters -p LipClusters transform;
+	$pos=`xform -q -ws -t ("upperLipOuter"+$numLipUpper)`;
+	xform -ws -t 0 $pos[1] $pos[2] LipAllClusters;
+	createNode -n JawJointStaticOffset -p LipAllClusters transform;
+	createNode -n JawJointStatic -p JawJointStaticOffset transform;
+	delete `parentConstraint $jawJoint JawJointStaticOffset`;
+	parentConstraint -mo $headJoint JawJointStatic;
+	createNode -n partialSideJawCluster -p LipAllClusters transform;
+
+	for ($upperLowerFactor=1;$upperLowerFactor>-2;$upperLowerFactor=$upperLowerFactor-2)
+		{
+		if ($upperLowerFactor==1) {$upperLower="upper"; $upperLowerOpposite="lower";}
+		else {$upperLower="lower"; $upperLowerOpposite="upper";}
+		if ($upperLower=="upper")
+			$numLip=$numLipUpper;
+		if ($upperLower=="lower")
+			$numLip=$numLipLower;
+
+		//JawClusters
+		createNode -n ($upperLower+"MidPartialJawCluster") -p LipAllClusters transform;
+		createNode -n ($upperLower+"JawCluster") -p LipAllClusters transform;
+		$pos=`xform -q -ws -t lowerLipOuter0`;
+		xform -ws -t $pos[0] $pos[1] $pos[2] ($upperLower+"JawCluster");	
+		createNode -n ($upperLower+"JawFollow") -p JawJointStatic transform;
+		orientConstraint $jawJoint JawJointStatic ($upperLower+"JawFollow");
+		parent ($upperLower+"JawCluster") ($upperLower+"JawFollow");
+
+		//JawFollow constraints
+		pointConstraint ($upperLower+"JawCluster") partialSideJawCluster;
+		pointConstraint ("upperJawCluster") ($upperLower+"MidPartialJawCluster");
+		if ($upperLower=="lower")
+			{
+			pointConstraint ("lowerJawCluster") ("upperMidPartialJawCluster");
+			pointConstraint ("upperJawCluster") ("lowerMidPartialJawCluster");
+			pointConstraint ("lowerJawCluster") ("lowerMidPartialJawCluster");
+			}
+
+		for ($b=1;$b>-2;$b=$b-2)
+			{
+			for ($i=0;$i<($numLip+1);$i++)
+				{
+				if ($b==1) $side="_R"; else $side="_L";
+				if ($i==0) $side="_M";
+
+				//inner/middle(s) loop, $ms=middleRowSuffix
+				for ($y=0;$y<($numLipMiddleRows+1);$y++)
+					{
+					if($i==0 && $b==-1)
+						continue;
+					$ms=`asFaceNrToLetter $y`;
+					if ($y==0)
+						$innerMiddle="Outer";
+					else
+						$innerMiddle="Middle";
+	
+					//progress
+					if (`progressBar -q -ic $gMainProgressBar`) return;progressBar -e -s 1 $gMainProgressBar;
+					if ($y==0)
+						{
+						select -cl;
+						joint -n ($upperLower+"LipCenter"+$i+$side);
+						}
+					pointConstraint ($upperLower+"Lip"+$innerMiddle+$ms+$i+$side) ($upperLower+"LipCenter"+$i+$side);
+					setAttr ($upperLower+"Lip"+$innerMiddle+$ms+$i+$side+".v") 0;
+					$parentCmd+="parent "+$upperLower+"Lip"+$innerMiddle+$ms+$i+$side+" "+$upperLower+"LipCenter"+$i+$side+";";
+					$parentCmd+="disconnectAttr "+$upperLower+"LipCenter"+$i+$side+".scale "+$upperLower+"Lip"+$innerMiddle+$ms+$i+$side+".inverseScale;";
+					}
+				if (`objExists ($upperLower+"LipCenter"+$i+$side+"_pointConstraint1")`)
+					delete ($upperLower+"LipCenter"+$i+$side+"_pointConstraint1");
+				}
+			}
+		//ribbon
+		$crvCmd="curve -n "+$upperLower+"LipRibbonCurve -d 3 ";
+		clear $tempTrns;
+		for ($i=0;$i<(($numLip+1)*2);$i++)
+			{
+			if ($i<($numLip+1))
+				{
+				$nr=$numLip-$i;
+				$side="_R";
+				}
+			else
+				{
+				$nr=$i-$numLip-1;
+				$side="_L";
+				}
+			//tangent extensions
+			if ($i==0 || $i==($numLip+2))
+				{
+				createNode -n ($upperLower+"LipCenter"+($numLip+1)+$side) transform;
+				$tempTrns[size($tempTrns)]=$upperLower+"LipCenter"+($numLip+1)+$side;
+				$posA=`xform -q -ws -t ($upperLower+"LipCenter"+$numLip+$side)`;
+				$posB=`xform -q -ws -t ($upperLower+"LipCenter"+($numLip-1)+$side)`;
+				$pos[0]=$posA[0]+($posA[0]-$posB[0]);$pos[1]=$posA[1]+($posA[1]-$posB[1]);$pos[2]=$posA[2]+($posA[2]-$posB[2]);
+				xform -ws -t $pos[0] $pos[1] $pos[2] ($upperLower+"LipCenter"+($numLip+1)+$side);
+				}
+			if ($nr==0)
+				$posA=`xform -q -ws -t ($upperLower+"LipCenter"+$nr+"_M")`;
+			else
+				$posA=`xform -q -ws -t ($upperLower+"LipCenter"+$nr+$side)`;
+			$posB=`xform -q -ws -t ($upperLower+"LipCenter"+($nr+1)+$side)`;
+			$pos[0]=($posA[0]+$posB[0])/2.0;$pos[1]=($posA[1]+$posB[1])/2.0;$pos[2]=($posA[2]+$posB[2])/2.0;
+			$crvCmd+="-p "+$pos[0]+" "+$pos[1]+" "+$pos[2];
+			}
+		evalEcho $crvCmd;
+		rebuildCurve -ch 0 -rpo 1 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0.01 ($upperLower+"LipRibbonCurve");
+		offsetCurve -n ($upperLower+"LipRibbonCurveOffset1") -ch 0 -rn false -cb 2 -st true -cl true -cr 0 -d -0.02 -tol 0.01 -sd 5 -ugn false ($upperLower+"LipRibbonCurve");
+		offsetCurve -n ($upperLower+"LipRibbonCurveOffset2") -ch 0 -rn false -cb 2 -st true -cl true -cr 0 -d 0.02 -tol 0.01 -sd 5 -ugn false ($upperLower+"LipRibbonCurve");
+		loft -n ($upperLower+"LipRibbonSurface") -ch 0 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true ($upperLower+"LipRibbonCurveOffset1") ($upperLower+"LipRibbonCurveOffset2");
+		delete $tempTrns ($upperLower+"LipRibbonCurveOffset1") ($upperLower+"LipRibbonCurveOffset2") ($upperLower+"LipRibbonCurve");
+		rebuildSurface -n ($upperLower+"LipRibbonSurfaceRebuilt") -ch 0 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kc 0 -su 4 -du 3 -sv 0 -dv 3 -tol 0.01 -fr 0  -dir 2 ($upperLower+"LipRibbonSurface");
+		parent ($upperLower+"LipRibbonSurface") ($upperLower+"LipRibbonSurfaceRebuilt") LipSurfaces;
+		//clusters
+		select -r ($upperLower+"LipRibbonSurfaceRebuilt.cv[0][0:3]");
+		$tempString=`cluster -n ($upperLower+"LipRibbonClusterA_R") -envelope 1`;
+		select -r ($upperLower+"LipRibbonSurfaceRebuilt.cv[1][0:3]");
+		$tempString=`cluster -n ($upperLower+"LipRibbonClusterB_R") -envelope 1`;
+		select -r ($upperLower+"LipRibbonSurfaceRebuilt.cv[2][0:3]");
+		$tempString=`cluster -n ($upperLower+"LipRibbonClusterC_R") -envelope 1`;
+		select -r ($upperLower+"LipRibbonSurfaceRebuilt.cv[3][0:3]");
+		$tempString=`cluster -n ($upperLower+"LipRibbonCluster_M") -envelope 1`;
+		select -r ($upperLower+"LipRibbonSurfaceRebuilt.cv[4][0:3]");
+		$tempString=`cluster -n ($upperLower+"LipRibbonClusterC_L") -envelope 1`;
+		select -r ($upperLower+"LipRibbonSurfaceRebuilt.cv[5][0:3]");
+		$tempString=`cluster -n ($upperLower+"LipRibbonClusterB_L") -envelope 1`;
+		select -r ($upperLower+"LipRibbonSurfaceRebuilt.cv[6][0:3]");
+		$tempString=`cluster -n ($upperLower+"LipRibbonClusterA_L") -envelope 1`;
+		createNode -n ($upperLower+"LipRibbonClusterHandleOffset_M") transform;
+		parent ($upperLower+"LipRibbonClusterHandleOffset_M") ($upperLower+"JawCluster");
+		parent ($upperLower+"LipRibbonCluster_MHandle") ($upperLower+"LipRibbonClusterHandleOffset_M");
+		
+		$clusters={($upperLower+"LipRibbonClusterA_R"),($upperLower+"LipRibbonClusterB_R"),($upperLower+"LipRibbonClusterC_R"),
+			($upperLower+"LipRibbonCluster_M"),
+			($upperLower+"LipRibbonClusterA_L"),($upperLower+"LipRibbonClusterB_L"),($upperLower+"LipRibbonClusterC_L")};
+		for ($z=0;$z<size($clusters);$z++)
+			{
+			string $cluster=$clusters[$z];
+			string $clusterHandle=$clusters[$z]+"Handle";
+			$tempString=`listRelatives -s $clusterHandle`;
+			string $clusterHandleShape=$tempString[0];
+			$tempString=`listConnections ($cluster+".input[0].inputGeometry")`;
+			string $clusterGroupParts=$tempString[0];
+			$tempString=`listConnections ($cluster+".input[0].groupId")`;
+			string $clusterGroupId=$tempString[0];
+			$tempString=`listConnections ($cluster+".message")`;
+			string $clusterSet=$tempString[0];
+			}
+
+		//wrap
+		select -r ($upperLower+"LipRibbonSurface");
+		select -add ($upperLower+"LipRibbonSurfaceRebuilt");
+//		string $temptring[]=`deformer -type wrap`;
+//		rename $tempString[0] ($upperLower+"LipRibbonWrap");
+		CreateWrap;
+		$tempString=`listConnections ($upperLower+"LipRibbonSurfaceShape.create")`;
+		rename $tempString[0] ($upperLower+"LipRibbonWrap");
+		select ($upperLower+"LipRibbonSurfaceRebuiltShape");
+		setAttr ($upperLower+"LipRibbonWrap.autoWeightThreshold") 1;
+		setAttr ($upperLower+"LipRibbonWrap.exclusiveBind") 0;
+
+//		$offset=1/(($numLip*2.0)-1);
+		connectAttr -f ($upperLower+"LipRibbonSurfaceShape.worldSpace") closestSurfaceSampler.inputSurface;
+		for ($b=1;$b>-2;$b=$b-2)
+			{
+			if ($b==1) $side="_R"; else $side="_L";
+			//clusterGrps
+			createNode -n ($upperLower+"LipRibbonClusterGrpOffset"+$side) -p partialSideJawCluster transform;
+			createNode -n ($upperLower+"LipRibbonClusterGrpCtrl"+$side) -p ($upperLower+"LipRibbonClusterGrpOffset"+$side) transform;
+			createNode -n ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side) -p ($upperLower+"LipRibbonClusterGrpCtrl"+$side) transform;
+			$pos=`xform -q -ws -piv ($upperLower+"LipRibbonClusterA"+$side+"Handle")`;
+			xform -ws -t $pos[0] $pos[1] $pos[2] ($upperLower+"LipRibbonClusterGrpOffset"+$side);
+			delete `aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 ($upperLower+"LipRibbonClusterC"+$side+"Handle") ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side)`;
+			createNode -n ($upperLower+"LipRibbonClusterCHandleOffset"+$side) transform;
+			parent ($upperLower+"LipRibbonClusterC"+$side+"Handle") ($upperLower+"LipRibbonClusterCHandleOffset"+$side);
+//			parent ($upperLower+"LipRibbonClusterAHandle"+$side) ($upperLower+"LipRibbonClusterBHandle"+$side) ($upperLower+"LipRibbonClusterCHandleOffset"+$side) ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side);
+			parent ($upperLower+"LipRibbonClusterA"+$side+"Handle") ($upperLower+"LipRibbonClusterB"+$side+"Handle") ($upperLower+"LipRibbonClusterCHandleOffset"+$side) ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side);
+			parent ($upperLower+"LipRibbonClusterCHandleOffset"+$side) ($upperLower+"MidPartialJawCluster");
+
+			for ($i=0;$i<($numLip+1);$i++)
+				{
+				if ($b==1) $side="_R"; else $side="_L";if ($i==0) $side="_M";
+				if ($side=="_M" && $b==-1)
+					continue;
+				//pointOnSurfaceInfo
+				createNode -n ($upperLower+"LipInfo"+$i+$side) pointOnSurfaceInfo;
+				setAttr ($upperLower+"LipInfo"+$i+$side+".turnOnPercentage") 1;
+
+				$pos=`xform -q -ws -t ($upperLower+"LipCenter"+$i+$side)`;
+				setAttr -type float3 closestSurfaceSampler.inPosition ($pos[0]*$b) $pos[1] $pos[2];
+				$parameterU=`getAttr closestSurfaceSampler.result.parameterU`;
+				if ($b==-1)
+					$parameterU=1-$parameterU;
+//				$parameterU=0.5-(($i*$offset)*$b);
+				if ($parameterU<0.01)	$parameterU=0.02;
+				if ($parameterU>0.99)	$parameterU=0.98;
+				setAttr ($upperLower+"LipInfo"+$i+$side+".parameterU") $parameterU;
+				setAttr ($upperLower+"LipInfo"+$i+$side+".parameterV") 0.5;
+
+					connectAttr ($upperLower+"LipRibbonSurfaceShape.worldSpace[0]") ($upperLower+"LipInfo"+$i+$side+".inputSurface");
+				createNode -n ($upperLower+"LipSurfaceAttach"+$i+$side) transform;
+				connectAttr ($upperLower+"LipInfo"+$i+$side+".position") ($upperLower+"LipSurfaceAttach"+$i+$side+".translate");
+				}
+
+			for ($i=0;$i<($numLip+1);$i++)
+				{
+				if ($b==1) $side="_R"; else $side="_L";if ($i==0) $side="_M";
+				if ($side=="_M" && $b==-1)
+					continue;
+				$upObj=($upperLower+"LipSurfaceAttach"+($i+1)+$side);
+				if ($i>$numLip-2)
+					$upObj=$upperLower+"LipRibbonClusterGrpAutoSmooth"+$side;
+//				normalConstraint -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "object" -worldUpObject $upObj ($upperLower+"LipRibbonSurface") ($upperLower+"LipSurfaceAttach"+$i+$side);
+				parent ($upperLower+"LipCenter"+$i+$side) ($upperLower+"LipSurfaceAttach"+$i+$side);
+				parent ($upperLower+"LipSurfaceAttach"+$i+$side) LipJoints;
+				}
+
+				//Lip_$ control
+				if ($upperLower=="upper")
+					{
+					createNode -n ("Lip") transform;
+					$pos=`xform -q -ws -piv ($upperLower+"LipCenter"+$numLip+$side)`;
+					xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] Lip;
+					setAttr ("Lip"+".overrideEnabled") 1;
+					setAttr("Lip"+".overrideColor") 10;
+					asFaceCreateNurbsCtrl ("Lip") $side "B";
+					connectAttr ("LipPlusMinusAverageDrivenT"+$side+".output3D") ("upperLipRibbonClusterGrpCtrl"+$side+".translate");
+					connectAttr ("LipPlusMinusAverageDrivenR"+$side+".output3D") ("upperLipRibbonClusterGrpCtrl"+$side+".rotate");
+					delete Lip;
+					}
+				if ($upperLower=="lower")
+					{
+					connectAttr ("LipPlusMinusAverageDrivenT"+$side+".output3D") ("lowerLipRibbonClusterGrpCtrl"+$side+".translate");
+					connectAttr ("LipPlusMinusAverageDrivenR"+$side+".output3D") ("lowerLipRibbonClusterGrpCtrl"+$side+".rotate");
+					}
+
+				//LipMid_$ control
+				createNode -n ($upperLower+"LipMid") transform;
+				$pos=`xform -q -ws -piv ($upperLower+"LipRibbonClusterC"+$side+"Handle")`;
+				xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] ($upperLower+"LipMid");
+				setAttr ($upperLower+"LipMid"+".overrideEnabled") 1;
+				setAttr($upperLower+"LipMid"+".overrideColor") 10;
+				asFaceCreateNurbsCtrl ($upperLower+"LipMid") $side "B";
+//				setAttr -k 0 -l 1 ($upperLower+"LipMid"+$side+".sx");setAttr -k 0 -l 1 ($upperLower+"LipMid"+$side+".sy");setAttr -k 0 -l 1 ($upperLower+"LipMid"+$side+".sz");
+//				setAttr -k 0 -l 1 ($upperLower+"LipMidDriven"+$side+".sx");setAttr -k 0 -l 1 ($upperLower+"LipMidDriven"+$side+".sy");setAttr -k 0 -l 1 ($upperLower+"LipMidDriven"+$side+".sz");
+				connectAttr ($upperLower+"LipMidPlusMinusAverageDrivenT"+$side+".output3D") ($upperLower+"LipRibbonClusterC"+$side+"Handle.translate");
+				connectAttr ($upperLower+"LipMidPlusMinusAverageDrivenR"+$side+".output3D") ($upperLower+"LipRibbonClusterC"+$side+"Handle.rotate");
+				delete ($upperLower+"LipMid");
+			}
+		//Lip_M control
+		createNode -n ($upperLower+"Lip") transform;
+		$pos=`xform -q -ws -piv ($upperLower+"LipRibbonCluster_MHandle")`;
+		xform -ws -t $pos[0] $pos[1] $pos[2] ($upperLower+"Lip");
+		setAttr ($upperLower+"Lip"+".overrideEnabled") 1;
+		setAttr ($upperLower+"Lip"+".overrideColor") 10;
+		asFaceCreateNurbsCtrl ($upperLower+"Lip") "_M" "B";
+		connectAttr ($upperLower+"LipPlusMinusAverageDrivenT_M.output3D") ($upperLower+"LipRibbonCluster_MHandle.translate");
+		connectAttr ($upperLower+"LipPlusMinusAverageDrivenR_M.output3D") ($upperLower+"LipRibbonCluster_MHandle.rotate");
+		delete ($upperLower+"Lip");
+
+		//autoribbonsmoothers
+		for ($b=1;$b>-2;$b=$b-2)
+			{
+			if ($b==1) $side="_R"; else $side="_L";
+
+			//clusterGrp Scale - ry
+			createNode -n ($upperLower+"LipDistance"+$side) distanceBetween;
+			$tempString=`spaceLocator`;
+			rename $tempString[0] ($upperLower+"LipRibbonLocatorA"+$side);
+			setAttr ($upperLower+"LipRibbonLocatorA"+$side+".v") 0;
+			parent ($upperLower+"LipRibbonLocatorA"+$side) LipLocators;
+			pointConstraint ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side) ($upperLower+"LipRibbonLocatorA"+$side);
+			if ($side=="_R")
+				{
+				$tempString=`spaceLocator`;
+				rename $tempString[0] ($upperLower+"LipRibbonLocator_M");
+				setAttr ($upperLower+"LipRibbonLocator_M.v") 0;
+				parent ($upperLower+"LipRibbonLocator_M") LipLocators;
+				pointConstraint ($upperLower+"LipRibbonCluster_MHandle") ($upperLower+"LipRibbonLocator_M");
+				}
+			connectAttr ($upperLower+"LipRibbonLocatorA"+$side+"Shape.worldPosition") ($upperLower+"LipDistance"+$side+".point1");
+			connectAttr ($upperLower+"LipRibbonLocator_MShape.worldPosition") ($upperLower+"LipDistance"+$side+".point2");
+			createNode -n ($upperLower+"LipDistanceNormalize"+$side) multiplyDivide;
+			setAttr ($upperLower+"LipDistanceNormalize"+$side+".operation") 2;
+			connectAttr ($upperLower+"LipDistance"+$side+".distance") ($upperLower+"LipDistanceNormalize"+$side+".input1X");
+			setAttr ($upperLower+"LipDistanceNormalize"+$side+".input2X") `getAttr ($upperLower+"LipDistance"+$side+".distance")`;
+			createNode -n ($upperLower+"LipDistanceRange"+$side) setRange;
+			connectAttr ($upperLower+"LipDistanceNormalize"+$side+".outputX") ($upperLower+"LipDistanceRange"+$side+".valueX");
+			setAttr ($upperLower+"LipDistanceRange"+$side+".minX") 0.001;
+			setAttr ($upperLower+"LipDistanceRange"+$side+".maxX") 1;
+			setAttr ($upperLower+"LipDistanceRange"+$side+".oldMaxX") 1;
+			//(scale)
+			connectAttr ($upperLower+"LipDistanceRange"+$side+".outValueX") ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side+".sx");
+			connectAttr ($upperLower+"LipDistanceRange"+$side+".outValueX") ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side+".sy");
+			connectAttr ($upperLower+"LipDistanceRange"+$side+".outValueX") ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side+".sz");
+			//(ry)
+			createNode -n ($upperLower+"LipRotYMultiply"+$side) multiplyDivide;
+			connectAttr ($upperLower+"LipDistanceRange"+$side+".outValueX") ($upperLower+"LipRotYMultiply"+$side+".input1X");
+			setAttr ($upperLower+"LipRotYMultiply"+$side+".input2X") `getAttr ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side+".ry")`;
+			connectAttr ($upperLower+"LipRotYMultiply"+$side+".outputX") ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side+".ry");
+
+			//jointToAttacherOffset
+			for ($i=1;$i<$numLip;$i++)
+				{
+				createNode -n ($upperLower+"LipJointOffsetMultiply"+$i+$side) multiplyDivide;
+				connectAttr ($upperLower+"LipDistanceRange"+$side+".outValueX") ($upperLower+"LipJointOffsetMultiply"+$i+$side+".input1X");
+				connectAttr ($upperLower+"LipDistanceRange"+$side+".outValueX") ($upperLower+"LipJointOffsetMultiply"+$i+$side+".input1Y");
+				connectAttr ($upperLower+"LipDistanceRange"+$side+".outValueX") ($upperLower+"LipJointOffsetMultiply"+$i+$side+".input1Z");
+				setAttr ($upperLower+"LipJointOffsetMultiply"+$i+$side+".input2X") `getAttr ($upperLower+"LipCenter"+$i+$side+".tx")`;
+				setAttr ($upperLower+"LipJointOffsetMultiply"+$i+$side+".input2Y") `getAttr ($upperLower+"LipCenter"+$i+$side+".ty")`;
+				setAttr ($upperLower+"LipJointOffsetMultiply"+$i+$side+".input2Z") `getAttr ($upperLower+"LipCenter"+$i+$side+".tz")`;
+				connectAttr ($upperLower+"LipJointOffsetMultiply"+$i+$side+".output") ($upperLower+"LipCenter"+$i+$side+".t");
+
+				}
+
+			//scaleConstraint
+			if ($upperLower=="upper")
+				{
+				createNode -n ("LipBlender"+$side) -p ($upperLower+"LipRibbonClusterGrpAutoSmooth"+$side) transform;
+				setAttr ("LipPlusMinusAverageDrivenR"+$side+".operation") 3;
+				connectAttr ("LipPlusMinusAverageDrivenR"+$side+".output3D") ("LipBlender"+$side+".r");
+				connectAttr ("LipMultiplyDivideDrivenS"+$side+".output") ("LipBlender"+$side+".s");
+				}
+			createNode -n ($upperLower+"LipMidScaler"+$side) -p ($upperLower+"LipRibbonClusterCHandleOffset"+$side) transform;
+			connectAttr ($upperLower+"LipMidPlusMinusAverageDrivenR"+$side+".output3D") ($upperLower+"LipMidScaler"+$side+".r");
+			connectAttr ($upperLower+"LipMidMultiplyDivideDrivenS"+$side+".output") ($upperLower+"LipMidScaler"+$side+".s");
+			if ($side=="_R")
+				{
+				createNode -n ($upperLower+"LipBlender_M") -p ($upperLower+"LipRibbonClusterHandleOffset_M") transform;
+				connectAttr ($upperLower+"LipPlusMinusAverageDrivenR_M.output3D") ($upperLower+"LipBlender_M.r");
+				connectAttr ($upperLower+"LipMultiplyDivideDrivenS_M.output") ($upperLower+"LipBlender_M.s");
+				}
+			for ($i=0;$i<($numLip+1);$i++)
+				{
+				$jointSide=$side;
+				if ($i==0) $jointSide="_M";
+				$factor=($i/($numLip+0.0));
+
+				orientConstraint -w $factor ("LipBlender"+$side) ("LipBlender"+$side) ($upperLower+"LipCenter"+$i+$jointSide);
+				orientConstraint -w (1-$factor) ($upperLower+"LipBlender_M") ($upperLower+"LipCenter"+$i+$jointSide);
+				orientConstraint -w ((abs(0.5-(abs($factor-0.5))))*2) ($upperLower+"LipMidScaler"+$side) ($upperLower+"LipCenter"+$i+$jointSide);
+
+				scaleConstraint -w $factor ("LipBlender"+$side) ($upperLower+"LipCenter"+$i+$jointSide);
+				scaleConstraint -w (1-$factor) ($upperLower+"LipBlender_M") ($upperLower+"LipCenter"+$i+$jointSide);
+				scaleConstraint -w ((abs(0.5-(abs($factor-0.5))))*2) ($upperLower+"LipMidScaler"+$side) ($upperLower+"LipCenter"+$i+$jointSide);
+				}
+			}
+
+
+		//JawFollow attributes
+		if ($upperLower=="upper")
+			{
+			addAttr -k 1 -ln ($upperLower+"JawFollow") -at double -min 0 -max 10 mouth_M;
+			addAttr -k 1 -ln ($upperLower+"MidJawFollow") -at double -min 0 -max 10 -dv 2 mouth_M;
+			addAttr -k 1 -ln ("sideJawFollow") -at double -min 0 -max 10 -dv 5 mouth_M;
+			}
+		if ($upperLower=="lower")
+			{
+			addAttr -k 1 -ln ($upperLower+"MidJawFollow") -at double -min 0 -max 10 -dv 2 mouth_M;
+			addAttr -k 1 -ln ($upperLower+"JawFollow") -at double -min 0 -max 10 mouth_M;
+			setAttr ("mouth_M."+$upperLower+"JawFollow") 10;
+			setAttr ("mouth_M."+$upperLower+"MidJawFollow") 8;
+			}
+
+		//JawFollow
+		createNode -n ($upperLower+"JawFollowUnitConversion") unitConversion;
+		setAttr ($upperLower+"JawFollowUnitConversion.conversionFactor") 0.1;
+		connectAttr ("mouth_M."+$upperLower+"JawFollow") ($upperLower+"JawFollowUnitConversion.input");
+		createNode -n ($upperLower+"JawFollowReverse") reverse;
+		connectAttr ($upperLower+"JawFollowUnitConversion.output") ($upperLower+"JawFollowReverse.inputX");
+		connectAttr ($upperLower+"JawFollowUnitConversion.output") ($upperLower+"JawFollow_orientConstraint1.Jaw_MW0");
+		connectAttr ($upperLower+"JawFollowReverse.outputX") ($upperLower+"JawFollow_orientConstraint1.JawJointStaticW1");
+
+		//MidJawFollow
+		createNode -n ($upperLower+"MidJawFollowUnitConversion") unitConversion;
+		setAttr ($upperLower+"MidJawFollowUnitConversion.conversionFactor") 0.1;
+		connectAttr ("mouth_M."+$upperLower+"MidJawFollow") ($upperLower+"MidJawFollowUnitConversion.input");
+		createNode -n ($upperLower+"MidJawFollowReverse") reverse;
+		connectAttr ($upperLower+"MidJawFollowUnitConversion.output") ($upperLower+"MidJawFollowReverse.inputX");
+		connectAttr ($upperLower+"MidJawFollowReverse.outputX")  ($upperLower+"MidPartialJawCluster_pointConstraint1.upperJawClusterW0");
+		if ($upperLower=="lower")
+			{
+			connectAttr  ("upperMidJawFollowUnitConversion.output")  ("upperMidPartialJawCluster_pointConstraint1.lowerJawClusterW1");
+			connectAttr ("lowerMidJawFollowUnitConversion.output") ("lowerMidPartialJawCluster_pointConstraint1.lowerJawClusterW1");
+			}
+		
+		//SideJawFollow
+		if ($upperLower=="upper")
+			{
+			createNode -n ("sideJawFollowUnitConversion") unitConversion;
+			setAttr ("sideJawFollowUnitConversion.conversionFactor") 0.1;
+			connectAttr ("mouth_M.sideJawFollow") ("sideJawFollowUnitConversion.input");
+			createNode -n ("sideJawFollowReverse") reverse;
+			connectAttr ("sideJawFollowUnitConversion.output") ("sideJawFollowReverse.inputX");
+			connectAttr ("sideJawFollowReverse.outputX") "partialSideJawCluster_pointConstraint1.upperJawClusterW0";
+			}
+		if ($upperLower=="lower")
+			connectAttr ("sideJawFollowUnitConversion.output") "partialSideJawCluster_pointConstraint1.lowerJawClusterW1";
+		}
+	createNode -n lipsRotFollowJawMultiply multiplyDivide;
+	connectAttr mouth_M.rotateZ lipsRotFollowJawMultiply.input1Z;
+	setAttr lipsRotFollowJawMultiply.input2Z 0.5;
+	connectAttr lipsRotFollowJawMultiply.outputZ LipAllClusters.rotateZ;
+
+	eval $parentCmd;
+	}
+
+//move Yellow controls out
+string $aControls[]=`listConnections faceCtrlA.drawInfo`;
+string $offsetTrn;
+for ($i=0;$i<size($aControls);$i++)
+	{
+	$offsetTrn=`substitute "_" $aControls[$i] "Offset_"`;
+	if (`objExists $offsetTrn`)
+		setAttr ($offsetTrn+".tz") (`getAttr ($offsetTrn+".tz")`+($scale*0.2));
+	}
+copySkinWeights -ss $skinCluster -ds $skinCluster -mirrorMode YZ -mirrorInverse -surfaceAssociation closestPoint -influenceAssociation closestJoint;
+
+if (`objExists jawOpenAimAtOffset`)
+	parent jawOpenAimAtOffset jawOpen_M;
+
+
+//Region
+asFaceSoftRegions;
+
+
+//Default values
+
+//buildPose
+createNode -n faceBuildPose dagPose;
+select `sets -q FaceControlSet`;
+string $controlSetMembers[]=`ls -sl`;
+string $setAttrCmd;
+for ($i=0;$i<size($controlSetMembers);$i++)
+	$setAttrCmd+="xform -a -os -t 0 0 0 -ro 0 0 0 -s 1 1 1 "+$controlSetMembers[$i]+";";
+addAttr -ln udAttr -dt "string"  faceBuildPose;
+setAttr -type "string" faceBuildPose.udAttr $setAttrCmd;
+
+//Cleanup
+setAttr -l 1 RegionSetup.v 0;
+if (`objExists closestSampler`)
+	delete closestSampler;
+delete closestSurfaceSampler;
+
+//FaceAllset
+string $allAfter[]=`ls`;
+string $allNew[];
+for ($i=0;$i<size($allAfter);$i++)
+	if (!`stringArrayCount $allAfter[$i] $allBefore`)
+		if ($allAfter[$i]!="FaceAllSet")
+			$allNew[size($allNew)]=$allAfter[$i];
+sets -add FaceAllSet $allNew;
+sets -remove FaceAllSet `listRelatives -ad FaceFitSkeleton`;
+
+//asFaceBypassMesh $geometry;
+polySelectConstraint -m 0;
+delete faceBuildStartPoint faceBuildEndPoint faceBuildDist;
+setAttr -l 0 FaceFitSkeleton.v;
+setAttr -l 1 FaceFitSkeleton.v 0;
+setAttr FaceMotionSystem.template 0;
+//setAttr faceCtrlA.visibility 0;
+setAttr faceCtrlDriven.visibility 0;
+select -cl;
+}
+
+global proc asFaceFramedControl (string $name, string $side, float $scaleX, float $scaleY)
+{
+float $scale=`asFaceGetScale`;
+sphere -n ($name+$side) -ch 0;
+sets -add "FaceControlSet" ($name+$side);
+editDisplayLayerMembers -noRecurse faceCtrlA ($name+$side);
+setAttr ($name+$side+".ry") 90;
+string $tempString[]=`listRelatives -s ($name+$side)`;
+string $tempString2[]=`listConnections -p 1 ($tempString[0]+".instObjGroups[0]")`;
+disconnectAttr ($tempString[0]+".instObjGroups[0]") $tempString2[0];
+setAttr ($tempString[0]+".overrideEnabled") 1;
+setAttr ($tempString[0]+".overrideColor") 22;
+xform -ws -s ($scale*0.3) ($scale*0.3) ($scale*0.3) ($name+$side);
+makeIdentity -a 1 -t 0 -r 1 -s 1 ($name+$side);
+
+//frame
+cylinder -n ($name+"Frame"+$side) -p 0 0 0 -ax 0 1 0 -ssw 0 -esw 360 -r 1 -hr 0.1 -d 1 -ut 0 -tol 0.01 -s 4 -nsp 1 -ch 0;
+select -r ($name+"Frame"+$side+".cv[1][0:4]");
+scale -r 0.98 0.98 0.98;
+select -cl;
+setAttr -type float3 ($name+"Frame"+$side+".r")  0 45 90;
+setAttr -type float3 ($name+"Frame"+$side+".s") 1.4142 0 1.4142;
+makeIdentity -a 1 -t 0 -r 1 -s 1 ($name+"Frame"+$side);
+setAttr -type float3 ($name+"Frame"+$side+".r")  0 90 0;
+makeIdentity -a 1 -t 0 -r 1 -s 1 ($name+"Frame"+$side);
+setAttr ($name+"Frame"+$side+"Shape.overrideEnabled") 1;
+setAttr ($name+"Frame"+$side+"Shape.overrideDisplayType") 2;
+
+if ($scaleX==0.1)
+	{
+	transformLimits -tx 0 0 -etx 1 1 ($name+$side);
+	xform -ws -s $scaleX $scaleY 1 ($name+"Frame"+$side);
+	makeIdentity -a 1 -t 0 -r 1 -s 1 ($name+"Frame"+$side);
+	}
+
+parent ($name+"Frame"+$side) RegionControls;
+createNode -n ($name+"FrameOffset"+$side) transform;
+parent ($name+$side) ($name+"Frame"+$side);
+parent ($name+"Frame"+$side) ($name+"FrameOffset"+$side);
+parent ($name+"FrameOffset"+$side) RegionControls;
+xform -ws -s ($scale*0.75) ($scale*0.75) ($scale*0.75) ($name+"FrameOffset"+$side);
+}
+
+global proc asFaceBypassMesh (string $geometry)
+{
+//byPass nonItermidiate mesh, to ensure surfaceAttachment keeps intact even though topo changing nodes such as polySmooth gets added.
+string $tempString[]=`listRelatives -ni -s $geometry`;
+string $mesh=$tempString[0];
+$tempString=`listConnections -p 1 ($mesh+".inMesh")`;
+string $meshInput=$tempString[0];
+string $meshConnections[]=`listConnections -p 1 ($mesh+".worldMesh[0]")`;
+for ($i=0;$i<size($meshConnections);$i++)
+	connectAttr -f $meshInput $meshConnections[$i];
+}
+
+global proc asFaceBalanceConstraint (string $constraint)
+{
+string $targets[];
+string $tempString[]=`listConnections -s 0 -d 1 ($constraint+".constraintTranslateX")`;
+string $obj=$tempString[0];
+float $totDist,$value;
+float $dists[];
+float $posA[3],$posB[3];
+$posA=`xform -q -ws -t $obj`;
+for ($i=0;$i<99;$i++)
+	{
+	$tempString=`listConnections -s 1 -d 1 ($constraint+".target["+$i+"].targetTranslate")`;
+	if ($tempString[0]=="")
+		continue;
+	$targets[$i]=$tempString[0];
+	$posB=`xform -q -ws -t $targets[$i]`;
+	$dists[$i]=`mag<<($posB[0]-$posA[0]),($posB[1]-$posA[1]),($posB[2]-$posA[2])>>`;
+	$totDist+=$dists[$i];
+	}
+for ($i=0;$i<size($targets);$i++)
+	{
+	$value=1.0-($dists[$i]/$totDist);
+	if ($value<0.1)
+		$value=0.1;
+	setAttr ($constraint+"."+$targets[$i]+"W"+$i) $value;
+	}
+}
+
+global proc float asFaceGetScale ()
+{
+float $scale=0.346;
+if (`objExists mouthCorner`)
+	$scale=(`getAttr mouthCorner.tx`*-1);
+for ($i=1;$i<99;$i++)
+	if (`objExists ("upperLipOuter"+$i)`)
+		$scale=(`getAttr ("upperLipOuter"+$i+".tx")`*-1);
+return $scale;
+}
+
+global proc asFaceCreateNurbsCtrl (string $name, string $side, string $controlLevel)
+{
+string $headJoint=`textField -q -tx asFsHeadJointTextField`;
+string $skinCluster=`textField -q -tx asFsSkinClusterTextField`;
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+if ($controlLevel=="B")
+	{
+	createNode -n ($name+"Attach"+$side) transform;
+	createNode -n ($name+"Subtract"+$side) transform;
+	}
+createNode -n ($name+"Offset"+$side) transform;
+sphere -n ($name+$side) -ch 0;
+sets -add "FaceControlSet" ($name+$side);
+setAttr ($name+$side+".ry") 90;
+string $tempString[]=`listRelatives -s ($name+$side)`;
+string $tempString2[]=`listConnections -p 1 ($tempString[0]+".instObjGroups[0]")`;
+disconnectAttr ($tempString[0]+".instObjGroups[0]") $tempString2[0];
+setAttr ($tempString[0]+".overrideEnabled") 1;
+string $fitJoint=$name;
+float $scale=`asFaceGetScale`;
+setAttr ($tempString[0]+".overrideColor") `getAttr ($fitJoint+".overrideColor")`;
+if ($controlLevel=="B")
+	{
+	parent ($name+"Offset"+$side) ($name+"Attach"+$side);
+	parent ($name+"Subtract"+$side) ($name+"Offset"+$side);
+	parent ($name+$side) ($name+"Subtract"+$side);
+	}
+else
+	parent ($name+$side) ($name+"Offset"+$side);
+if ($controlLevel=="B")
+	parent ($name+"Attach"+$side) Bcontrols;
+else
+	parent ($name+"Offset"+$side) Acontrols;
+xform -ws -s ($scale*0.15) ($scale*0.15) ($scale*0.15) ($name+$side);
+makeIdentity -a 1 -t 0 -r 1 -s 1 ($name+$side);
+
+//Driven
+if ($controlLevel=="B")
+	{
+	createNode -n ($name+"DrivenOffset"+$side) transform;
+	parent ($name+"DrivenOffset"+$side) SdkSetup;
+	duplicate -n ($name+"Driven"+$side) ($name+$side);
+	parent ($name+"Driven"+$side) ($name+"DrivenOffset"+$side);
+	string $tempString[]=`listRelatives -s ($name+"Driven"+$side)`;
+	setAttr ($tempString[0]+".overrideColor") 4;
+	createNode -n ($name+"PlusMinusAverageDrivenT"+$side) plusMinusAverage;
+	createNode -n ($name+"PlusMinusAverageDrivenR"+$side) plusMinusAverage;
+	createNode -n ($name+"MultiplyDivideDrivenS"+$side) multiplyDivide;
+	connectAttr ($name+$side+".t") ($name+"PlusMinusAverageDrivenT"+$side+".input3D[0]");
+	connectAttr ($name+"Driven"+$side+".t") ($name+"PlusMinusAverageDrivenT"+$side+".input3D[1]");
+	connectAttr ($name+$side+".r") ($name+"PlusMinusAverageDrivenR"+$side+".input3D[0]");
+	connectAttr ($name+"Driven"+$side+".r") ($name+"PlusMinusAverageDrivenR"+$side+".input3D[1]");
+	connectAttr ($name+$side+".s") ($name+"MultiplyDivideDrivenS"+$side+".input1");
+	connectAttr ($name+"Driven"+$side+".s") ($name+"MultiplyDivideDrivenS"+$side+".input2");
+	editDisplayLayerMembers -noRecurse faceCtrlDriven ($name+"Driven"+$side);
+	}
+
+
+if ($controlLevel=="B")
+	editDisplayLayerMembers -noRecurse faceCtrlB ($name+$side);
+else
+	editDisplayLayerMembers -noRecurse faceCtrlA ($name+$side);
+
+//Place
+float $pos[3]=`xform -q -ws -t $fitJoint`;
+int $b=1;
+if ($side=="_L")
+	$b=-1;
+if ($controlLevel=="B")
+	xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] ($name+"Attach"+$side);
+else
+	xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] ($name+"Offset"+$side);
+if ($controlLevel=="B")
+	xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] ($name+"DrivenOffset"+$side);
+
+if ($controlLevel=="A")
+	{
+	if ($side=="_L")
+		//placeHolder, to simplyfy poseMirroring
+		addAttr -ln "mirror" -k 0 -at double -min 0 -max 10 -dv 10 ($name+"_L");
+	if ($side!="_L")
+		return;
+	$oppositeSide=`substitute "_L" $side "_R"`;
+
+	createNode -n ($name+"Mirror"+$side) transform;
+	parent ($name+"Mirror"+$side) ($name+"Offset"+$side);
+	xform -os -t 0 0 0 -ro 0 0 0 -s 1 1 1 ($name+"Mirror"+$side);
+	parent ($name+$side) ($name+"Mirror"+$side);
+	createNode -n ($name+"PlusMinusAverageMirrorT"+$side) plusMinusAverage;
+	connectAttr -f ($name+"Mirror"+$side+".t") ($name+"PlusMinusAverageMirrorT"+$side+".input3D[0]");
+	connectAttr -f ($name+$side+".t") ($name+"PlusMinusAverageMirrorT"+$side+".input3D[1]");
+	createNode -n ($name+"PlusMinusAverageMirrorR"+$side) plusMinusAverage;
+	connectAttr -f ($name+"Mirror"+$side+".r") ($name+"PlusMinusAverageMirrorR"+$side+".input3D[0]");
+	connectAttr -f ($name+$side+".r") ($name+"PlusMinusAverageMirrorR"+$side+".input3D[1]");
+	createNode -n ($name+"PlusMinusAverageMirrorS"+$side) plusMinusAverage;
+	connectAttr -f ($name+"Mirror"+$side+".s") ($name+"PlusMinusAverageMirrorS"+$side+".input3D[0]");
+	connectAttr -f ($name+$side+".s") ($name+"PlusMinusAverageMirrorS"+$side+".input3D[1]");
+
+	addAttr -ln "mirror" -k 1 -at double -min 0 -max 10 -dv 10 ($name+$oppositeSide);
+	createNode -n ($name+"MouthMirrorUnitConversion"+$oppositeSide) unitConversion;
+	setAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".conversionFactor") 0.1;
+	connectAttr ($name+$oppositeSide+".mirror") ($name+"MouthMirrorUnitConversion"+$oppositeSide+".input");
+
+	//MultiplyDivideXFactor (mirror multiplier)
+	createNode -n ($name+"MultiplyDivideTFactor"+$side) multiplyDivide;
+	createNode -n ($name+"MultiplyDivideRFactor"+$side) multiplyDivide;
+	connectAttr ($name+$oppositeSide+".t") ($name+"MultiplyDivideTFactor"+$side+".input1");
+	connectAttr ($name+$oppositeSide+".r") ($name+"MultiplyDivideRFactor"+$side+".input1");
+	connectAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".output") ($name+"MultiplyDivideTFactor"+$side+".input2X");
+	connectAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".output") ($name+"MultiplyDivideTFactor"+$side+".input2Y");
+	connectAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".output") ($name+"MultiplyDivideTFactor"+$side+".input2Z");
+	connectAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".output") ($name+"MultiplyDivideRFactor"+$side+".input2X");
+	connectAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".output") ($name+"MultiplyDivideRFactor"+$side+".input2Y");
+	connectAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".output") ($name+"MultiplyDivideRFactor"+$side+".input2Z");
+
+
+	//MultiplyDivideX (rot & trans - axis multiplier)
+	createNode -n ($name+"MultiplyDivideT"+$side) multiplyDivide;
+	createNode -n ($name+"MultiplyDivideR"+$side) multiplyDivide;
+	setAttr -type float3 ($name+"MultiplyDivideT"+$side+".input2") -1 1 1;
+	setAttr -type float3 ($name+"MultiplyDivideR"+$side+".input2") 1 -1 -1;
+	connectAttr ($name+"MultiplyDivideTFactor"+$side+".output") ($name+"MultiplyDivideT"+$side+".input1");
+	connectAttr ($name+"MultiplyDivideRFactor"+$side+".output") ($name+"MultiplyDivideR"+$side+".input1");
+
+	connectAttr ($name+"MultiplyDivideT"+$side+".output") ($name+"Mirror"+$side+".t");
+	connectAttr ($name+"MultiplyDivideR"+$side+".output") ($name+"Mirror"+$side+".r");
+	
+	//`Blend` scale 
+	createNode -n ($name+"blendTwoAttr"+$side) blendColors;
+	setAttr ($name+"blendTwoAttr"+$side+".color1") -type double3 1 1 1;
+	connectAttr ($name+$oppositeSide+".s") ($name+"blendTwoAttr"+$side+".color1");
+	setAttr ($name+"blendTwoAttr"+$side+".color2") -type double3 1 1 1;
+	connectAttr ($name+"MouthMirrorUnitConversion"+$oppositeSide+".output") ($name+"blendTwoAttr"+$side+".blender");
+	connectAttr ($name+"blendTwoAttr"+$side+".output") ($name+"Mirror"+$side+".s");
+
+	return;
+	}
+
+//Attach
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+string $tempString[]=`listRelatives -ni -s $geometry`;
+if (!`objExists closestSampler`)
+	createNode -n closestSampler closestPointOnMesh;
+if (!`isConnected ($tempString[0]+".outMesh") closestSampler.inMesh`)
+	connectAttr -f ($tempString[0]+".outMesh") closestSampler.inMesh;
+
+setAttr -type float3 closestSampler.inPosition ($pos[0]*$b) $pos[1] $pos[2];
+string $vtx=`getAttr closestSampler.result.closestVertexIndex`;
+delete closestSampler;
+select ($geometry+".vtx["+$vtx+"]");
+ConvertSelectionToEdges;
+string $edges[]=`ls -sl -fl`;
+select $edges[0];
+$tempString=`duplicateCurve -ch 1 -rn 0 -local 0`;
+string $dupCurve=$tempString[0];
+rename $dupCurve ($name+"Curve"+$side);
+rename $tempString[1] ($name+"CurveEdge"+$side);
+setAttr -l 1 ($name+"Curve"+$side+".v") 0;
+parent ($name+"Curve"+$side) SdkSetup;
+createNode -n ($name+"PointOnCurveInfo"+$side) pointOnCurveInfo;
+setAttr ($name+"PointOnCurveInfo"+$side+".turnOnPercentage") 1;
+connectAttr -f ($name+"Curve"+$side+"Shape.worldSpace[0]") ($name+"PointOnCurveInfo"+$side+".inputCurve");
+//determine PointOnCurveInfo.parameter
+float $tempFloatA[]=`xform -q -ws -t ($name+$side)`;
+float $tempFloatB[]=`getAttr ($name+"PointOnCurveInfo"+$side+".position")`;
+float $magAB=`mag<<$tempFloatA[0]-$tempFloatB[0],$tempFloatA[1]-$tempFloatB[1],$tempFloatA[2]-$tempFloatB[2]>>`;
+setAttr ($name+"PointOnCurveInfo"+$side+".parameter") 1;
+float $tempFloatC[]=`getAttr ($name+"PointOnCurveInfo"+$side+".position")`;
+float $magAC=`mag<<$tempFloatA[0]-$tempFloatC[0],$tempFloatA[1]-$tempFloatC[1],$tempFloatA[2]-$tempFloatC[2]>>`;
+if ($magAB<$magAC)
+	setAttr ($name+"PointOnCurveInfo"+$side+".parameter") 0;
+
+//avoid double Xform
+createNode -n ($name+"PlusMinusAverage"+$side) plusMinusAverage;
+setAttr ($name+"PlusMinusAverage"+$side+".operation") 2;
+connectAttr -f ($name+"PointOnCurveInfo"+$side+".position") ($name+"Attach"+$side+".t");
+//connectAttr -f ($name+"PointOnCurveInfo"+$side+".position") ($name+"DrivenOffset"+$side+".t");
+connectAttr -f Brs.r ($name+"Attach"+$side+".r");
+connectAttr -f Brs.s ($name+"Attach"+$side+".s");
+connectAttr -f ($name+$side+".t") ($name+"PlusMinusAverage"+$side+".input3D[0]");
+connectAttr -f ($name+$side+".t") ($name+"PlusMinusAverage"+$side+".input3D[1]");
+disconnectAttr ($name+$side+".t") ($name+"PlusMinusAverage"+$side+".input3D[0]");
+parent -w ($name+"Offset"+$side);
+connectAttr -f ($name+"PlusMinusAverage"+$side+".output3D") ($name+"Subtract"+$side+".t");
+//orientConstraint $headJoint ($name+"Attach"+$side);
+xform -ws -t ($pos[0]*$b) $pos[1] $pos[2] ($name+"Offset"+$side);
+parent ($name+"Offset"+$side) ($name+"Attach"+$side);
+}
+
+global proc asFaceCreateDistanceMessure ()
+{
+string $sel[]=`ls -sl`;
+select -cl;
+string $temp=`distanceDimension -sp 1 1 1 -ep 2 2 2`;
+rename $temp faceBuildDistShape;
+string $tempString3[]=`listConnections faceBuildDistShape.startPoint`;
+rename $tempString3[0] faceBuildStartPoint;
+string $tempString3[]=`listConnections faceBuildDistShape.endPoint`;
+rename $tempString3[0] faceBuildEndPoint;
+string $tempString3[]=`listRelatives -p faceBuildDistShape`;
+rename $tempString3[0] faceBuildDist;
+select $sel;
+}
+
+global proc string asFaceGetNrFromJoint (string $joint)
+{
+string $nr;
+int $subEnd=size($joint);
+if (`gmatch $joint "*[0-9][0-9]"`)
+	$subEnd--;
+$nr=`substring $joint $subEnd 999`;
+return $nr;
+}
+
+global proc asFaceSkinAreaByVolume (string $geometry, string $skinCluster, string $posTrn, string $inf, float $falloffRadius, float $falloffMode, float $value)
+{
+select $geometry;
+float $pos[3]=`xform -q -ws -t $posTrn`;
+polySelectConstraint -m 3 -t 1 -d 1 -db 0 $falloffRadius -dp $pos[0] $pos[1] $pos[2];
+$vtxs=`ls -sl -fl`;
+for ($vtx in $vtxs)
+	skinPercent -tv $inf $value $skinCluster $vtx;
+}
+
+global proc asFaceSkinAreaBySoftMod (string $geometry, string $skinCluster, string $posTrn, string $inf, float $falloffRadius, float $falloffMode, float $value)
+{
+select $geometry;
+float $pos[3]=`xform -q -ws -t $posTrn`;
+
+//softmod create
+select -r $geometry;
+string $tempString[]=`softMod -falloffMode 1 -falloffAroundSelection 0`;
+string $softMod=$tempString[0];
+string $softModHandle=$tempString[1];
+string $tempString[]=`listConnections ($softMod+".message")`;
+string $softModSet=$tempString[0];
+setAttr -type float3 ($softModHandle+"Shape.origin") $pos[0] $pos[1] $pos[2];
+setAttr ($softMod+".falloffCenter") $pos[0] $pos[1] $pos[2];
+xform -piv $pos[0] $pos[1] $pos[2] $softModHandle;
+setAttr ($softMod+".falloffRadius") $falloffRadius;
+setAttr ($softMod+".falloffMode") $falloffMode;
+
+//softmod prune
+setAttr -type float3 ($softModHandle+".t") 1 0 0;
+softMod -e -pr $softMod;
+string $tempString[]=`listConnections ($softMod+".message")`;
+select `sets -q $tempString[0]`;
+string $vtxs[]=`ls -sl -fl`;
+setAttr -type float3 ($softModHandle+".t") 0 0 0;
+
+//softmod to skinCluster
+select `sets -q $softModSet`;
+string $vtxs[]=`ls -sl -fl`;
+move -r -ws 1 0 0 $softModHandle;
+for ($i=0;$i<size($vtxs);$i++)
+	{
+	setAttr ($softMod+".envelope") 0;
+	$posA=`xform -q -ws -t $vtxs[$i]`;
+	setAttr ($softMod+".envelope") 1;
+	$posB=`xform -q -ws -t $vtxs[$i]`;
+	$mag=$posB[0]-$posA[0];
+	skinPercent -tv $inf $mag $skinCluster $vtxs[$i];
+	}
+move -r -ws -1 0 0 $softModHandle;
+delete $softMod;
+}
+
+global proc asCreateFaceFitJoint (string $region, float $size, int $color)
+{
+string $sel[]=`ls -sl -fl`;
+float $pos[3]=`xform -q -ws -t $sel[0]`;
+float $centerErrorMargin=0.001;
+if ($region=="mouthUpper" || $region=="mouthLower" || $region=="noseTip" || $region=="eyeBrow0")
+	if ($pos[0]>$centerErrorMargin || $pos[0]<(-1*$centerErrorMargin))
+		error ($region+" needs to be in the center, currently:"+$pos[0]+"\n");
+int $jointNumber;
+string $jointName;
+for ($i=1;$i<99;$i++)
+	{
+	$jointNumber=$i;
+	$jointName=$region+$jointNumber;
+	if (!`objExists $jointName`)
+		break;
+	}
+if (!`objExists FaceGroup`)
+	asFaceCreateTopNode;
+for ($i=0;$i<size($sel);$i++)
+	{
+	$jointName=$region;
+	if (size($sel)>1)
+		$jointName=$region+$jointNumber;
+	$jointNumber++;
+	$jointName=`asFaceCreateFitJoint $jointName $size $color`;
+	$pos=`xform -q -ws -t $sel[$i]`;
+	xform -ws -t $pos[0] $pos[1] $pos[2] $jointName;
+	}
+hilite -r `ls -o $sel`; 
+select $sel;
+repeatLast -addCommand ("asCreateFaceFitJoint "+$region+" "+$size+" "+$color);
+
+if (`gmatch $region "eyeBrow[0-9]"`)
+	asAutoEyeBrowFalloff $region;
+}
+
+global proc asAutoEyeBrowFalloff (string $region)
+{
+float $posA[3],$posB[3];
+float $mag;
+int $nr=`substring $region 8 8`;
+string $previousRegion="eyeBrow"+($nr-1);
+if (!`objExists $previousRegion`)
+	return;
+$posA=`xform -q -ws -t $region`;
+$posB=`xform -q -ws -t $previousRegion`;
+$mag=mag(<<$posA[0]-$posB[0],$posA[1]-$posB[1],$posA[2]-$posB[2]>>);
+setAttr ($region+".falloffRadius") $mag;
+float $previousRad=`getAttr ($previousRegion+".falloffRadius")`;
+if ($mag>$previousRad || $previousRegion=="eyeBrow0")
+	setAttr ($previousRegion+".falloffRadius") $mag;
+}
+
+global proc string asFaceCreateFitJoint (string $name, float $radius, int $color)
+{
+if (`objExists $name`)
+	error ($name+" Already Exists");
+
+select FaceFitSkeleton;
+joint -n $name;
+setAttr ($name+".overrideEnabled") 1;
+setAttr ($name+".overrideColor") $color;
+addAttr -k 1 -min 0 -dv $radius -ln "falloffRadius" -at double $name;
+addAttr -k 1 -ln "falloffMode"  -at "enum" -en "volume:surface:" $name;
+addAttr -k 1 -ln "interpolation"  -at "enum" -en "none:linear:smooth:spline:" $name;
+if (`gmatch $name "lowerEye*"` || `gmatch $name "upperEye*"` || `gmatch $name "lowerLip*"` || `gmatch $name "upperLip*"`)
+	;
+else
+	{
+	setAttr ($name+".falloffMode") 1;
+	setAttr ($name+".interpolation") 2;
+	}
+if (`gmatch $name "*Shaper*"`)
+	setAttr ($name+".falloffMode") 0;
+return $name;
+}
+
+global proc asFaceCreateTopNode ()
+{
+createNode -n FaceGroup transform;
+createNode -n FaceFitSkeleton transform;
+parent FaceFitSkeleton FaceGroup;
+}
+
+global proc softCluster (string $trnPos, string $name, int $b, string $side)
+{
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+string $headJoint=`textField -q -tx asFsHeadJointTextField`;
+string $skinCluster=`textField -q -tx asFsSkinClusterTextField`;
+string $jawJoint=`textField -q -tx asFsJawJointTextField`;
+string $jawControl=`textField -q -tx asFsJawControlTextField`;
+float $falloffRadius=`getAttr ($name+".falloffRadius")`;
+float $falloffMode=`getAttr ($name+".falloffMode")`;
+string $allFaceGeoString=`textField -q -tx asFsAllFaceGeoTextField`;
+string $allFaceGeo[],$tempString[];
+tokenize $allFaceGeoString $tempString;
+for ($i=0;$i<size($tempString);$i++)
+	$allFaceGeo[$i]=$tempString[$i];
+
+select $allFaceGeo;
+float $scale=`asFaceGetScale`;
+float $pos[3]=`xform -q -ws -t $trnPos`;
+float $tempFloat[];
+int $numVtxs[];
+int $infNr;
+float $value;
+float $skinPercents[];
+string $skinClusterInfs[];
+string $oppositeSide;
+select -r $geometry;
+string $tempString[]=`softMod -falloffMode 1 -falloffAroundSelection 0`;
+string $softMod=`rename $tempString[0] ($name+"SoftMod"+$side)`;
+string $softModHandle=`rename $tempString[1] ($name+"SoftModHandle"+$side)`;
+string $tempString[]=`listConnections ($name+"SoftMod"+$side+".message")`;
+string $softModSet=`rename $tempString[0] ($name+"SoftModSet"+$side)`;
+setAttr -type float3 ($softModHandle+"Shape.origin") ($pos[0]*$b) $pos[1] $pos[2];
+setAttr ($softMod+".falloffCenter") ($pos[0]*$b) $pos[1] $pos[2];
+xform -piv ($pos[0]*$b) $pos[1] $pos[2] $softModHandle;
+setAttr ($softMod+".falloffRadius") $falloffRadius;
+setAttr ($softMod+".falloffMode") $falloffMode;
+
+asFaceCreateNurbsCtrl $name $side "B";
+
+setAttr -type float3 ($softModHandle+".t") 1 0 0;
+softMod -e -pr $softMod;
+string $tempString[]=`listConnections ($softMod+".message")`;
+select `sets -q $tempString[0]`;
+string $vtxs[]=`ls -sl -fl`;
+setAttr -type float3 ($softModHandle+".t") 0 0 0;
+
+if (`getAttr ($name+".overrideColor")`==9)
+	//keep softMod
+	{
+	setAttr ($softModHandle+".v") 0;
+	connectAttr ($name+"PlusMinusAverageDrivenT"+$side+".output3D") ($softModHandle+".t");
+	connectAttr ($name+"PlusMinusAverageDrivenR"+$side+".output3D") ($softModHandle+".r");
+	connectAttr ($name+"MultiplyDivideDrivenS"+$side+".output") ($softModHandle+".s");
+	reorderDeformers $skinCluster $softMod $geometry;
+	for ($i=0;$i<size($allFaceGeo);$i++)
+		{
+		if ($allFaceGeo[$i]==$geometry)
+			continue;
+		$numVtxs=`polyEvaluate -v $geometry`;
+		sets -add $softModSet ($allFaceGeo[$i]+".vtx[0:"+($numVtxs[0]-1)+"]");
+		}
+	setAttr -type float3 ($name+$side+".t") 1 0 0;
+//	softMod -e -pr $softMod;
+	setAttr -type float3 ($name+$side+".t") 0 0 0;
+	addAttr -k 1 -min 0 -dv $falloffRadius -ln "falloffRadius" -at double ($name+$side);
+	connectAttr ($name+$side+".falloffRadius") ($name+"SoftMod"+$side+".falloffRadius");
+	parent ($name+"SoftModHandle"+$side) SdkSetup;
+	return;
+	}
+$tempString=`cluster -n ($name+"Cluster"+$side) -envelope 1`;
+string $cluster=$tempString[0];
+string $clusterHandle=$tempString[1];
+$tempString=`listRelatives -s $clusterHandle`;
+string $clusterHandleShape=$tempString[0];
+$tempString=`listConnections ($cluster+".input[0].inputGeometry")`;
+string $clusterGroupParts=$tempString[0];
+$tempString=`listConnections ($cluster+".input[0].groupId")`;
+string $clusterGroupId=$tempString[0];
+$tempString=`listConnections ($cluster+".message")`;
+string $clusterSet=$tempString[0];
+parent $clusterHandle SdkSetup;
+setAttr -type float3 ($clusterHandle+"Shape.origin") ($pos[0]*$b) $pos[1] $pos[2];
+xform -piv ($pos[0]*$b) $pos[1] $pos[2] $clusterHandle;
+
+asFaceSoftModToCluster $softMod $cluster $vtxs;
+delete $softMod;
+
+
+//Reduced width weights
+/*
+if (`gmatch $name "mouthSneer*"` || `gmatch $name "mouthGnarl*"`)
+	{
+	$posA[0]=$pos[0]*$b;$posA[1]=$pos[1];$posA[2]=$pos[2];
+	for ($i=0;$i<size($vtxs);$i++)
+		{
+		$posB=`xform -q -ws -t $vtxs[$i]`;
+		$tempFloat=`percent -q -v $cluster $vtxs[$i]`;
+		if ($b==1)
+			$value=1-(($posB[0]-$posA[0])/((-1*$scale)-$posA[0]));
+		else
+			$value=1-(($posA[0]-$posB[0])/((-1*$scale)+$posA[0]));
+		$value=$tempFloat[0]*$value;
+		if ($value<0) $value=0;
+		if ($value>1) $value=1;
+		percent -mp -v $value $cluster $vtxs[$i];
+		}
+	}
+*/
+
+setAttr ($clusterHandle+".v") 0;
+connectAttr ($name+"PlusMinusAverageDrivenT"+$side+".output3D") ($clusterHandle+".t");
+connectAttr ($name+"PlusMinusAverageDrivenR"+$side+".output3D") ($clusterHandle+".r");
+connectAttr ($name+"MultiplyDivideDrivenS"+$side+".output") ($clusterHandle+".s");
+
+reorderDeformers $skinCluster $cluster $geometry;
+}
+
+
+
+global proc asFaceSoftModToCluster (string $softMod, string $cluster, string $vtxs[])
+{
+global string $gMainProgressBar;
+int $dirWeights;
+int $doProgressBar;
+if (`progressBar -q -st $gMainProgressBar`=="")
+	{
+	$doProgressBar=1;
+	progressBar -e -st "converting" -bp -ii 0 -min 0 -max `size($vtxs)` $gMainProgressBar;
+	}
+float $mag,$xRadius,$yRadius,$vecX,$vecY;
+float $posA[3],$posB[3],$posSoftMod[3],$posBX[3],$posBY[3],$v0[3];
+string $tempString[]=`listConnections ($softMod+".matrix")`;
+string $softModHandle=$tempString[0];
+int $numLetters=`size $cluster`;
+string $fitJoint=`substring $cluster 1 ($numLetters-9)`;
+if (`attributeExists radiusUp $fitJoint`)
+	$dirWeights=1;
+string $deformSet;
+$tempString=`listConnections ($cluster+".message")`;
+for ($y=0;$y<size($tempString);$y++)
+	if ($tempString[$y]!="FaceAllSet")
+		$deformSet=$tempString[$y];
+select $vtxs;
+sets -add $deformSet;
+
+$posSoftMod=`xform -q -ws -piv $softModHandle`;
+move -r -ws 1 0 0 $softModHandle;
+for ($i=0;$i<size($vtxs);$i++)
+	{
+	if ($doProgressBar)
+		progressBar -e -s 1 $gMainProgressBar;
+	setAttr ($softMod+".envelope") 0;
+	$posA=`xform -q -ws -t $vtxs[$i]`;
+	setAttr ($softMod+".envelope") 1;
+	if ($dirWeights)
+		{
+		if ($posA[0]<$posSoftMod[0])
+			$xRadius=`getAttr ($fitJoint+".radiusLeft")`;
+		else
+			$xRadius=`getAttr ($fitJoint+".radiusRight")`;
+		if ($posA[1]>$posSoftMod[1])
+			$yRadius=`getAttr ($fitJoint+".radiusUp")`;
+		else
+			$yRadius=`getAttr ($fitJoint+".radiusDown")`;
+
+		setAttr ($softMod+".falloffRadius") $xRadius;
+		$posBX=`xform -q -ws -t $vtxs[$i]`;
+		setAttr ($softMod+".falloffRadius") $yRadius;
+		$posBY=`xform -q -ws -t $vtxs[$i]`;
+
+		$vecX=$posA[0]-$posSoftMod[0];
+		$vecY=$posA[1]-$posSoftMod[1];
+
+		$magX=$posBX[0]-$posA[0];
+		$magY=$posBY[0]-$posA[0];
+		$mag=(($magX-abs($vecY*(1.0/($yRadius*2.0))))	+ ($magY-abs($vecX*(1.0/($xRadius*2.0))))) / 2;
+		if ($mag<0)
+			$mag=0;
+		}
+	else
+		{
+		$posB=`xform -q -ws -t $vtxs[$i]`;
+		$mag=$posB[0]-$posA[0];
+		}
+	percent -v $mag $cluster $vtxs[$i];
+	}
+move -r -ws -1 0 0 $softModHandle;
+if ($doProgressBar)
+	progressBar -e -ep $gMainProgressBar;
+}
+
+global proc string asFaceMirror ()
+{
+string $restoreCmd,$oppositeControl;
+int $autoKeyState=`autoKeyframe -q -state`;
+if ($autoKeyState)
+	autoKeyframe -state 0;
+string $mirrorAttrs[]={"tx","ty","tz","rx","ry","rz","sx","sy","sz"};
+string $controls[]=`sets -q FaceControlSet`;
+for ($i=0;$i<size($controls);$i++)
+	{
+	if (!`gmatch $controls[$i] "*_L"`)
+		continue;
+	for ($attr in $mirrorAttrs)
+		{
+		if (`getAttr -l ($controls[$i]+"."+$attr)`)
+			continue;
+		$oppositeControl=`substitute "_L" $controls[$i] "_R"`;
+		$multiply=1;
+		if ($attr=="tx" || $attr=="ry" || $attr=="rz")
+			$multiply=-1;
+	
+		$restoreCmd+="setAttr "+$controls[$i]+"."+$attr+" "+`getAttr ($controls[$i]+"."+$attr)`+";";
+		setAttr ($controls[$i]+"."+$attr) (`getAttr ($oppositeControl+"."+$attr)`*$multiply);
+		}
+	}
+if ($autoKeyState)
+	$restoreCmd+="autoKeyframe -state 1;";
+return $restoreCmd;
+}
+
+global proc asFaceMirrorAllClusterWeights ()
+{
+string $controls[]=`sets -q FaceControlSet`;
+for ($i=0;$i<size($controls);$i++)
+	if (`gmatch $controls[$i] "*_R"`)
+		asFaceMirrorClusterWeights $controls[$i];
+}
+
+global proc asFaceMirrorClusterWeights (string $control)
+{
+string $restorePoseCmd;
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+int $multiply;
+int $numVtxs[]=`polyEvaluate -v $geometry`;
+float $maxDist,$mag;
+float $posA[3],$posB[3],$tempFloat[];
+string $tempString[],$rightVtxs[];
+string $cluster=`substitute "_R" $control "Cluster_R"`;
+string $oppositeControl=`substitute "_R" $control "_L"`;
+string $oppositeCluster=`substitute "_R" $cluster "_L"`;
+if (!`gmatch $control "*_R"` || !`objExists $oppositeCluster`)
+	return;
+$tempString=`listConnections ($cluster+".message")`;
+string $clusterSet=$cluster+"Set";
+string $oppositeClusterSet=`substitute "_R" $clusterSet "_L"`;
+if (!`objExists $oppositeClusterSet`)
+	return;
+
+//Mirror pose before doing left to ensure identical attachment
+string $restoreCmd=`asFaceMirror`;
+
+percent -v 0 $oppositeCluster ($geometry+".vtx[0:"+$numVtxs[0]+"]");
+select `sets -q ($cluster+"Set")`;
+$rightVtxs=`ls -sl -fl`;
+$posA=`xform -q -ws -t $control`;
+$maxDist=0;
+for ($i=0;$i<size($rightVtxs);$i++)
+	{
+	$posB=`xform -q -ws -t $rightVtxs[$i]`;
+	$mag=`mag <<($posA[0]-$posB[0]),($posA[1]-$posB[1]),($posA[2]-$posB[2])>>`;
+	if ($mag>$maxDist)
+		$maxDist=$mag;
+	}
+$maxDist=$maxDist+($maxDist/20.0);
+
+select $geometry;
+sets -add ($oppositeCluster+"Set") $geometry;
+polySelectConstraint -m 3 -t 1 -d 1 -db 0 $maxDist -dp ($posA[0]*-1) $posA[1] $posA[2];
+string $vtxs[]=`ls -sl -fl`;
+polySelectConstraint -m 0;
+//sets -add ($oppositeCluster+"Set") $vtxs;
+createNode -n closestSampler closestPointOnMesh;
+string $tempString[]=`listRelatives -ni -s $geometry`;
+connectAttr -f ($tempString[0]+".outMesh") closestSampler.inMesh;
+int $closestOppositeVtxNr;
+global string $gMainProgressBar;
+evalDeferred ("progressBar -e -ep "+$gMainProgressBar);
+progressBar -e -st ("Mirroring Cluster for: "+$control) -bp -ii 0 -min 0 -max `size($vtxs)` $gMainProgressBar;
+for ($i=0;$i<size($vtxs);$i++)
+	{
+	progressBar -e -s 1 $gMainProgressBar;
+	$posB=`xform -q -ws -t $vtxs[$i]`;
+	setAttr -type float3 closestSampler.inPosition ($posB[0]*-1) $posB[1] $posB[2];
+	$closestOppositeVtxNr=`getAttr closestSampler.result.closestVertexIndex`;
+	$tempFloat=`percent -q -v $cluster ($geometry+".vtx["+$closestOppositeVtxNr+"]")`;
+
+	if (!`sets -im $clusterSet ($geometry+".vtx["+$closestOppositeVtxNr+"]")`)
+		$tempFloat[0]=0;
+
+	percent -v $tempFloat[0] $oppositeCluster $vtxs[$i];
+	}
+setAttr -type float3 ($oppositeControl+".t") 1 1 1;
+cluster -e -pr $oppositeCluster;
+setAttr -type float3 ($oppositeControl+".t") 0 0 0;
+delete closestSampler;
+
+eval ($restoreCmd);
+}
+
+global proc asFaceRemoveClusterInfsFromLips ()
+{
+string $sel[]=`ls -sl`;
+string $geometry=`textField -q -tx asFsGeometryTextField`;
+int $numVtxs[]=`polyEvaluate -v $geometry`;
+string $history[]=`listHistory $geometry`;
+string $tempString[];
+string $deformSet;
+float $pos[3];
+select -cl;
+setAttr "LipJoints.translateZ" 1000;
+for ($i=0;$i<$numVtxs[0];$i++)
+	{
+	$pos=`xform -q -ws -t ($geometry+".vtx["+$i+"]")`;
+	if ($pos[2]>500)
+		select -add ($geometry+".vtx["+$i+"]");
+	}
+setAttr "LipJoints.translateZ" 0;
+
+for ($i=0;$i<size($history);$i++)
+if (`objectType $history[$i]`=="cluster" || `objectType $history[$i]`=="softMod")
+	{
+	$tempString=`listConnections ($history[$i]+".message")`;
+	for ($y=0;$y<size($tempString);$y++)
+		if ($tempString[$y]!="FaceAllSet")
+			$deformSet=$tempString[$y];
+	sets -noWarnings -remove $deformSet;
+	}
+select $sel;
+}
+
+global proc asFaceSdk (int $set, string $driver, string $driverAttr, float $driverValue)
+{
+float $value;
+string $drivenAttrs[];
+string $exludedDrivenMatchString;
+if ($driver=="mouth_M")
+	{
+	$exludedDrivenMatchString="*eyeBrow*";
+	$drivenAttrs={"tx","ty","tz","rx","ry","rz","sx","sy","sz"};
+	}
+if ($driver=="eyeBrow_R")
+	{
+	$exludedDrivenMatchString="*mouth*";
+	$drivenAttrs={"tx","ty","tz","rx","ry","rz"};
+	}
+string $allDrivenControls[]=`listConnections faceCtrlDriven.drawInfo`;
+string $drivenControls[];
+for ($i=0;$i<size($allDrivenControls);$i++)
+	{
+	if (`gmatch $allDrivenControls[$i] $exludedDrivenMatchString` || `gmatch $allDrivenControls[$i] "*_L"`)
+		;
+	else
+		$drivenControls[size($drivenControls)]=$allDrivenControls[$i];
+	}
+
+//confirm if driver value is not 1 or -1
+string $dialog;
+float $currentDriverValue=`getAttr ($driver+"."+$driverAttr)`;
+if (!$set)
+	setAttr ($driver+"."+$driverAttr) 0 ;
+if ($set)
+	if ($currentDriverValue!=1 && $currentDriverValue!=-1)
+		$dialog=`confirmDialog -t "Confirm"
+	-m ($driver+"."+$driverAttr+" is "+$currentDriverValue+",\nwhich can cause undesired effects.\n"
+		+"Unless you are intentionally setting advanced inbetween setDrivenKeyframes.")
+	-b "Continue" -db "Continue"
+	-b "Cancel" -ds "Cancel"`;
+
+if ($dialog=="Cancel")
+	return;
+
+//visibility
+for ($i=0;$i<size($allDrivenControls);$i++)
+	{
+	setAttr ($allDrivenControls[$i]+".v") 1;
+	if (`gmatch $allDrivenControls[$i] $exludedDrivenMatchString` || `gmatch $allDrivenControls[$i] "*_L"`)
+		if (!$set)
+			setAttr ($allDrivenControls[$i]+".v") 0;
+	}
+
+for ($i=0;$i<size($drivenControls);$i++)
+	for ($y=0;$y<size($drivenAttrs);$y++)
+		{
+		if ($set)
+			{
+			$value=`getAttr ($drivenControls[$i]+"."+$drivenAttrs[$y])`;
+			}
+		else
+			{
+			$value=0;
+			if (`gmatch $drivenAttrs[$y] "s*"`)
+				$value=1;
+			}
+		setDrivenKeyframe -currentDriver ($driver+"."+$driverAttr) -value $value ($drivenControls[$i]+"."+$drivenAttrs[$y]);
+		}
+
+if ($set)
+	setAttr ($driver+"."+$driverAttr) 0;
+else
+	setAttr ($driver+"."+$driverAttr) $driverValue;
+
+setAttr faceCtrlA.v $set;
+setAttr faceCtrlB.v $set;
+setAttr faceCtrlDriven.v (!$set);
+if ($set)
+	select $driver;
+}
+
+global proc int [] asFaceSelVtxIntArray ()
+{
+int $intArray[];
+string $tempString[];
+string $sel[]=`ls -sl -fl`;
+for ($i=0;$i<size($sel);$i++)
+	{
+	tokenize $sel[$i] "[" $tempString;
+	$intArray[$i]=`substitute "]" $tempString[1] ""`;
+    	}
+return $intArray;
+}
+
+global proc asCreateFaceFitJointsFromEdgeLoop (string $region, float $size, int $color)
+{
+string $sel[]=`ls -sl`;
+string $tempString[],$tempString2[],$tempString3[];
+string $startVtx,$vtxNr;
+for ($i=0;$i<size($sel);$i++)
+	if (!`gmatch $sel[$i] "*[.]e[[]*"`)
+		if (`gmatch $sel[$i] "*[.]vtx[[]*"`)
+			$startVtx=$sel[$i];
+		else
+			error "Select edgeLoop";
+
+$tempString=`ls -sl -o`;
+string $object=$tempString[0];
+ConvertSelectionToVertices;
+int $loopVtxsNrs[]=`asFaceSelVtxIntArray`;
+float $tyz;
+float $tyzMax=-999;
+float $pos[3],$connectedVtxPos[3];
+float $xs[],$ys[],$zs[];
+float $centerErrorMargin=0.001;
+int $startVtxNr;
+int $startNr=0;
+if (`gmatch $region "Eye*"`)
+	$startNr=1;
+for ($i=0;$i<size($loopVtxsNrs);$i++)
+	{
+	$pos=`xform -q -ws -t ($object+".vtx["+$loopVtxsNrs[$i]+"]")`;
+	$xs[$i]=$pos[0];$ys[$i]=$pos[1];$zs[$i]=$pos[2];
+	}
+
+//determin $startVtxNr
+if ($startVtx!="")
+	{
+	if (`gmatch $startVtx "*[[]*:*[]]*"`)
+		error "More than 1 `start-vertex` selected"; 
+	tokenize $startVtx "[" $tempString;
+	$startVtxNr=`substitute "]" $tempString[1] ""`;
+	}
+else
+	{
+	createNode -n tempTransform transform;
+	if (`gmatch $region "*Lip*"`)
+		setAttr "tempTransform.rotateZ" -45;
+	if (`gmatch $region "*Eye*"`)
+		setAttr "tempTransform.rotateZ" -90;
+	for ($i=0;$i<size($loopVtxsNrs);$i++)
+		{
+		if ($xs[$i]>$centerErrorMargin)
+			continue;
+		createNode -n ("tempTransform"+$loopVtxsNrs[$i]) transform;
+		xform -ws -t $xs[$i] $ys[$i] $zs[$i] ("tempTransform"+$loopVtxsNrs[$i]);
+		parent ("tempTransform"+$loopVtxsNrs[$i]) tempTransform;
+		$tyz=`getAttr ("tempTransform"+$loopVtxsNrs[$i]+".ty")`;
+		if ($tyz>$tyzMax)
+			{
+			$startVtxNr=$loopVtxsNrs[$i];
+			$tyzMax=$tyz;
+			}
+		}
+	delete tempTransform;
+	//reConsider $startVtxNr if finding neighbour startNr (so overlapping lips do not run in reverse)
+    if (`gmatch $region "*Middle"` || `gmatch $region "*Inner"`)
+        for ($i=0;$i<size($loopVtxsNrs);$i++)
+        	{
+        	select ($object+".vtx["+$loopVtxsNrs[$i]+"]");
+        	ConvertSelectionToEdges;
+        	ConvertSelectionToVertices;
+        	$tempString=`ls -sl -fl`;
+        	for ($y=0;$y<size($tempString);$y++)
+        	    {
+            	tokenize $tempString[$y] "[" $tempString2;
+            	$vtxNr=`substitute "]" $tempString2[1] ""`;
+            	$pos=`xform -q -ws -t ($object+".vtx["+$vtxNr+"]")`;
+            	$tempString3=`listRelatives -c -type joint FaceFitSkeleton`;
+            	for ($z=0;$z<size($tempString3);$z++)
+            	    {
+            	    if (!`gmatch $tempString3[$z] ("upper*"+$startNr)`)
+            	        continue;
+                    $pos2=`xform -q -ws -t $tempString3[$z]`;
+                    if ($pos2[0]==$pos[0] && $pos2[1]==$pos[1] && $pos2[2]==$pos[2])
+                        $startVtxNr=$loopVtxsNrs[$i];
+            	    }
+                }	
+        	}
+	}
+select ($object+".vtx["+$startVtxNr+"]");
+
+int $sortedVtxs[];
+int $connectedVtxNr,$foundConnectedVtxInLoop,$previousVtxNr;
+int $loopCompleted=0;
+int $currentVtxNr=$startVtxNr;
+int $previousVtxNr=-1;
+int $nr=0;
+for ($i=0;$i<99;$i++)
+	{
+	$sortedVtxs[size($sortedVtxs)]=$currentVtxNr;
+	
+	select ($object+".vtx["+$currentVtxNr+"]");
+	$pos=`xform -q -ws -t ($object+".vtx["+$currentVtxNr+"]")`;
+	ConvertSelectionToEdges;
+	ConvertSelectionToVertices;
+	$connectedVtxNrs=`asFaceSelVtxIntArray`;
+	for ($y=0;$y<size($connectedVtxNrs);$y++)
+		{
+		$foundConnectedVtxInLoop=0;
+		$connectedVtxPos=`xform -q -ws -t ($object+".vtx["+$connectedVtxNrs[$y]+"]")`;
+		if ($connectedVtxPos[0]>$centerErrorMargin)
+			if ($i==0)
+				continue;
+			else
+				{
+				$foundConnectedVtxInLoop=1;
+				$i=99;
+				$y=99;
+				break;
+				}
+		//do not start out going `down` for Eye
+		if ($i==0 && `gmatch $region "*Eye*"` && $connectedVtxPos[1]<$pos[1])
+			continue;
+		for ($z=0;$z<size($loopVtxsNrs);$z++)
+			{
+			if ($connectedVtxNrs[$y]==$loopVtxsNrs[$z] && $connectedVtxNrs[$y]!=$currentVtxNr && $connectedVtxNrs[$y]!=$previousVtxNr)
+				{
+				$foundConnectedVtxInLoop=1;
+		            	$previousVtxNr=$currentVtxNr;
+				$currentVtxNr=$connectedVtxNrs[$y];
+				$y=99;
+				break;
+				}
+			}
+		}
+	if (!$foundConnectedVtxInLoop)
+		error ("Failed to find loopVtx connected to "+$currentVtxNr);
+	//loop completed
+	if ($i>0 && $currentVtxNr==$startVtxNr)
+		break;
+	}
+
+string $middlePrefix;
+int $letterNr;
+if (`gmatch $region "*Middle"`)
+	{
+	$middlePrefix=`textField -q -tx ("asFS"+$region+"PrefixTextField")`;
+	$letterNr=`asFaceLetterToNr $middlePrefix`;
+	textField -e -tx (`asFaceNrToLetter ($letterNr+1)`) ("asFS"+$region+"PrefixTextField");
+	}
+
+string $curveName;
+string $upperLower="upper";
+for ($i=0;$i<size($sortedVtxs);$i++)
+	{
+	select ($object+".vtx["+$sortedVtxs[$i]+"]");
+	
+	if ($upperLower=="upper" && $i>(`size($sortedVtxs)`-1)/2)
+		{
+		$upperLower="lower";
+		$nr=size($sortedVtxs)-$i-1;
+		}
+	$joint=$upperLower+$region+$middlePrefix+($nr+$startNr);
+	if ($upperLower=="upper")
+		$nr++;
+	else
+		$nr--;
+	//Allow for additional Inner EyeLids
+	if ($region=="EyeInner" && `objExists $joint`)
+		$joint=`substitute "Inner" $joint "InnerExtraA"`;
+	if ($region=="EyeInner" && `objExists $joint`)
+		$joint=`substitute "Inner" $joint "InnerExtraB"`;
+	if (`objExists $joint`)
+		error ("Joint: "+$joint+" already exists");
+	asCreateFaceFitJoint $joint $size ($color+$letterNr);
+
+	if (!`gmatch $region "Eye*"`)
+		continue;
+
+	//mark start
+	if ($i==0 || $i==(`size($sortedVtxs)`-1)/2)
+		{
+		setAttr ($joint+".drawLabel") 1;
+		setAttr ($joint+".type") 18;
+		setAttr -type "string" ($joint+".otherType") $nr;
+		setAttr ($joint+".overrideColor") 22;
+		}
+	//curves
+	if ($upperLower=="lower")
+		{
+		$curveName=`substitute "lower" $joint ""`+"Curve";
+		if (`objExists $curveName`)
+			delete $curveName;
+		$tempString[0]=`curve -d 1 -p 0 0 0 -p 0 0 0 -k 0 -k 1`;
+		rename $tempString[0] $curveName;
+		parent $curveName FaceFitSkeleton;
+		connectAttr -f ("upper"+$region+$middlePrefix+($nr+2)+".t") ($curveName+".controlPoints[0]");
+		connectAttr -f ("lower"+$region+$middlePrefix+($nr+2)+".t") ($curveName+".controlPoints[1]");
+		setAttr ($curveName+"Shape.overrideEnabled") 1;
+		setAttr ($curveName+"Shape.overrideDisplayType") 1;
+		}
+	}
+
+//temporary lip falloff method
+if ($region=="LipOuter")
+	for ($y=99;$y>0;$y--)
+		if (`objExists ("upperLipOuter"+$y)`)
+			{
+			setAttr ("upperLipOuter"+$y+".falloffRadius") 0.5;
+			break;
+			}
+
+select $sel;
+}
+
+global proc asFaceHelpImage (string $region)
+{
+string $asScriptLocation=`asScriptLocation`;
+
+if (`window -q -ex faceHelpImage`)
+	deleteUI faceHelpImage;
+window -w 320 -h 240 faceHelpImage;
+columnLayout;
+image -i ($asScriptLocation+"/helpfiles/faceHelp/"+$region+".jpg");
+showWindow;
+}
+
+
+

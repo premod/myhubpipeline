@@ -1,0 +1,112 @@
+
+global proc usersetup()
+{
+    	global string $gMainWindow;
+	setParent $gMainWindow;
+	menu -label "Rigging_TD" -parent $gMainWindow -tearOff on;
+	menuItem -label "Auto Save" -c "NPautoSaveOptions";
+	menuItem -label "Optimize and Save" -c "fileOptimisation";
+	menuItem -label "Remove Namespace"-c "removeNsPrefix;";
+	menuItem -divider true;
+	menuItem -sm on -tearOff true -label "UV transfer";
+		menuItem -l "Transfer UV" -c "transferUV_Shader (\"copyUV\") ";
+		menuItem -l "Transfer Shader" -c "transferUV_Shader (\"copyShader\") ";
+		menuItem -divider true;
+		menuItem -l "Transfer Both" -c "transferUV_Shader (\"both\")  ";
+	setParent -menu..; 
+	menuItem -label "UV transfer w/o history"-c "zbw_cleanTransferUV";
+	menuItem -label "Texture Manager" -c "FileTextureManager";
+	menuItem -divider true;
+	menuItem -label "studio56 Rig tools" -c "studio56RigTools";
+	menuItem -label "poseDeformer" -c "poseDeformerUI";
+	menuItem -label "Advanced Skin" -sm true -tearOff true;
+		menuItem -l "vertex smooth weights" -c "advancedSkin(\"vertexSmooth\") ";
+		menuItem -l "copy skin (wrapping)" -c "advancedSkin(\"copySkin\") "; 
+	setParent -menu..; 
+	
+	menuItem -label "Hyper Real Mesh Parent" -c "hyperRealMeshParent";
+	menuItem -label "Create Controllers" -c "rig101wireControllers";
+	menuItem -divider true;
+menuItem -label "BlendshapeXtract" -c "extractBlendShape";
+menuItem -label "CorrectiveBlendshape" -c "icExtractDeltas";	
+	//menuItem -label "Selector:Utilities" -c "asUtilities";
+	menuItem -label "Character Picker" -c "asSelectorbiped";
+	menuItem -label "Report DuplicateNodes" -c "reportDuplicateNodes";
+	menuItem -divider true;
+	menuItem -label "Rigging Cleaner" -c "riggingCleaner";
+	
+menuItem -label "Delete Empty Layers" -c "deleteEmptyLayers";
+
+	menuItem -label "Comments" -c "comments" ;
+}
+usersetup;
+
+/* headsUpDisplay 
+               -section          8
+               -block            0
+               -ao               true
+               -blockSize        "small"
+               -label            "Frame:" 
+		 		-labelFontSize    "small"
+               -c                "currentTime -q"
+               -atr
+                HUDtime;
+
+headsUpDisplay 
+               -section          6
+               -block            0
+               -ao               true
+               -blockSize        "small"
+		 -dfs		      "large" 
+               -label            "User Name :"
+               -labelFontSize    "small"
+                -c                "DOPrint;"
+		 -atr
+               HUDname;
+
+
+headsUpDisplay 
+               -section          9
+               -block            4
+               -ao               true
+               -blockSize        "small"
+		 -label            "Date :"
+               -labelFontSize    "small"
+               -c                "DOdate"
+		 -atr
+               HUDdate;
+
+
+
+global proc string DOPrint()
+{
+	string $name =` getenv "USERNAME"`;
+ 	return $name;
+}
+global proc string DOdate()
+{
+	string $date = eval("system(\"date /t\")");
+ 	return $date;
+}*/
+
+welcomeWindow();
+
+//optionVar -sv "workingUnitTime" "pal" 
+//-sv workingUnitTimeDefault pal;
+optionVar -sv workingUnitTimeDefault pal;
+	currentUnit -t pal;
+
+playbackOptions -ps 1;
+
+
+optionVar -iv "isIncrementalSaveEnabled" 1;
+optionVar -iv incrementalSaveMaxBackups 10;
+
+source "cometMenu.mel";
+
+cgmToolbox();
+
+
+
+
+

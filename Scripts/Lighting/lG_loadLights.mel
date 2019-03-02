@@ -1,0 +1,330 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+global proc lG_loadLightsAttributeFilter()
+{
+	string $attr = `textField -q -tx lG_gblCustomAttrText`;
+	string $value = `textField -q -tx lG_gblCustomAttrValue`;
+	lG_lightGirlLoadLights(11, "lightGirlCmd", "", $attr, $value);
+}
+
+/*
+ * FUNCTION NAME	lG_lightListParseSelection
+ * DESCRIPTION		Removes group name references from light list (for selection)
+ * CALLED BY		lG_lightGirlLoadLights
+ * INPUT			Light list (string[])
+ * RETURN			New light list (string[])
+ */
+ 
+proc string[] lG_lightListParseSelection(string $selectionList[])
+{
+	string $initSel[] = `ls -sl -l`;
+	string $lightList[];
+	for($i=0;$i<size($selectionList);$i++) {
+		//print("Selection: " + $selectionList[$i] + "\n");
+		if($selectionList[$i] == `lG_getShape($selectionList[$i])`) {
+			select -r `lG_getTransform($selectionList[$i])`;
+			select -hi;
+			$lightList = `listRelatives -fullPath -type spotLight -type pointLight -type areaLight -type ambientLight -type directionalLight -type volumeLight`;
+			select -r $initSel;
+			return $lightList;
+		} else {
+			select -r $initSel;
+			return $selectionList;
+		}
+	}
+	select -r $initSel;
+	return $selectionList;
+}
+
+/*
+ * FUNCTION NAME	lG_lightGirlLoadLights
+ * DESCRIPTION		Load Lights...
+ * CALLED BY		*
+ * INPUT		int (light type), string (calling UI to refresh)
+ * RETURN		NONE
+ */
+ 
+global proc lG_lightGirlLoadLights(int $loadType, string $functName, string $set, string $attr, int $value) // $set can be used arbitrarily but is meant for light sets...
+{
+	waitCursor -state on;
+	
+	global int $g_lG_maxActiveLightsInUI;
+	
+	global int $g_lG_showLightsInInterface;
+	
+	global int $g_lG_linkManagerToLightGirl;
+	global int $g_lG_linkSheetToLightGirl;
+	
+	global string $g_lG_allLights[];
+	
+	string $newLightList[];
+	clear $newLightList;
+	string $tempLightList[];
+	clear $tempLightList;
+	string $lightShapeList[];
+	clear $lightShapeList;
+	string $lightType;
+	
+	//print("Load Type: " + $loadType + "\n");
+	
+	switch($loadType) {
+		case 0:
+			$newLightList = `ls -long -type spotLight`;
+			$lightType = "spotLight";
+			break;
+		case 1:
+			$newLightList = `ls -long -type pointLight`;
+			$lightType = "pointLight";
+			break;
+		case 2:
+			$newLightList = `ls -long -type areaLight`;
+			$lightType = "areaLight";
+			break;
+		case 3:
+			$newLightList = `ls -long -type ambientLight`;
+			$lightType = "ambientLight";
+			break;
+		case 4:
+			$newLightList = `ls -long -type directionalLight`;
+			$lightType = "directionalLight";
+			break;
+		case 5:
+			$newLightList = `ls -long -sl`;
+			$newLightList = lG_lightListParseSelection($newLightList);
+			for ($i=0; $i<size($newLightList); $i++) {
+				$lightShapeList[$i] = `lG_getShape($newLightList[$i])`;
+				if (`nodeType($lightShapeList[$i])` == "spotLight" || `nodeType($lightShapeList[$i])` == "pointLight" || `nodeType($lightShapeList[$i])` == "areaLight" || `nodeType($lightShapeList[$i])` == "ambientLight" || `nodeType($lightShapeList[$i])` == "directionalLight" || `nodeType($lightShapeList[$i])` == "volumeLight") {
+					$newLightList[$i] = $lightShapeList[$i];
+				}	
+			}
+			$lightType = "Selected";
+			break;
+		case 6:
+			$newLightList = `ls -long -type light`;
+			$lightType = "All";
+			break;
+		case 7:
+			clear $newLightList;
+			$tempLightList = `ls -long -type light`;
+
+			string $tempLightListConn[];
+			string $foundDispLayer;
+			
+			string $lGRemStr[];
+			$lGRemStr = { "_" };
+
+			// layer based visibility
+			for($i=0; $i<size($tempLightList); $i++) {
+				$tempLightListConn = `listConnections -type displayLayer $tempLightList[$i]`;
+				$tempLightListConn = stringArrayRemoveDuplicates($tempLightListConn);
+				
+			//	print("Connection Size for " + $tempLightList[$i] + ": " + `size($tempLightListConn)` + "\n");
+				
+				if (size($tempLightListConn) == 1) {
+					if ( `getAttr($tempLightListConn[0] + ".visibility")` == 1 ) {
+						$newLightList[$i] = $tempLightList[$i];
+					} else {
+						$newLightList[$i] = "_";
+					}
+				} else if (size($tempLightListConn) < 1) {
+					$newLightList[$i] = $tempLightList[$i];
+				}
+			}
+			
+			$newLightList = stringArrayRemove($lGRemStr, $newLightList); 
+			
+			// light based visibility - overrides layer based visibility
+			for ($i=0; $i<size($newLightList); $i++) {
+				if (`getAttr($newLightList[$i] + ".visibility")` == 1) {
+					string $lightTransform = lG_getTransform($newLightList[$i]);
+					if(`getAttr ($lightTransform + ".visibility")` == 1) {
+						$newLightList[$i] = $newLightList[$i];
+					} else {
+						$newLightList[$i] = "_";
+					}
+				} else {
+					$newLightList[$i] = "_";
+				}
+			}
+
+			$newLightList = stringArrayRemove($lGRemStr, $newLightList);
+			$lightType = "Visible";
+			break;
+		case 8:
+			int $i=0;
+			$tempLightList = `ls -long -type light`;
+			for ($j=0; $j<size($tempLightList); $j++) {
+				if($set == "both") { // both shadow types...
+					if (`nodeType($tempLightList[$j])` != "ambientLight") {
+						if (`getAttr($tempLightList[$j] + ".useDepthMapShadows")` == 1 || `getAttr($tempLightList[$j] + ".useRayTraceShadows")` == 1) {
+							$newLightList[$i] = $tempLightList[$j];
+							$i++;
+						}
+					} else if (`getAttr($tempLightList[$j] + ".useRayTraceShadows")` == 1) {
+						$newLightList[$i] = $tempLightList[$j];
+						$i++;
+					}
+				} else if($set == "DM") { // depthmap only
+					if (`nodeType($tempLightList[$j])` != "ambientLight") {
+						if (`getAttr($tempLightList[$j] + ".useDepthMapShadows")` == 1) {
+							$newLightList[$i] = $tempLightList[$j];
+							$i++;
+						}
+					}
+				} else if($set == "RT") { // raytrace only...
+					if (`getAttr($tempLightList[$j] + ".useRayTraceShadows")` == 1) {
+						$newLightList[$i] = $tempLightList[$j];
+						$i++;
+					}
+				} else if($set == "none") { // no shadows!
+					if (`nodeType($tempLightList[$j])` != "ambientLight") {
+						if (`getAttr($tempLightList[$j] + ".useDepthMapShadows")` == 0 && `getAttr($tempLightList[$j] + ".useRayTraceShadows")` == 0) {
+							$newLightList[$i] = $tempLightList[$j];
+							$i++;
+						}
+					} else if (`getAttr($tempLightList[$j] + ".useRayTraceShadows")` == 0) {
+						$newLightList[$i] = $tempLightList[$j];
+						$i++;
+					}
+				}
+			}
+			$lightType = "Shadow Casting";
+			break;
+		case 9: // newer light type
+			$newLightList = `ls -long -type volumeLight`;
+			$lightType = "volumeLight";
+			break;
+		case 10: // light sets
+			$newLightList = `sets -q $set`;
+			$lightType = "Light Set";
+			
+			//print("Light Set '" + $set + "' lights:\n");
+			//print($newLightList);
+			
+			break;
+		case 11: // load by attribute filter...
+			$tempLightList = `ls -long -type light`;
+			$newLightList = lG_getLightsWithAttribute($tempLightList, $attr, $value);
+			$lightType = "Attribute Filter";
+		
+			break;
+		case 12: // unload lights...
+			$newLightList = {"UNLOAD"};
+			$lightType = "Unload";
+		
+			break;
+	}
+	
+	if(`size($newLightList)`) {
+		clear $g_lG_allLights;
+		for ($i=0; $i<size($newLightList); $i++) {
+			if (!`objectType -isType "group" $newLightList[$i]`) {
+				if (objectType($newLightList[$i]) == "spotLight" || objectType($newLightList[$i]) == "areaLight" || objectType($newLightList[$i]) == "pointLight" || objectType($newLightList[$i]) == "directionalLight" || objectType($newLightList[$i]) == "ambientLight" || objectType($newLightList[$i]) == "volumeLight") {
+					$g_lG_allLights[$i] = `lG_getShape $newLightList[$i]`;
+				} else if (objectType(`lG_getShape $newLightList[$i]`) == "spotLight" || objectType(`lG_getShape $newLightList[$i]`) == "areaLight" || objectType(`lG_getShape $newLightList[$i]`) == "pointLight" || objectType(`lG_getShape $newLightList[$i]`) == "directionalLight" || objectType(`lG_getShape $newLightList[$i]`) == "ambientLight" || objectType(`lG_getShape $newLightList[$i]`) == "volumeLight") {
+					$g_lG_allLights[$i] = `lG_getShape $newLightList[$i]`;
+				} else {
+					warning("[Invalid Selection] '" + $newLightList[$i] + "' is not a light!");
+				}
+			}
+		}
+	}
+	
+	int $error = 0;
+	
+	if (size($newLightList) < 1) {
+		if($lightType == "All" || 
+			$lightType == "Selected" || 
+			$lightType == "Visible" ||
+			$lightType == "Shadow Casting") {
+			warning("No lights to load!");
+		} else if($lightType == "UNLOAD") { 
+			// do nothing...
+		}else {
+			warning("No matching '" + $lightType + "' lights to load!");
+		}
+		$error= 1;
+	} else if (size($newLightList) > $g_lG_maxActiveLightsInUI) {
+		//print("newLightList: " + `size $newLightList` + "\n");
+		//print("g_lG_maxActiveLightsInUI: " + $g_lG_maxActiveLightsInUI + "\n");
+		// override ligts in interface
+		if($g_lG_showLightsInInterface) {
+			//warning("Too many lights (" + `size($newLightList)` + ") for interface to handle! Please selectively load " + $g_lG_maxActiveLightsInUI + " lights or fewer to regain interface functionality.");
+			$error=1;
+		}
+	}
+
+	string $lInitSel[] = `ls -sl`;
+	
+	// manageable light amount
+	if(!$error) {
+		select -r $newLightList;
+		int $reloadLG=0;
+		if($g_lG_linkManagerToLightGirl && `window -exists lG_managerWin` /*&& $functName != "lG_managerWin"*/) {
+			//print("Manager Linked...\n");
+			//print("Manager window found...\n");
+			eval("lG_managerWin");
+			$reloadLG=1;
+		}
+		if($g_lG_linkSheetToLightGirl && `window -exists lG_sheetWin` /*&& $functName != "lG_sheetWin"*/) {
+			//print("Sheet Linked...\n");
+			//print("Sheet window found...\n");
+			eval("lG_sheetWin");
+			$reloadLG=1;
+		}
+		
+		//print("F: " + $functName + "\n");
+		if($reloadLG || $functName == "lightGirlCmd") {
+			eval("lightGirlCmd");
+		} else if($functName != "lightGirlCmd"){
+			eval($functName);
+		}
+		
+		if(`window -exists lG_colorIntensityWin`) {
+			eval("lG_colorIntensityWin");
+		}
+		
+		//print("// Result: Loaded " + `size($newLightList)` + " Lights. //\n");
+	} else {
+		lightGirlCmd();
+	}
+
+	select -r $lInitSel;
+	
+	// store lights in second var for UI use (used if lights are renamed outside of lG...
+	global string $g_lG_allLights_SAVE_[];
+	$g_lG_allLights_SAVE_ = $g_lG_allLights;
+	//print("SAVE:\n");
+	//print($g_lG_allLights_SAVE_);
+	
+	// update shameless text and light number menu...
+	lG_updateLightListCountCommand();
+	
+	// store light colors for reset...
+	lG_storeLightInfo();
+	
+	lG_startScriptJobs();
+	
+	lG_updateLightConnections();
+	
+	waitCursor -state off;
+}

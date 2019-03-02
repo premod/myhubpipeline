@@ -1,0 +1,3063 @@
+
+
+global proc poseManGlobal () {
+	global int $gCharacterImage;
+
+	// Borramos todas las posibles ventanas
+	if (`window -exists newCharacterWindow`) { deleteUI newCharacterWindow; }
+	if (`window -exists newSectinWindow`) { deleteUI newSectinWindow; }
+	if (`window -exists selectCharacterWindow`) { deleteUI selectCharacterWindow; }
+	if (`window -exists characterWindow`) { deleteUI characterWindow; }
+	if (`window -exists poseListWindow`) { deleteUI poseListWindow; }
+	if (`window -exists sectionWindow`) { deleteUI sectionWindow; }
+	if (`window -exists capturePoseWindow`) { deleteUI capturePoseWindow; }
+	if (`window -exists aboutPoseManWindow`) { deleteUI aboutPoseManWindow; }
+	if (`window -exists renameCharacterWindow`) { deleteUI renameCharacterWindow; }
+	if (`window -exists renamePoseWindow`) { deleteUI renamePoseWindow; }
+	if (`window -exists renameSectionWindow`) { deleteUI renameSectionWindow; }
+	if (`window -exists cleanModeWindow`) { deleteUI cleanModeWindow; }
+	if (`window -exists newSectionWindow`) { deleteUI newSectionWindow; }
+	if (`window -exists reorderWindow`) { deleteUI reorderWindow; }
+	if (`window -exists movePoseWindow`) { deleteUI movePoseWindow; }
+	if (`window -exists poseManSpreadSheetWindow`) { deleteUI poseManSpreadSheetWindow; }
+	
+	// Iniciamos poseman sin personqjes
+	$gCharacterImage = 1;	
+	poseManProc("");
+}
+
+// ---------------------
+// PoseMAN Main proccess
+// ---------------------
+global proc poseManProc (string $characterName) {
+	global int    $gCurrentTabId;
+	global int    $gCharCount;
+	// global int	  $gCells;
+	global int    $gCharacterImage;
+	global int    $gSizeableFlag;
+	global string $poseMAN_version;
+	global string $poseMAN_UI_title;
+	global string $gIconsPath;
+	global string $gPoseFile;
+	global string $gLogoFile;
+	global string $gCharFile;
+	global string $gCurrentChar;
+	global string $gMainLayout;
+	global string $gProjectURL;
+	global string $gTabs;
+	global string $gCurrentCharNamespace;
+	global string $imgExtension;
+	global string $PoseMANActive;
+	global string $gSetKeyOnPose;
+	global string $keyOnPoseLayout;
+	global string $showHideCharacterImageMenuItem;
+	
+	if (`about -windows`) {
+        // windows os
+        $gLogoFile = "poseManLogo.bmp";
+        $imgExtension = ".bmp";
+		$gSizeableFlag = 1;
+    } else if (`about -linux` || `about -mac`) {
+        // linux os
+        $gLogoFile = "poseManLogo.xpm";
+        $imgExtension = ".xpm";
+		$gSizeableFlag = 1;
+    }
+
+	if ($gCurrentTabId<1) {
+    	$gCurrentTabId = 1;
+	}
+	
+    // Poseman funciones
+	$gCurrentChar = $characterName;
+	// $gCells = $cells;
+	
+    $poseMAN_version = "1.2.7";
+    $poseMAN_UI_title = ("PoseMAN " + $poseMAN_version);
+        
+    $gProjectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+    $gIconsPath = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+
+
+    // Crea el directorio principal de PoseMan y el archivo de configuración
+    poseMan_createPoseManDir;
+
+    // Tamaños de ventanas	
+    int $mainWindowWith = 300;
+	
+    // Lista de personajes del proyecto activo
+    string $charactersList[];
+    $charactersList = `poseMan_getCharacterFromHD`;
+
+    // Cantidad de personajes del proyecto activo
+    $gCharCount = size($charactersList);
+
+    // PoseMAN main window
+    // If exists, delete poseMan window
+    if (`window -exists poseManWindow`) {
+        deleteUI -window poseManWindow;
+    }
+	
+    // PoseMAN Window ---------------------------------------------------------------------------
+    window -menuBar 1 poseManWindow;
+	
+	// PoseMAN Main Form Layout -----------------------------------------------------------------
+    $gMainLayout = `formLayout`;
+             
+	// CHARACTER AVATAR -------------------------------------------------------------------------
+	string $characterThumbLayout = `columnLayout -adj 1 characterAvatarLayout`;
+    if (`filetest -r ($gProjectURL +  "/poseman/" + $gCurrentChar + "/" + ($gCurrentChar + ".avatar" + $imgExtension))`) {
+			iconTextButton -mw 0 -mh -0 -dcc "poseMan_captureNewPoseUI($gTabs)" -i1 ($gProjectURL +  "/poseman/" + $gCurrentChar + "/" + ($gCurrentChar + ".avatar" + $imgExtension)) -w 355 -h 80;			
+		} else {
+			string $charNameFixed = poseMan_spacesToDown ($gCurrentChar);
+			// text -align "center" -fn "boldLabelFont" -l ("\nPut a "+$charNameFixed+".avatar"+$imgExtension+"/iff at\n /poseman/" + $charNameFixed+"\nHeigh: 80px") -h 80;
+			iconTextButton -mw 0 -mh -0 -dcc "poseMan_captureNewPoseUI($gTabs)" -i1 ($gProjectURL +  "/poseman/poseManLogo.bmp") -h 80;
+
+		}
+		
+		
+	if ($gCurrentChar != "") {
+		
+		
+	
+	popupMenu;
+		menuItem -l "Create new Sections..." -c "poseMan_addNewSectionUI";
+		menuItem -l "Create new Pose..." -c "poseMan_captureNewPoseUI($gTabs)";
+		menuItem -divider true;
+		menuItem -en 1 -l "Rename character..." -c "poseMan_renameCharacterUI";	
+		if ($gCurrentChar != "") {
+			menuItem -en 1 -l "Delete this Character..." -c "poseMan_deleteCharacterSimple";						
+			if (size(`poseMan_getSectionsFromConfFile($gCurrentChar)`)<2 || $gCurrentChar == "") {							
+				menuItem -en 0 -l "Delete Sections...";
+			} else {
+				menuItem -en 1 -l "Delete Sections..." -c ("poseMan_deleteSectionUI(\""+$gCurrentChar+"\")");
+			}
+		}		
+		menuItem -l "Delete Poses..." -c "poseMan_deletePoseUI($gTabs)";
+		menuItem -divider true;
+		menuItem -l "Learn Namespace from object" -c "poseMan_learnNS";
+		menuItem -l "Reset/Empty Namespace" -c "$gCurrentCharNamespace=\"\"";
+		menuItem -l "Hide Character image" -c "poseMan_HideCharAvatar";
+	}
+	setParent..;
+			
+	// CHARACTER SELECTION ----------------------------------------------------------------------
+	string $characterSelectionList = `formLayout`;		
+	
+		// SELECT
+		string $charListOption = `optionMenu`;
+			menuItem -label "Fast character selection";
+		 	for($i=0;$i<size($charactersList);$i++) {
+            	menuItem -label $charactersList[$i];
+			}
+			
+		// BOTON			
+		string $getNamespaceInfoButton = `button -l "Get NS" -c "poseMan_learnNS"`;
+		
+		// INFO
+		string $namespaceInfoText = `text -l ("NS: " + $gCurrentCharNamespace) namespaceInfoText`;
+		
+		// Add command
+		optionMenu -e -cc ("poseMan_loadCharacterFromSelection(\""+$charListOption+"\")") $charListOption;
+
+		formLayout -e
+			
+			-attachForm $charListOption "left" 0
+			
+			-af $getNamespaceInfoButton "top" 1
+			-ac $getNamespaceInfoButton "right" 10 $namespaceInfoText
+			
+			-af $namespaceInfoText "right" 5
+			-af $namespaceInfoText "top" 4
+	
+		$characterSelectionList;
+				
+	setParent..;
+	
+	// POSES LIST ---------------------------------------------------------------------------	
+	$gTabs = `tabLayout  poseManTabLayout`;
+
+	// Add the scrolls with content
+	string $scroles[]={""};
+	string $listaPoses[]={""};					
+	string $poseIcon;
+	string $poseNameNoExt;	
+	
+	// Hay al menos un personaje, recojemos sus secciones
+	string $sectionsList[];
+	if ($gCurrentChar != "") {
+		$sectionsList = `poseMan_getSectionsFromConfFile ($gCurrentChar)`;
+	}
+	string $thumbPose = "";
+	if ($gCharCount>0 && $gCurrentChar!="") {
+		for ($i=0;$i<size($sectionsList);$i++) {
+			//$scroles[$i] =`scrollLayout`;			
+			// gridLayout -nrc 1 $gCells -autoGrow 1 -cwh 82 102;
+			shelfLayout -h 300 -cw 82 -ch 102 $sectionsList[$i];
+			$listaPoses = poseMan_getPosesFromConfFile ($gCurrentChar, $sectionsList[$i]);
+			$thumbPose = "";
+			for ($j=0;$j<size($listaPoses);$j++) {
+				string $poseThumbnailFormLayout= `formLayout`;
+				// icono pose
+				$poseIcon = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $gCurrentChar + "/" + $sectionsList[$i] + "/" + (`substring $listaPoses[$j] 1 (size($listaPoses[$j])-5)`) + $imgExtension);
+				$thumbPose = `iconTextButton`;
+				iconTextButton -e -i1 $poseIcon -c ("poseMan_applyPoseFast(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")") -w 80 -h 80 -ann ("Set the pose " + (`substring $listaPoses[$j] 1 (size($listaPoses[$j])-5)`) ) -mh 0 -mw 0 $thumbPose;
+				popupMenu;
+					menuItem -l ("Asign "+(`substring $listaPoses[$j] 1 (size($listaPoses[$j])-5)`) ) -c ("poseMan_applyPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\", 1)");
+					menuItem -en 1 -l "Asign pose at frame..." -c ("poseMan_applyPoseAtFramesUI(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\", 1)");
+					menuItem -divider true;
+					menuItem -en 1 -l "Mix pose Slider" -c ("sliderMix(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+					menuItem -divider true;
+					menuItem -en 1 -l "Mix pose at 10%" -c ("poseMan_applyPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\", 0.1)");
+					menuItem -en 1 -l "Mix pose at 25%" -c ("poseMan_applyPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\", 0.25)");
+					menuItem -en 1 -l "Mix pose at 50%" -c ("poseMan_applyPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\", 0.5)");
+					menuItem -en 1 -l "Mix pose at 75%" -c ("poseMan_applyPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\", 0.75)");
+					menuItem -divider true;
+					menuItem -en 1 -l "Update Pose (All controls pose)" -c ("poseMan_updatePose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+					menuItem -en 1 -l "Add selected controls to Pose" -c ("poseMan_addControlsToPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+					menuItem -en 1 -l "Remove selected controls from Pose" -c ("poseMan_removeControlsFromPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+					menuItem -en 1 -l "Select pose controls" -c ("poseMan_selectControlsFromPose(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+					menuItem -divider true;
+					menuItem -en 1 -l "Override Pose..." -c ("poseMan_rewritePoseData(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+					menuItem -en 1 -l "Override Thumbnail..." -c ("poseMan_reCaptureNewPoseUI(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+					menuItem -divider true;
+					menuItem -en 1 -l "Move pose to..." -c ("poseMan_movePoseUI(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");					
+					menuItem -en 1 -l "Rename pose..." -c ("poseMan_renamePoseUI(\""+$listaPoses[$j]+"\")");
+					menuItem -l "Delete pose" -c ("poseMan_deletePoseSimple(\""+$gCurrentChar+"\", \""+$sectionsList[$i]+"\", \""+$listaPoses[$j]+"\")");
+				// texto
+				$poseNameNoExt = `substring $listaPoses[$j] 1 (size($listaPoses[$j])-5)`;
+				string $i1 = `text -align "center" -l $poseNameNoExt -w 80 -h 20 -bgc 1 1 1`;
+					setParent ..;
+					formLayout -e					
+						-attachForm $thumbPose "top" 0
+		    			-attachForm $thumbPose "left" 0					
+						-attachForm $i1 "top" 80
+		    			-attachForm $i1 "left" 0					
+					$poseThumbnailFormLayout;			
+			}					
+			setParent ..;
+		
+		}		
+	/*
+		// Reseteamos (rellenamos) los tabs
+		for ($i=0;$i<size($sectionsList);$i++) {
+			tabLayout -e -tl $scroles[$i] $sectionsList[$i] poseManTabLayout;
+		}*/
+			
+		// Elegimos el tab por defecto
+		tabLayout -e -sti $gCurrentTabId poseManTabLayout;
+	
+	} // fin if 
+		
+	setParent..;
+
+	string $refreshWindow = `columnLayout -adj 1`;
+	button  -h 28 -l "Fit grid poses to new wondow size" -c "poseMan_refreshMainWindow";
+	setParent..;
+	
+	int $showHideValue;
+	if ($gCharacterImage == 0) {
+		$showHideValue = -80;
+	} else {
+		$showHideValue = 0;
+	}
+	
+	formLayout -e
+		-attachForm $characterThumbLayout "top" $showHideValue
+		-attachForm $characterThumbLayout "left" 0
+		-attachForm $characterThumbLayout "right" 0
+
+		-attachControl $characterSelectionList "top" 5 $characterThumbLayout
+		-attachForm $characterSelectionList "left" 2
+		-attachForm $characterSelectionList "right" 2
+				
+		-attachControl $gTabs "top" 5 $characterSelectionList
+		-attachForm $gTabs "left" 0
+		-attachForm $gTabs "right" 0
+		-attachForm $gTabs "bottom" 30
+		
+		-attachControl $refreshWindow "top" 2 $gTabs
+		-attachForm $refreshWindow "bottom" 0		
+		-attachForm $refreshWindow "left" 0
+		-attachForm $refreshWindow "right" 0
+		
+	$gMainLayout;
+	
+ 	// @@@@@@@@@@@@@@@@@@@
+	// PoseMAN - MAIN MENU
+	// @@@@@@@@@@@@@@@@@@@
+	
+	// @@@@@@@@@@@@@@@@@
+	// GENERAL ITEM MENU
+	// @@@@@@@@@@@@@@@@@
+	menu -label "General" -tearOff 0;
+	menuItem -en 1 -label "Refresh window" -c poseMan_refreshMainWindow;
+	menuItem -divider true;
+	if (`about -mac`) {
+		menuItem -en 1 -label "ZIP PoseMAN project" -c "poseMan_zipProjectFileBrowser";
+		menuItem -divider true;
+	}
+	// menuItem -en 1 -label "Spread Sheet" -c "poseMan_poseManSpread";
+	menuItem -en 1 -label "Quit PoseMan" -c ("deleteUI -window poseManWindow;$PoseMANActive=false");
+		
+	// @@@@@@@@@@@@@@@@@@@
+	// CHARACTER ITEM MENU
+	// @@@@@@@@@@@@@@@@@@@
+	// Character menu with character loaded
+	if ($gCurrentChar != "") {				
+		menu -label "Character" -tearOff 0;
+			menuItem -en 1 -label "Load character..." -c "poseMan_selectCharacterUI";
+			menuItem -en 1 -label "Create new character..." -c "poseMan_addNewCharacterUI";
+			menuItem -en 1 -label "Rename character..." -c "poseMan_renameCharacterUI";
+			menuItem -en 1 -label "Delete characters..." -c "poseMan_deleteCharacterUI";
+			menuItem -en 1 -label "Delete current character" -c "poseMan_deleteCharacterSimple";
+			menuItem -divider true;
+			menuItem -en 1 -label "Capture avatar..." -c "poseMan_captureCharacterAvatar($gCurrentChar)";
+			menuItem -divider true;
+			$keyOnPoseLayout = `menuItem -en 1 -cb 0 -label "Create Key on Pose" -c "poseMan_manageCheckBoxKeyOnPose"`;
+			menuItem -en 1 -label "Learn character namespace" -c "poseMan_learnNS";
+			menuItem -en 1 -label "Reset/Empty namespace" -c "$gCurrentCharNamespace=\"\"";
+			menuItem -divider true;
+			$showHideCharacterImageMenuItem = `menuItem -en 1 -cb $gCharacterImage -label "Show / Hide Character image" -c "poseMan_ShowHideCharAvatar"`;
+	}
+		
+	// Character menu with NO character loaded
+	if ($gCurrentChar == "") {				
+		menu -label "Character" -tearOff 0;
+			menuItem -en 1 -label "Load character..." -c "poseMan_selectCharacterUI";
+			menuItem -en 1 -label "Create new character..." -c "poseMan_addNewCharacterUI";
+			menuItem -en 0 -label "Rename current character..." -c "poseMan_renameCharacterUI";
+			menuItem -en 1 -label "Delete characters..." -c "poseMan_deleteCharacterUI";
+			menuItem -en 0 -label "Delete current character" -c "poseMan_deleteCharacterSimple";
+			menuItem -divider true;
+			menuItem -en 0 -label "Capture avatar..." -c "poseMan_captureCharacterAvatar($gCurrentChar)";
+			menuItem -divider true;						
+			$keyOnPoseLayout = `menuItem -en 1 -cb 0 -label "Create Key on Pose" -c "poseMan_manageCheckBoxKeyOnPose"`;
+			menuItem -en 0 -label "Learn character namespace" -c "poseMan_learnNS";
+			menuItem -en 1 -label "Reset/Empty namespace" -c "$gCurrentCharNamespace=\"\"";
+			menuItem -divider true;
+			menuItem -en 0 -label "Show / Hide Character image";
+	}
+	
+	// @@@@@@@@@@@@@@@@@@
+	// SECTIONS ITEM MENU
+	// @@@@@@@@@@@@@@@@@@
+	// Section menus with character loaded				
+	if ($gCurrentChar != "") {
+		menu -label "Sections" -tearOff 0;	
+			menuItem -en 1 -label "Create new section..." -c "poseMan_addNewSectionUI";
+			menuItem -en 1 -label "Rename section..." -c "poseMan_renameSectionUI($gTabs)";
+			menuItem -en 1 -label "Reorder section..." -c "poseMan_reorderSections($gCurrentChar)";
+		if (size(`poseMan_getSectionsFromConfFile($gCurrentChar)`)<2 || $gCurrentChar == "") {
+			menuItem -en 0 -label "Delete cections...";
+		} else {
+			menuItem -en 1 -label "Delete sections..." -c ("poseMan_deleteSectionUI (\""+$gCurrentChar+"\")");
+		}
+	}
+	
+	// Section menus with NO character loaded
+	if ($gCurrentChar == "") {
+		menu -label "Sections" -en 0;
+	}
+	
+	// @@@@@@@@@@@@@@@
+	// POSES ITEM MENU
+	// @@@@@@@@@@@@@@@
+	// Poses menu with character loaded
+	if ($gCurrentChar != "") {
+		menu -label "Poses" -tearOff 0;
+			menuItem -en 1 -label "Create new pose..." -c "poseMan_captureNewPoseUI($gTabs)";
+			menuItem -en 1 -label "Delete poses..." -c "poseMan_deletePoseUI($gTabs)";
+			menuItem -divider true;
+			menuItem -en 1 -label "Reorder poses..." -c "poseMan_reorderPoses($gTabs)";
+			
+	}
+
+	// Poses menu with NO character loaded
+	if ($gCurrentChar == "") {
+		menu -label "Poses" -en 0;
+	}
+	
+	// @@@@@@@@@@@@@@
+	// HELP ITEM MENU
+	// @@@@@@@@@@@@@@
+	menu -label "Help" -helpMenu 0;
+	    menuItem -en 0 -label "Help (html)...";
+	    menuItem -en 1 -label "About PoseMan..." -c "poseMan_aboutPoseMan";
+
+	if ($gCurrentChar == "") {
+		print ("// PoseMAN launched\n");		
+	} else {
+		print ("// Character "+$gCurrentChar+" loaded\n");		
+	}
+
+	window -e  -title $poseMAN_UI_title poseManWindow;
+	
+	showWindow poseManWindow;
+}
+
+// ------------------------
+// Add new character Window
+// ------------------------
+global proc poseMan_addNewCharacterUI () {
+	global int $gSizeableFlag;
+		
+	if (`window -ex newCharacterWindow`) {
+		deleteUI -window newCharacterWindow;	
+	}
+	
+    string $newCharacterWindow = `window newCharacterWindow`;
+        string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" newCharacterLayout`;
+        columnLayout -adj 1 -rs 1;
+            text -l "Character name" -align "left";
+            string $characterName = `textField`;
+            text -l "Section Name" -align "left";
+            string $firstSectionName = `textField -tx "Default"`;
+
+			button -l "CREATE" -c ("poseMan_addNewCharacter(`textField -q -tx "+$characterName+"`, `textField -q -tx "+$firstSectionName+"`)");
+			
+		textField -e -ec ("poseMan_addNewCharacter(`textField -q -tx "+$characterName+"`);deleteUI "+$newCharacterWindow+"") $characterName;
+        window -e -sizeable $gSizeableFlag -w 300 -h 130 -title "Add new Character" newCharacterWindow;
+        
+    showWindow $newCharacterWindow;
+}
+
+// ----------------------------------------
+// Add new character Window to the project
+// ----------------------------------------
+global proc poseMan_addNewCharacter (string $characterName, string $firstSectionName) {
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	global string $gCurrentChar;
+	global int $gCurrentTabId;
+	global string $gTabs;
+    string $buffer[];
+			
+			// Establecemos el primer tab para que no de error el query del refreshMainWindow
+			if ($gCurrentChar == "") {
+			} else {
+				tabLayout -e -sti 1 $gTabs;
+			}
+			
+	$characterName = poseMan_spacesToDown ($characterName);
+ 
+	if ($characterName != "") {	
+		if (poseMan_checkCharacterName($characterName) == 0) {
+			sysFile -makeDir ($projectURL + "/poseman/" + $characterName);
+			
+			
+			print ("// The Character " + $characterName + " has been created\n");
+			poseMan_addDefaultSection ($characterName, $firstSectionName);
+				
+			// Borramos la ventana de "nuevo personaje"
+			deleteUI newCharacterWindow;
+			
+			$gCurrentChar = $characterName;
+			
+			// poseMan_refreshMainWindow;			
+			poseMan_refreshMainWindowWhenNewCharacter;
+		
+		} else {
+			print "// This Character name already exists\n";
+		}
+		
+	} else {
+		print ("// Type any character name\n");
+	}	
+	
+}
+
+// -----------------------
+// Add new section window
+// -----------------------
+global proc poseMan_addNewSectionUI () {
+	global int $gSizeableFlag;
+	
+	if (`window -exists newSectionWindow`) { deleteUI -window newSectionWindow; }
+	
+	string $newSectionWindow = `window newSectionWindow`;
+	global string $gCurrentChar;
+	
+		string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" newSectionLayout`;
+		columnLayout -adj 1 -rs 1;
+			text -l "Type section name/s (spaces = multi)" -align "left";
+			string $nombreSeccion = `textField`;
+			
+			button -l "CREATE" -c ("poseMan_addNewSection(\""+$gCurrentChar+"\", `textField -q -tx "+$nombreSeccion+"`);deleteUI "+$newSectionWindow+"");
+			
+		window -e -sizeable $gSizeableFlag -w 250 -h 92 -title "Add new Section" $newSectionWindow;
+	showWindow $newSectionWindow;
+}
+// ------------------------------------------------
+// Add defaults secionts at character creation time
+// ------------------------------------------------
+global proc poseMan_addDefaultSection (string $characterName, string $sectionName) {
+	string $buffer[];
+	global string $gCurrentSection;
+	global int $gCurrentTabId;
+	global string $gTabs;
+	string $fileData;
+	
+	tokenize $sectionName " " $buffer;
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	for ($i=0;$i<size($buffer);$i++) {
+		sysFile -makeDir ($projectURL + "/poseman/" + $characterName + "/" + $buffer[$i]);
+		$fileData += ($buffer[$i] + " * ");
+		print ("// Section " + $buffer[$i] + " for Character " + $characterName + " has been created\n");
+	}
+	
+	// Añadimos las secciones al recien creado sections.conf
+	$fileID = `fopen ($projectURL + "/poseman/" + $characterName + "/" + "sections.conf") "w"`;
+	fprint $fileID $fileData;
+	fclose $fileID;
+	
+	$gCurrentTabId = 1;
+	
+}
+
+// --------------------------------
+// Add new section to the character
+// -------------------------------- 
+global proc poseMan_addNewSection (string $characterName, string $sectionName) {
+    string $buffer[];
+    global string $gCurrentSection;
+    global int $gCurrentTabId;
+	global string $gTabs;
+    
+    $gCurrentSection = $sectionName;
+    
+    tokenize $sectionName " " $buffer;
+    
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+
+    for ($i=0;$i<size($buffer);$i++) {		
+		if (poseMan_checkSectionName($characterName, $sectionName) == 0) {			
+			sysFile -makeDir ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $buffer[$i]);			
+			poseMan_addSectionToConfigFile ($characterName, $buffer[$i]);
+			print ("// Section " + $buffer[$i] + " for Character " + $characterName + " has been created\n");
+		} else {
+			error ("// This section name already exists!");
+		}
+    }
+	
+	string $nTabs[] = `tabLayout -q -ca $gTabs`;
+	int $tabIndex = `size($nTabs)`;
+		
+	poseMan_refreshMainWindow;
+	
+	tabLayout -e -sti ($tabIndex+1) $gTabs;
+}
+
+// ---------------------------------------
+// Add a section name to section conf file
+// ---------------------------------------
+global proc poseMan_addSectionToConfigFile (string $charName, string $sectionName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $charName + "/sections.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+	int $i;
+	
+	// leemos las secciones desde el fichero de configuración de secciones
+	string $sectionsList[] = poseMan_getSectionsFromConfFile ($charName);
+
+	// Adjuntamos al final del array las nuevas poses		
+	$sectionsList[size($sectionsList)] = $sectionName;
+	
+	for ($i=0;$i<size($sectionsList);$i++) {
+		$fileData += ($sectionsList[$i] + " * ");
+	}
+	
+	$fileID = `fopen $filePath "w"`;
+	fprint $fileID $fileData;
+	fclose $fileID;
+}
+
+// ---------------------------------------
+// Add a pose name to pose conf file
+// ---------------------------------------
+global proc poseMan_addPoseToConfigFile (string $charName, string $sectionName, string $poseName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $charName + "/" + $sectionName + "/poses.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+	
+	$poseName = poseMan_spacesToDown ($poseName);
+	$poseName = ($poseName + ".pose");
+	
+	// leemos las poses desde el fichero de configuración de secciones
+	string $posesList[] = poseMan_getPosesFromConfFile ($charName, $sectionName);
+
+	// Adjuntamos al final del array las nuevas poses
+	$posesList[size($posesList)] = $poseName;
+	
+	for ($i=0;$i<size($posesList);$i++) {
+		$fileData += ($posesList[$i] + " * ");
+	}
+	
+	$fileID = `fopen $filePath "w"`;
+	fprint $fileID $fileData;
+	fclose $fileID;
+}
+
+// -------------------------------------
+// Add new pose from reference character
+// -------------------------------------
+global proc poseMan_addNewPoseFromReference (int $idTabSeccion, string $nombrePose) {
+	global string $gCurrentChar;
+	global int $gCurrentTabId;
+	global string $imgExtension;
+	
+	$nombrePose = poseMan_spacesToDown ($nombrePose);
+    
+	string $nombreSeccion[] = `poseMan_getSectionsFromConfFile($gCurrentChar)`;
+
+	string $listaObjs[] = `ls -sl`;
+	
+	string $poseData = "// PoseMAN pose file\n\n";
+	// $poseData += ("// Example pose format\n// object * attribute * value * mixweight\n\n");
+	string $atributosKeyable[];
+	string $atributosKeyable_tmp[];
+	string $buffer[], $buffer2[];
+	int $nTokens, $nTokens2;
+	string $nombreSinNS = "";
+
+	// Vamos objeto por objeto
+	for ($i=0;$i<size($listaObjs);$i++) {
+		$atributosKeyable = {};
+		$atributosKeyable_tmp = {};
+		
+		// obtenemos los atributos son keyables
+		$atributosKeyable = (`listAttr -k -u $listaObjs[$i]`);
+
+		for ($atributo in $atributosKeyable) {
+			
+			if (`getAttr -se ($listaObjs[$i]+"."+$atributo)`){
+				$atributosKeyable_tmp[size($atributosKeyable_tmp)] = $atributo;
+			}
+		}
+		
+		$atributosKeyable = $atributosKeyable_tmp;
+		
+		$zzz = `size($atributosKeyable)`;
+		$zzz = `size($atributosKeyable_tmp)`;
+		
+		// Procesamos el nombre del objeto para quiarle el/los namespace/s		
+		// Primero separamos los diferentes objetos de la "ruta" del nombre compuesto tipo: nombre|nombre|nombre|etc..
+		$nTokens = `tokenize $listaObjs[$i] "|" $buffer`;
+		
+		for ($k=0;$k<$nTokens;$k++) {
+			// Ahora por cada uno, le quitamos el namespace
+			$nTokens2 = `tokenize $buffer[$k] ":" $buffer2`;
+			$nombreSinNS += ($buffer2[size($buffer2)-1] + "|");
+			$buffer2 = {""};
+		}
+		
+		$nombreSinNS = `substring $nombreSinNS 1 (size($nombreSinNS)-1)`;
+		
+		$poseData += ("ctrl:" + $nombreSinNS + "\n");
+		
+		// Ahora pasamos atributo por atributo recogiendo el valor
+		for ($j=0;$j<size($atributosKeyable);$j++) {
+
+			// primero comprobamos si es de tipo "vector" o "non-vector"
+			// Si es vector no guardamos la primera referencia, así guardamos las siguientes 3, como atributos normales
+			if (`getAttr -type ($listaObjs[$i]+"."+$atributosKeyable[$j])`=="double3" || `getAttr -type ($listaObjs[$i]+"."+$atributosKeyable[$j])`=="string") {				
+				// float $vectorValor[] = (`getAttr ($listaObjs[$i] + "." + $atributosKeyable[$j])`);
+				// $valor = ($vectorValor[0] + "," + $vectorValor[1] + "," + $vectorValor[2]);
+				// $poseData += ($nombreSinNS + " * " + "<<" + $atributosKeyable[$j] + ">>" + " * " + $valor + " * " + "1" + "\n");				
+			} else {
+				float $valor = (`getAttr ($listaObjs[$i]+"."+$atributosKeyable[$j])`);
+				$poseData += ($nombreSinNS + " * " + $atributosKeyable[$j] + " * " + $valor + " * " + "1" + "\n");
+			}
+		}
+		
+		// $poseData += ("// set keyframe at all keyeable attrs\nsetKeyframe (\""+$listaObjs[$i]+"\");\n");
+		$poseData += ("\n");
+		
+		$nombreSinNS = "";
+	}
+
+	$poseData += "// End of PoseMAN file";
+
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseURLFull = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $gCurrentChar + "/" + $nombreSeccion[$idTabSeccion-1] + "/");
+	
+	if (poseMan_checkPoseName($gCurrentChar, ($nombreSeccion[$idTabSeccion-1]), ($nombrePose+".pose")) == 0) {
+		$fileID = `fopen ($poseURLFull + $nombrePose+".pose") "w"`;
+		fprint $fileID $poseData;
+		fclose $fileID;
+		
+		// Thumbnail part...
+		// Renderiza el playblast
+		int $currentTime = `currentTime -q`;
+		select -cl;
+		
+		if (`about -windows`) {
+			setAttr "defaultRenderGlobals.imageFormat" 20;
+			playblast -v false -frame $currentTime -w 160 -h 160 -orn 0 -cf ($poseURLFull + $nombrePose + ".bmp") -fmt "image";
+		} 
+		if (`about -linux` ||`about -mac`) {
+			setAttr "defaultRenderGlobals.imageFormat" 7;
+			playblast -v false -frame $currentTime -w 160 -h 160 -orn 0 -cf ($poseURLFull + $nombrePose + ".iff") -fmt "image";
+			system ("imgcvt " + ($poseURLFull + $nombrePose + ".iff"  + " " +  $poseURLFull + $nombrePose + ".xpm"));
+			sysFile -delete ($poseURLFull + $nombrePose + ".iff");
+		}
+				
+	} else {
+		error "// This name pose already exists!";	
+	}
+    
+	$gCurrentTabId = $idTabSeccion;    
+
+	// Añadimos la pose al archivo de poses
+	poseMan_addPoseToConfigFile ($gCurrentChar, $nombreSeccion[$idTabSeccion-1],  $nombrePose);
+	
+	poseMan_refreshMainWindow;
+}
+
+// ------------------------
+// Add new character avatar
+// ------------------------
+global proc poseMan_addCharacterAvatar (string $charName) {
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $avatarURLFull = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $charName);
+
+	global string $imgExtension;
+
+	// Renderiza el playblast
+	int $currentTime = `currentTime -q`;
+	select -cl;
+
+	if (`about -windows`) {
+		setAttr "defaultRenderGlobals.imageFormat" 20;
+		playblast -v false -frame $currentTime -w 560 -h 160 -orn 0 -cf ($avatarURLFull + "/" + $charName + ".avatar.bmp") -fmt "image";
+	}
+	if (`about -linux` || `about -mac`) {
+		setAttr "defaultRenderGlobals.imageFormat" 7;
+		playblast -v false -frame $currentTime -w 560 -h 160 -orn 0 -cf ($avatarURLFull + "/" + $charName + ".avatar.iff") -fmt "image";
+		system ("imgcvt " + ($avatarURLFull + "/" + $charName + ".avatar.iff"  + " " +  $avatarURLFull + "/" + $charName + ".avatar.xpm"));
+		sysFile -delete ($avatarURLFull + "/" + $charName + ".avatar.iff");		
+	}
+
+    poseMan_refreshMainWindow;
+}
+
+// -------------------------------------
+// Update section conf file from reorder
+// -------------------------------------
+global proc poseMan_addAllSectionsFromReorder (string $charName, string $allSections[]) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/sections.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+	int $i;
+
+	for ($i=0;$i<size($allSections);$i++) {
+		$fileData += ($allSections[$i] + " * ");
+	}
+
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;
+	fclose $fileID;
+	
+	poseMan_refreshMainWindow;
+}
+
+// -------------------------------------
+// Update section conf file from reorder
+// -------------------------------------
+global proc poseMan_addAllPosesFromReorder (string $charName, string $sectionName, string $allPoses[]) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/poses.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+
+	for ($i=0;$i<size($allPoses);$i++) {
+		$fileData += ($allPoses[$i] + " * ");
+	}
+
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;
+	fclose $fileID;
+	
+	poseMan_refreshMainWindow;
+
+}
+
+// -------------------------------------
+// Load a character FROM CHARACTER SELECTION WINDOW and make it active
+// -------------------------------------
+global proc poseMan_selectedCharacter (string $charactersList) {
+	global string $gCurrentChar;	
+	global int $gCurrentTabId;
+	$gCurrentTabId = 1;
+	string $poseMan_selectedCharacter[] = `textScrollList -q -si $charactersList`;
+	
+	$gCurrentChar = $poseMan_selectedCharacter[0];
+	
+	//poseMan_refreshMainWindow;
+	poseMan_refreshMainWindowWhenNewCharacter;
+}
+
+// -------------------------------------
+// Load a character FROM OPTION SELECTION and make it active
+// -------------------------------------
+global proc poseMan_loadCharacterFromSelection (string $selectionLayout) {
+	global string $gCurrentChar;	
+	global int $gCurrentTabId;
+	$gCurrentTabId = 1;
+	
+	string $poseMan_selectedCharacter = `optionMenu -q -v $selectionLayout`;
+	
+	$gCurrentChar = $poseMan_selectedCharacter;
+	
+	//poseMan_refreshMainWindow;
+	poseMan_refreshMainWindowWhenNewCharacter;
+	
+}
+
+// ------------------------
+// Load character Window
+// ------------------------
+global proc poseMan_selectCharacterUI() {
+	global int $gSizeableFlag;
+	int $i=0;
+	string $charactersList[] = `poseMan_getCharacterFromHD`;
+	
+	if (`window -exists selectCharacterWindow`) {
+		deleteUI -window selectCharacterWindow;
+	}
+	
+	string $selectCharacterWindow = `window selectCharacterWindow`;
+
+		string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" selectCharacterFrameLayout`;
+            columnLayout -adj 1 -rs 1;
+            string $characterListLayout = `textScrollList -numberOfRows 8 -allowMultiSelection 0`;
+            button -l "Cancel" -c ("deleteUI -window "+$selectCharacterWindow);
+            button -l "Load" -c ("poseMan_selectedCharacter (\""+$characterListLayout+"\");deleteUI -window "+$selectCharacterWindow);
+
+            for ($i=0;$i<size($charactersList);$i++) {
+                textScrollList -dcc ("poseMan_selectedCharacter (\""+$characterListLayout+"\");deleteUI -window "+$selectCharacterWindow) -e -append $charactersList[$i] $characterListLayout;
+            }
+
+		window -e -sizeable $gSizeableFlag -w 250 -h 180 -title "Character Selection" $selectCharacterWindow;
+	showWindow $selectCharacterWindow;
+}
+
+// -----------------------
+// Delete character window
+// -----------------------
+global proc poseMan_deleteCharacterUI () {
+	string $seleccionado[];
+	global string $gCurrentChar;
+    global string $characterListLayout;
+	global int $gSizeableFlag;
+
+	if (`window -exists characterWindow`) {
+		deleteUI -window characterWindow;
+	}
+	
+	string $characterWindow = `window characterWindow`;
+
+		string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" poseMan_deleteCharacterLayout`;
+			columnLayout -adj 1 -rs 1;
+			$characterListLayout = `textScrollList -numberOfRows 8 -allowMultiSelection 1`;	
+			string $characterList[] = `poseMan_getCharacterFromHD`;
+            for ($i=0;$i<size($characterList);$i++) {
+                textScrollList -e -append $characterList[$i] $characterListLayout;
+            }
+			
+            button -l "Cancel" -c ("deleteUI -window "+$characterWindow);
+            button -l "Delete" -c ("poseMan_deleteCharacter;deleteUI "+$characterWindow);
+            
+            window -e -sizeable $gSizeableFlag -w 250 -h 196 -title "Delete Character" $characterWindow;
+            
+	showWindow $characterWindow;
+}
+
+// ---------------------------------------
+// Delete a character (Rename to .deleted)
+// ---------------------------------------
+global proc poseMan_deleteCharacter () {
+	global string $characterListLayout;	
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	global string $gCurrentChar;
+	
+	string $characterName[] = `textScrollList -q -si $characterListLayout`;
+		
+	// Borramos el personaje
+	for ($i=0;$i<size($characterName);$i++) {
+		$resultado = `sysFile -rename ($projectURL + "/poseman_trash/" + $characterName[$i]) ($projectURL + "/poseman/" + $characterName[$i])`;
+		
+		if ($resultado == 0) {
+			$theRandomer = `rand $gCurrentChar 99999`;
+			sysFile -rename ($projectURL + "/poseman_trash/" + ($characterName[$i] + "_" + $theRandomer)) ($projectURL + "/poseman/" + $characterName[$i]);
+		}
+		
+		print ("// " + $characterName[$i] + " has been deleted\n");
+	}
+		
+	$gCurrentChar = "";
+    
+  	poseMan_refreshMainWindow;
+}
+
+// ---------------------------------------
+// Delete a character (Rename to .deleted)
+// ---------------------------------------
+global proc poseMan_deleteCharacterSimple () {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	global string $gCurrentChar;
+	
+	// Borramos el personaje
+	int $resultado = `sysFile -rename ($projectURL + "/poseman_trash/" + $gCurrentChar) ($projectURL + "/poseman/" + $gCurrentChar)`;
+	
+	if ($resultado==0) {
+		$theRandomer = `rand $gCurrentChar 99999`;
+		sysFile -rename ($projectURL + "/poseman_trash/" + ($gCurrentChar + "_" + $theRandomer)) ($projectURL + "/poseman/" + $gCurrentChar);
+		print ("// " + $gCurrentChar + " has been deleted\n");
+		
+	} 
+		
+	$gCurrentChar = "";
+    
+  	poseMan_refreshMainWindow;
+}
+// ------------------
+// Delete pose window
+// ------------------
+global proc poseMan_deletePoseUI (string $tabName) {
+	global int $gSizeableFlag;
+	global string $gCurrentChar;
+	
+	int $tabIndex = `tabLayout -q -sti $tabName`;
+	string $sectionsList[] = `poseMan_getSectionsFromConfFile($gCurrentChar)`;
+	
+	string $currentSection = $sectionsList[$tabIndex-1];
+	
+	if (`window -exists poseListWindow`) {
+		deleteUI -window poseListWindow;
+	}
+
+	string $posesListWindow = `window poseListWindow`;
+	
+		string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" poseMan_deletePoseLayout`;
+			columnLayout -adj 1 -rs 1;
+			string $posesListLayout = `textScrollList -numberOfRows 8 -allowMultiSelection 1`;
+			string $posesList[] = poseMan_getPosesFromHD($gCurrentChar, $currentSection);
+			            
+			for ($i=0;$i<size($posesList);$i++) {
+            	textScrollList -e -append $posesList[$i] -dcc ("poseMan_deletePose(\""+$gCurrentChar+ "\", \""+$currentSection+"\", eval(\"textScrollList -q -si "+$posesListLayout+"\"));deleteUI "+$posesListWindow+"") $posesListLayout;
+			}
+			
+			button -l "Cancel" -c ("deleteUI -window "+$posesListWindow);
+			button -l "Delete" -c ("poseMan_deletePose(\""+$gCurrentChar+ "\", \""+$currentSection+"\", eval(\"textScrollList -q -si "+$posesListLayout+"\"));deleteUI "+$posesListWindow+"");
+            
+            window -e -sizeable $gSizeableFlag -w 250 -h 180 -title "Delete Pose" $posesListWindow;
+        
+	showWindow $posesListWindow;
+}
+
+// -----------------------
+// Delete a character pose
+// -----------------------
+global proc poseMan_deletePose (string $characterName, string $sectionName, string $poseName[]) {
+	global string $imgExtension;
+	
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseNameFileOriginal;
+	string $poseNameFileMarkedAsDelete;
+	string $fileNoExtension;
+
+	for ($i=0;$i<size($poseName);$i++) {
+		
+		$poseNameFileOriginal = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName + "/" + $poseName[$i]);
+		$fileNoExtension = `substring $poseNameFileOriginal 1 (size($poseNameFileOriginal)-5)`;
+
+		sysFile -delete $poseNameFileOriginal;
+		sysFile -delete ($fileNoExtension + $imgExtension);			
+		poseMan_removePoseFromConfigFile ($characterName, $sectionName, $poseName[$i]);
+		
+		print ("// The pose "+$fileNoExtension+" has been deleted\n");
+	}
+    
+	poseMan_refreshMainWindow;
+}
+
+// --------------------------------------------
+// Delete a character pose from contextual menu
+// --------------------------------------------
+global proc poseMan_deletePoseSimple (string $characterName, string $sectionName, string $poseName) {
+	global string $imgExtension;
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseNameFileOriginal;
+	string $poseNameFileMarkedAsDelete;
+	string $fileNoExtension;
+
+	$poseNameFileOriginal = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName + "/" + $poseName);
+	$fileNoExtension = `substring $poseNameFileOriginal 1 (size($poseNameFileOriginal)-5)`;
+	
+	sysFile -delete $poseNameFileOriginal;
+	sysFile -delete ($fileNoExtension + $imgExtension);
+		
+	print ("// The pose "+$poseName+" has deleted\n");
+	
+	poseMan_removePoseFromConfigFile ($characterName, $sectionName, $poseName);
+	poseMan_refreshMainWindow;
+
+}
+
+// ---------------------
+// Delete section window
+// ---------------------
+global proc poseMan_deleteSectionUI (string $characterName) {
+	global string $gCurrentChar;
+	global int $gSizeableFlag;
+
+	if (`window -exists sectionWindow`) {
+		deleteUI -window sectionWindow;
+	}
+
+	string $sectionWindow = `window sectionWindow`;
+
+		string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" poseMan_deleteSectionLayout`;
+			columnLayout -adj 1 -rs 1;
+			string $sectionsListLayout = `textScrollList -numberOfRows 8 -allowMultiSelection 1`;
+			string $sectionsList[] = `poseMan_getSectionsFromConfFile($gCurrentChar)`;
+			
+            string $sectionsListNoNumber[];
+			int $sizeOfSectionChars;
+            
+			for ($i=0;$i<size($sectionsList);$i++) {
+				textScrollList -e -dcc ("poseMan_selectedSection (\""+$gCurrentChar+"\", \""+$sectionsListLayout+"\");deleteUI "+$sectionWindow) -append $sectionsList[$i] $sectionsListLayout;
+			}			
+			button -l "Cancel" -c ("deleteUI -window "+$sectionWindow);
+			// button -l "Delete" -h 30 -c ("poseMan_selectedSection (\""+$gCurrentChar+"\", \""+$sectionsListLayout+"\");deleteUI "+$sectionWindow);
+            button -l "Delete" -c ("poseMan_deleteSectionMultiple (\""+$gCurrentChar+"\", `textScrollList -q -si "+$sectionsListLayout+"`);deleteUI "+$sectionWindow);
+            window -e -sizeable $gSizeableFlag -w 250 -h 196 -title "Delete sections" $sectionWindow;
+             
+	showWindow $sectionWindow;
+}
+
+// ------------------------
+// Delete multiple sections
+// ------------------------
+global proc poseMan_deleteSectionMultiple (string $characterName, string $sectionName[]) {
+	global int $gCurrentTabId;	
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	
+	for($i=0;$i<size($sectionName);$i++) {
+		$resultado = `sysFile -rename ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman_trash/" + $sectionName[$i]) ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName[$i])`;
+		
+		if ($resultado == 0) {
+			$theRandomer = `rand $characterName 9999`;
+			sysFile -rename ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman_trash/" + ($sectionName[$i] + "_" + $theRandomer)) ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName[$i]);
+		}
+		
+		poseMan_removeSectionFromConfigFile ($characterName, $sectionName[$i]);
+		
+		print ("// The section " + $sectionName[$i] + " has been moved to poseman trash directory\n");
+	}
+	    
+	$gCurrentTabId = 1;
+	
+    poseMan_refreshMainWindowWhenDeleteSections;
+
+}
+
+// ----------------
+// Delete a section
+// ----------------
+global proc poseMan_deleteSection (string $characterName, string $sectionName[]) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $seccionFullURL = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName[0]);		
+	
+	$resultado = `sysFile -rename ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman_trash/" + $sectionName[0]) ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName[0])`;
+	if ($resultado==0) {
+		int $theRandomer = `rand $characterName 9999`;
+		sysFile -rename ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman_trash/" + $sectionName[0] + "_" + $theRandomer) ($projectURL + "/poseman/" + $characterName + "/" + $sectionName[0]);
+	}
+    poseMan_refreshMainWindowWhenDeleteSections;
+}
+
+// -----------------------------------------------------------------
+// Create PoseMan main directory from current maya project directory
+// -----------------------------------------------------------------
+global proc poseMan_createPoseManDir () {
+    // creamos el directorio poseman en el projecto actual
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+    $projectFullURL = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman");
+    $projectFullURL_trash = ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman_trash");	
+    
+    if (`filetest -d $projectFullURL`==0) {
+        sysFile -makeDir $projectFullURL;
+        print ("// PoseMan Directory Created at \"" + "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "\"\n");
+    }
+	
+	if (`filetest -d $projectFullURL_trash`==0) {
+		sysFile -makeDir $projectFullURL_trash;
+		print ("// PoseMan Trash Directory Created at \"" + $projectFullURL_trash + "\"\n");   
+    }
+
+}
+
+// ----------------------------------
+// Know who section (tab) is selected
+// ----------------------------------
+global proc poseMan_selectedSection (string $characterName, string $layoutName) {
+	$poseMan_selectedSection = `textScrollList -q -si $layoutName`;
+	poseMan_deleteSection ($characterName, $poseMan_selectedSection);
+}
+
+// ---------------------------------------
+// Get the name of the active Maya project
+// ---------------------------------------
+global proc string poseMan_getProjectName (string $projectURL) {
+	string $projectName;
+    string $buffer[];
+
+   	tokenize $projectURL "/" $buffer;
+   	$projectName = $buffer[size($buffer)-1];
+    
+	return $projectName;	
+}                  
+
+// --------------------------
+// Create capture pose window
+// --------------------------
+global proc poseMan_captureNewPoseUI (string $tabName) {
+	global int $gSizeableFlag;
+	
+	// Comprobamos la selecciÃ³n
+	string $selection[] = `ls -sl`;
+	if (size($selection)==0) {
+		warning "Please, select one or more controls!";
+	}
+
+	string $poseManCameraName = "poseManCamera";
+		if( `objExists $poseManCameraName`==false) {
+			string $poseManCamera[] = `camera -n $poseManCameraName`;
+			viewSet -p $poseManCamera[0];
+			$poseManCameraName = `camera -q -n $poseManCamera[0]`;
+			int $poseManCameraIndex = size($poseManCameraName);
+			string $poseManCameraShortName=  `substring $poseManCameraName 1 ($poseManCameraIndex-1)`;
+			rename $poseManCameraName $poseManCameraShortName;
+			$poseManCameraName = $poseManCameraShortName;
+			setAttr ($poseManCameraName + ".focalLength") 100;
+			hide $poseManCameraName;
+		} else {
+			print ("// Camera exists, skiping camera creation\n");
+		}
+	
+	global string $gCurrentChar;
+	string $charactersList[] = `poseMan_getCharacterFromHD`;
+	string $sectionsList[] = poseMan_getSectionsFromConfFile($gCurrentChar);
+	
+	if (`window -exists capturePoseWindow`) {
+		deleteUI -window capturePoseWindow;
+	}
+
+	string $capturePoseWindow =`window capturePoseWindow`;
+	string $mainCol = `columnLayout`;
+	// Visor
+    	frameLayout -p $mainCol -w 240 -h 240 -cll 0 -cl 1 -lv 0;
+		paneLayout -w 240 -h 240;	
+    
+    	string $createPoseCamera = `modelPanel -mbv false -camera $poseManCameraName`;  
+		modelEditor -e -grid 0 -da smoothShaded $createPoseCamera;
+		modelEditor -e -allObjects 0 $createPoseCamera;
+		modelEditor -e -nurbsSurfaces  1 $createPoseCamera;
+		modelEditor -e -polymeshes  1 $createPoseCamera;
+		modelEditor -e -subdivSurfaces  1 $createPoseCamera;
+
+	string $accionesLayout = `frameLayout -p $mainCol -cll 1 -cl 0 -w 247 -h 240 -lv 0`;
+
+		columnLayout;
+		// Current Char
+		text -w 200 -l "Current Character" -fn "boldLabelFont" -align "left";
+        text -w 200 -l $gCurrentChar -align "left";
+
+	    // Current Section
+		text -w 200 -align "left" -l "Current Section" -fn "boldLabelFont";
+		int $tabIndex = `tabLayout -q -sti $tabName`;
+	    string $opcionMenu = `optionMenu`;
+		
+		for ($i=0;$i<size($sectionsList);$i++) {
+			menuItem -label $sectionsList[$i];
+		}
+		
+		optionMenu -e -sl $tabIndex $opcionMenu;
+
+        // New pose text and create        
+		// Name pose
+		text -align "left" -l "Pose name";
+		string $poseNameLayout = `textField -w 235`;
+
+		// Create Pose from reference
+		button -h 26 -w 235 -l "CREATE" -c ("poseMan_addNewPoseFromReference((eval(\"optionMenu -q -sl "+$opcionMenu+"\")), eval(\"textField -q -tx "+$poseNameLayout+"\"));deleteUI "+$capturePoseWindow+";delete "+$poseManCameraName+"");
+    
+	window -e -mxb 0 -mnb 0 -rtf 0 -sizeable $gSizeableFlag -t "Create New Pose" -w 247 -h 408 $capturePoseWindow;
+	frameLayout -e -w 240 $accionesLayout;
+
+	showWindow $capturePoseWindow;
+
+	// BUG
+	// Reseleccionamos los objetos
+	for ($k=0;$k<size($selection);$k++) {
+	 select -add $selection[$k];
+	}
+}
+
+// -------------------------
+// Check if character exists
+// -------------------------
+global proc int poseMan_checkCharacterName (string $characterName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	int $outPut;
+	
+	if (`filetest -d ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName)`) {
+		$outPut = 1;
+	} else {
+		$outPut = 0;
+	}
+	
+	return $outPut;
+}
+
+// -----------------------
+// Check if section exists
+// -----------------------
+global proc int poseMan_checkSectionName (string $characterName, string $sectionName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	int $outPut = 0;
+	
+	if (`filetest -d ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName)`) {
+		$outPut = 1;
+	}
+	
+	return $outPut;
+}
+
+// --------------------
+// Check if pose exists
+// --------------------
+global proc int poseMan_checkPoseName (string $characterName, string $sectionName, string $poseName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	int $outPut;
+	
+	if (`filetest -f ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $sectionName + "/" + $poseName)`) {
+		$outPut = 1;
+	} else {
+		$outPut = 0;
+	}	
+	return $outPut;
+}
+
+// -----------------------------
+// Refresh PoseMAN (main) window
+// -----------------------------
+global proc poseMan_refreshMainWindow() {
+	
+	global string $gCurrentChar;
+	global int $gCurrentTabId;
+	global string $gTabs;
+	// int $cells;
+	int $newWith;
+	
+	// Vamos a comprobar si no tiene sections, le hacemos uno y metemos los directorios en el mismo.
+	poseMan_updateAssets;
+    
+	$gCurrentTabId = `tabLayout -q -sti $gTabs`;
+	
+	$newWith = `window -q -w poseManWindow`;
+	// $cells = ($newWith / 80);
+
+	poseManProc ($gCurrentChar);
+}
+
+
+// -----------------------------
+// Refresh PoseMAN (main) window when create new character
+// -----------------------------
+global proc poseMan_refreshMainWindowWhenNewCharacter () {
+	
+	global string $gCurrentChar;
+	global int $gCurrentTabId;
+	global string $gTabs;
+	// global int $gCells;
+	
+	$gCurrentTabId = 1;
+
+	poseMan_updateAssets;
+	
+	poseManProc($gCurrentChar);
+	
+}
+
+
+// --------------------------------------------------
+// Refresh PoseMAN (main) window when delete sections
+// -------------------------------------------------
+global proc poseMan_refreshMainWindowWhenDeleteSections() {
+	
+	global string $gCurrentChar;
+	global int $gCurrentTabId;
+	global string $gTabs;
+	// global int $gCells;
+	
+	$gCurrentTabId = 1;
+	
+	poseManProc($gCurrentChar);
+
+}
+
+// ------------------------------------------
+// Check if is the first time runnung PoseMAN
+// ------------------------------------------
+global proc int poseMan_checkIfFirstTime () {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";	
+	int $status = `filetest -d ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman")`;
+	
+	return $status;
+}
+
+// --------------------
+// About PoseMan Window
+// --------------------
+global proc poseMan_aboutPoseMan() {
+	global string $gIconsPath;
+	global string $gLogoFile;
+	global string $poseMAN_UI_title;
+	global int $gSizeableFlag;
+	
+	if (`window -exists aboutPoseManWindow`) {
+		deleteUI -window aboutPoseManWindow;
+	}
+	
+	string $aboutPoseManWindow = `window aboutPoseManWindow`;
+		string $aboutLayout = `frameLayout -cll 0 -lv 0 -bv 0 -bs "etchedIn" -h 100`;
+			columnLayout -adj 0;
+			image -i ($gIconsPath + $gLogoFile) -w 280 -h 100;
+			text -fn "boldLabelFont" -l ("\n   "+$poseMAN_UI_title+"   ");
+			text -l "Mêlèe Island Project Tools\n";
+			text -l "Francis Vega (c) 2008\n";
+			button -w 100 -l "Close" -h 20 -c ("deleteUI -window "+$aboutPoseManWindow);
+		window -e -sizeable $gSizeableFlag -w 280 -h 230 -title "About PoseMAN" $aboutPoseManWindow;
+	showWindow $aboutPoseManWindow;
+}
+
+// ------------------------------
+// "learn" who namespaced is used
+// ------------------------------
+global proc poseMan_learnNS () {
+	string $theNS;
+	string $buffer[], $bufferObject[];
+	string $currentNSCharacter = `namespaceInfo -cur`;
+	global string $gCurrentCharNamespace;
+	string $lista[] = `ls -sl`;
+	
+	if (size($lista)>0) {
+		// Primero separamos solo un objeto
+		tokenize $lista[0] "|" $bufferObject;
+		
+		int $nTokens = `tokenize $bufferObject[0] $currentNSCharacter $buffer`;
+		if ($nTokens==2) {
+			// Tiene un namespace
+			$gCurrentCharNamespace = ($buffer[0] + $currentNSCharacter);
+			print ("// Namespace: " + $gCurrentCharNamespace+"\n");
+		} else if ($nTokens>2) {
+			$gCurrentCharNamespace = "";
+			for ($i=0;$i<($nTokens-1);$i++) {
+				$gCurrentCharNamespace += ($buffer[$i] + $currentNSCharacter);
+			}
+			print ("// Namespace : " + $gCurrentCharNamespace+"\n");
+		} else {
+			// es un objeto sin namespace
+			$gCurrentCharNamespace = "";
+			print ("// No namespace found. The namespace environment has been reset" + $gCurrentCharNamespace + "\n");
+		}
+	} else {		
+		error "// Select object with namespace info or has double namespace (reference inside referenfe)!";
+	}
+	
+	// Update namespace info at main UI
+	text -e -l ("NS: " + $gCurrentCharNamespace) namespaceInfoText;
+
+}
+
+// -----------------------
+// Character rename Window
+// -----------------------
+global proc poseMan_renameCharacterUI () {
+	global string $gTabs;
+	global string $gCurrentChar;
+	
+	if (`window -exists renameCharacterWindow`) {
+		deleteUI -window renameCharacterWindow;
+	}
+
+	window renameCharacterWindow;
+		columnLayout -adj 1;
+			
+			text -fn "boldLabelFont" -l ($gCurrentChar) -align "center";
+			text -l "Type new character name";
+			string $newCharacterName = `textField`;
+			button -l "Rename" -c ("poseMan_renameCharacter($gCurrentChar, `textField -q -tx "+$newCharacterName+"`);deleteUI renameCharacterWindow");
+		
+	window -title "Rename character" -e -w 200 -h 103 renameCharacterWindow;
+	showWindow renameCharacterWindow;
+}
+
+// --------------------------
+// Rename a character (files)
+// --------------------------
+global proc poseMan_renameCharacter (string $characterName, string $newCharacterName) {
+	global string $imgExtension;
+	global string $gCurrentChar;
+	
+	$newCharacterName = poseMan_spacesToDown ($newCharacterName);
+	
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";	
+	
+	if (`filetest -d ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $newCharacterName)`==1) {
+		error ("// This Character ("+$newCharacterName+") already exist, type a new name!");
+	} else {
+		sysFile -rename ("Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES" + "/poseman/" + $characterName + "/" + $newCharacterName + ".avatar" + $imgExtension) ($projectURL + "/poseman/" + $characterName + "/" + $characterName + ".avatar" + $imgExtension);
+		sysFile -rename ($projectURL + "/poseman/" + $newCharacterName) ($projectURL + "/poseman/" + $characterName);
+		print ("// Character " + $gCurrentChar + " has been renamed to " + $newCharacterName + "\n");
+	}
+	
+	$gCurrentChar = $newCharacterName;
+	
+	poseMan_refreshMainWindow;
+}
+
+// ------------------
+// Rename pose window
+// ------------------
+global proc poseMan_renamePoseUI (string $poseToRename) {
+	global string $gTabs;
+	global string $gCurrentChar;
+
+	$poseToRename = `substring $poseToRename 1 (size($poseToRename)-5)`;
+	
+	if (`window -exists renamePoseWindow`) {
+		deleteUI -window renamePoseWindow;
+	}
+	
+	window renamePoseWindow;
+		columnLayout -adj 1;
+			
+			text -fn "boldLabelFont" -l ($poseToRename) -align "center";
+			text -l "Type new pose name";
+			string $newPoseName = `textField`;
+			button -l "Rename" -c ("poseMan_renamePose($gCurrentChar, $gTabs, \""+$poseToRename+"\", `textField -q -tx "+$newPoseName+"`);deleteUI renamePoseWindow");
+		
+	window -title "Rename pose" -e -w 200 -h 103 renamePoseWindow;
+	showWindow renamePoseWindow;
+}
+
+// -------------
+// Rename a pose
+// -------------
+global proc poseMan_renamePose (string $characterName, string $sectionName, string $poseName, string $newPoseName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	global string $gCurrentChar;
+	global string $imgExtension;
+
+	$newPoseName = poseMan_spacesToDown ($newPoseName);
+	
+	int $tabIndex = `tabLayout -q -sti $sectionName`;
+	string $sectionsList[] = `poseMan_getSectionsFromConfFile($gCurrentChar)`;
+
+	string $currentSection = $sectionsList[$tabIndex-1];
+	
+	if (`filetest -r ($projectURL + "/poseman/" + $characterName + "/" + $currentSection + "/" + $newPoseName + ".pose")`==1) {
+		error ("// This name ("+$newPoseName+") pose already exist, type a new name!");
+	} else {
+		sysFile -rename ($projectURL + "/poseman/" + $characterName + "/" + $currentSection + "/" + $newPoseName + ".pose") ($projectURL + "/poseman/" + $characterName + "/" + $currentSection + "/" + $poseName + ".pose");
+		sysFile -rename ($projectURL + "/poseman/" + $characterName + "/" + $currentSection + "/" + $newPoseName + $imgExtension) ($projectURL + "/poseman/" + $characterName + "/" + $currentSection + "/" + $poseName + $imgExtension);
+		poseMan_renamePoseFromConfigFile ($characterName, $currentSection, $poseName, $newPoseName );
+		print ("// Pose " + $poseName + " has been renamed to " + $newPoseName + "\n");
+	}
+	
+	poseMan_refreshMainWindow;
+}
+
+// ---------------------
+// Rename section window
+// ---------------------
+global proc poseMan_renameSectionUI (string $sectionToRename) {
+	global string $gTabs;
+	global string $gCurrentChar;
+	
+	int $tabIndex = `tabLayout -q -sti $sectionToRename`;
+	string $sectionsList[] = `poseMan_getSectionsFromConfFile($gCurrentChar)`;
+	
+	string $currentSection = $sectionsList[$tabIndex-1];
+
+	//$sectionToRename = `substring $sectionToRename 1 (size($sectionToRename)-5)`;
+	
+	if (`window -exists renameSectionWindow`) {
+		deleteUI -window renameSectionWindow;
+	}
+	
+	window renameSectionWindow;
+		columnLayout -adj 1;
+			
+			text -fn "boldLabelFont" -l ($currentSection) -align "center";
+			text -l "Type new pose name";
+			string $newSectionName = `textField`;
+			button -l "Rename" -c ("poseMan_renameSection($gCurrentChar, \""+$currentSection+"\", `textField -q -tx "+$newSectionName+"`);deleteUI renameSectionWindow");
+		
+	window -title "Rename pose" -e -w 200 -h 103 renameSectionWindow;
+	showWindow renameSectionWindow;
+}
+
+// --------------
+// Rename section
+// --------------
+global proc poseMan_renameSection (string $characterName, string $sectionName, string $newSectionName) {
+	global string $gCurrentSection;
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	$newSectionName = poseMan_spacesToDown ($newSectionName);
+		
+	if (`filetest -r ($projectURL + "/poseman/" + $characterName + "/" + $newSectionName)`==1) {
+		error ("// This name ("+$newSectionName+") pose already exist, type a new name!");
+	} else {		
+		sysFile -rename ($projectURL + "/poseman/" + $characterName + "/" + $newSectionName) ($projectURL + "/poseman/" + $characterName + "/" + $sectionName);	
+		poseMan_renameSectionFromConfigFile ($characterName, $sectionName, $newSectionName);		
+		print ("// Section " + $sectionName + " has been renamed to " + $newSectionName + "\n");
+	}
+	
+	$gCurrentSection = $newSectionName;
+	
+	poseMan_refreshMainWindow;
+}
+
+// ------------
+// Apply a pose
+// ------------
+global proc poseMan_applyPose (string $charName, string $sectionName, string $poseName, float $mix) {
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+    string $buffer[];
+    global string $gCurrentCharNamespace;
+	string $filePoseData;
+    $fileID = `fopen ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/" + $poseName) "r"`;
+    
+    // leemos una linea
+    $nextLine = `fgetline $fileID`;
+
+	// leemos todas las lineas
+	while ( !`feof $fileID` ) {
+		// La línea es // o \n
+        if (`substring $nextLine 1 2` == "//" || `substring $nextLine 1 2` == "\n" || `substring $nextLine 1 5` == "ctrl:") {
+        } else {
+            tokenize $nextLine " * " $buffer;
+            
+            $nombreDelObjeto = $buffer[0];
+            $propiedadDelObjeto = $buffer[1];
+            $valorDelObjeto = $buffer[2];
+			
+			// Componemos la línea de mixAttr
+			$filePoseData += ("poseMan_mixAttr (\""+$nombreDelObjeto+"\", \""+$gCurrentCharNamespace+"\", \""+$propiedadDelObjeto+"\", \""+$valorDelObjeto+"\", \""+$mix+"\", -1000000);\n");
+        }
+        $nextLine = `fgetline $fileID`;	
+    }
+    
+	// Cerramos el archivo
+    fclose $fileID;
+	
+	// Evaluamos la pose
+	eval ($filePoseData);
+	    
+	// info
+	print ("// "+(`substring $poseName 1 (size($poseName)-5)`)+" pose asigned\n");
+}
+
+// ------------
+// Apply a pose (FAST)
+// ------------
+global proc poseMan_applyPoseFast (string $charName, string $sectionName, string $poseName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $buffer[];
+	global string $gCurrentCharNamespace;
+	string $filePoseData;
+	$fileID = `fopen ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/" + $poseName) "r"`;
+    
+	// leemos una linea
+	$nextLine = `fgetline $fileID`;
+
+	// leemos todas las lineas
+	while ( !`feof $fileID` ) {
+		// La línea es // o \n
+		if (`substring $nextLine 1 2` == "//" || `substring $nextLine 1 2` == "\n" || `substring $nextLine 1 5` == "ctrl:") {
+		} else {
+			
+		tokenize $nextLine " * " $buffer;	    
+		$nombreDelObjeto = $buffer[0];
+		$propiedadDelObjeto = $buffer[1];
+		$valorDelObjeto = $buffer[2];
+			
+		// Componemos la línea de mixAttr
+		$filePoseData += ("poseMan_mixAttrFast (\""+$nombreDelObjeto+"\", \""+$gCurrentCharNamespace+"\", \""+$propiedadDelObjeto+"\", \""+$valorDelObjeto +"\");\n");
+	}
+	
+	$nextLine = `fgetline $fileID`;	
+	}
+    
+	// Cerramos el archivo
+	fclose $fileID;
+	
+	// Evaluamos la pose
+	eval ($filePoseData);
+	    
+	// info
+	print ("// "+(`substring $poseName 1 (size($poseName)-5)`)+" pose asigned\n");
+}
+
+// --------------
+// Mix attributes (FAST)
+// --------------
+global proc poseMan_mixAttrFast (string $objeto, string $objectNamespace, string $propiedad, float $valor) {
+	global string $gCurrentCharNamespace;
+	global string $gSetKeyOnPose;
+	string $buffer[];
+	int $nTokens;
+	string $objetoCompleto;
+
+	// Procesamos el nombre del objeto para añadir el namespace en caso de que sea un nombre "compuesto" tipo nombre|nombre|nombre|....
+	tokenize $objeto "|" $buffer;
+
+	$objetoCompleto = "";
+
+	for ($i=0;$i<size($buffer);$i++) {
+		$objetoCompleto += ($gCurrentCharNamespace + $buffer[$i] + "|");
+	}
+
+	$objetoCompleto = `substring $objetoCompleto 1 (size($objetoCompleto)-1)`;
+
+	// asignamos valor
+	setAttr ($objetoCompleto + "." + $propiedad) $valor;
+
+	// currentTime $nFrame;
+	if ($gSetKeyOnPose == 1) {
+		setKeyframe $objetoCompleto;
+	} 
+}
+
+// -----------------------------
+// Apply a pose at frames window
+// -----------------------------
+global proc poseMan_applyPoseAtFramesUI (string $charName, string $sectionName, string $poseName, float $mix) {
+	global int $gSizeableFlag;
+	
+    if (`window -exists posesAtFramesWindow`) {
+        deleteUI -window posesAtFramesWindow;
+    }
+
+    string $applyPoseAtFramesWidow = `window posesAtFramesWindow`;
+    global string $gCurrentChar;
+
+        string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" newSectionLayout`;
+        columnLayout -adj 1 -rs 1;
+            text -l "Frame(s) where asign the Pose" -align "left";
+            string $framesWhereApplyPose = `textField`;
+
+            // text -l "Weight (0 to 1)" -align "left";
+            // string $weightOfPose = `floatSlider -min 0 -max 1 -value 1`;
+
+            button -l "Cancel" -c ("deleteUI " + $applyPoseAtFramesWidow);
+            button -l "Asign Pose" -c ("poseMan_applyPoseAtFrames (\""+$charName+"\", \""+$sectionName+"\", \""+$poseName+"\", 1, `textField -q -tx "+$framesWhereApplyPose+"`);deleteUI "+$applyPoseAtFramesWidow+"");
+
+        window -e -sizeable $gSizeableFlag -w 250 -h 155 -title "Add new Section" $applyPoseAtFramesWidow;
+    showWindow $applyPoseAtFramesWidow;
+}
+
+// --------------------------
+// Apply a pose at frames ...
+// --------------------------
+global proc poseMan_applyPoseAtFrames (string $charName, string $sectionName, string $poseName, float $mix, string $framesWhereApplyPose) {
+	string $buffer_nFrames[];
+	
+	tokenize $framesWhereApplyPose " " $buffer_nFrames;
+	
+	// Guardamos el frame actual
+	string $actualFrame = `currentTime -q`;
+		
+	for ($i=0;$i<size($buffer_nFrames);$i++) {
+		currentTime $buffer_nFrames[$i];
+		poseMan_applyPose ($charName, $sectionName, $poseName, $mix);
+		setKeyframe;
+	}
+
+	// Volvemos al frame "actual"
+	currentTime $actualFrame;
+}
+
+// --------------
+// Mix attributes
+// --------------
+global proc poseMan_mixAttr (string $objeto, string $objectNamespace, string $propiedad, float $valor, float $mix, int $nFrame) {
+    float $v1, $v2, $valor;
+    global string $gCurrentCharNamespace;
+	global string $gSetKeyOnPose;
+	string $buffer[] = {""};
+	int $nTokens;
+	string $objetoCompleto = "";
+	
+	// Procesamos el nombre del objeto para añadir el namespace en caso de que sea un nombre "compuesto" tipo nombre|nombre|nombre|....
+	tokenize $objeto "|" $buffer;
+
+	$objetoCompleto = "";
+	
+	for ($i=0;$i<size($buffer);$i++) {
+		$objetoCompleto += ($gCurrentCharNamespace + $buffer[$i] + "|");
+	}
+	
+	$objetoCompleto = `substring $objetoCompleto 1 (size($objetoCompleto)-1)`;
+    
+	// leemos el valor
+	$v1 = (`getAttr ($objetoCompleto + "." + $propiedad)`);
+	
+    // calculamos la mezcla (de grog!)
+    $v2 = ($valor*$mix) + ($v1*(1-$mix));
+
+    // asignamos valor
+	setAttr ($objetoCompleto + "." + $propiedad) $v2;
+	
+	if ($nFrame==-1000000) {
+		$nFrame = `currentTime -q`;
+	}
+	
+	// currentTime $nFrame;
+	if ($gSetKeyOnPose == 1) {
+		setKeyframe $objetoCompleto;
+	}	
+}
+
+// --------------------------------------------
+// Remove a section name from section conf file
+// --------------------------------------------
+global proc poseMan_removeSectionFromConfigFile (string $charName, string $sectionName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/sections.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+	int $i;
+
+	// leemos las secciones desde el fichero de configuración de secciones
+	string $sectionsList[] = poseMan_getSectionsFromConfFile ($charName);
+				
+	// Ahora hacemos un recorrido y metemos todas las secciones en la variable final EXCEPTO la sección borrada
+	for ($i=0;$i<size($sectionsList);$i++) {
+		if ($sectionsList[$i] != $sectionName) {
+			$fileData += ($sectionsList[$i] + " * ");
+		}
+	}
+	
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;			
+	fclose $fileID;	
+}
+
+// --------------------------------------------
+// Remove a pose name from pose conf file
+// --------------------------------------------
+global proc poseMan_removePoseFromConfigFile (string $charName, string $sectionName, string $poseName) {		
+		
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/poses.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+
+	// leemos las poses desde el fichero de configuración de poses
+	string $posesList[] = poseMan_getPosesFromConfFile ($charName, $sectionName);
+
+	// Ahora hacemos un recorrido y metemos todas las poses en la variable final EXCEPTO la pose borrada
+	for ($i=0;$i<size($posesList);$i++) {
+		if ($posesList[$i] != $poseName) {
+			$fileData += ($posesList[$i] + " * ");
+
+		}
+	}
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;			
+	fclose $fileID;
+	
+	// Comprobamos si ya no existen poses, en ese caso, borramos poses.conf
+	string $posesFromHD[];
+	$posesFromHD = poseMan_getPosesFromHD ($charName, $sectionName);
+	if (size($posesFromHD) == 0) {
+		sysFile -delete $filePath;
+	}
+
+}
+
+// ---------------------------------------
+// Rename a section from section conf file
+// ---------------------------------------
+global proc poseMan_renameSectionFromConfigFile (string $charName, string $sectionName, string $newSectionName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/sections.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+	int $i;
+
+	// leemos las secciones desde el fichero de configuración de secciones
+	string $sectionsList[] = poseMan_getSectionsFromConfFile ($charName);
+	
+	// Ahora hacemos un recorrido y cuando demos con la sección a renombrar, damos el cambiazao
+	for ($i=0;$i<size($sectionsList);$i++) {
+		if ($sectionsList[$i] == $sectionName) {
+			$fileData += ($newSectionName + " * ");
+		} else {
+			$fileData += ($sectionsList[$i] + " * ");
+		}
+	}
+	
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;			
+	fclose $fileID;
+		
+}
+
+// ---------------------------------------
+// Rename a pose from pose conf file
+// ---------------------------------------
+global proc poseMan_renamePoseFromConfigFile (string $charName, string $sectionName, string $poseName, string $newPoseName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/poses.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+	int $i;
+
+	// leemos las poses desde el fichero de configuración de poses
+	string $posesList[] = poseMan_getPosesFromConfFile ($charName, $sectionName);
+	
+	// Ahora hacemos un recorrido y cuando demos con la pose a renombrar, damos el cambiazao
+	for ($i=0;$i<size($posesList);$i++) {
+		if ($posesList[$i] == ($poseName + ".pose")) {
+			$fileData += (($newPoseName + ".pose")+ " * ");
+		} else {
+			$fileData += ($posesList[$i] + " * ");
+		}
+	}
+	
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;			
+	fclose $fileID;		
+}
+
+// -----------------------------------------
+// Get array of sections name from conf file
+// -----------------------------------------
+global proc string[] poseMan_getSectionsFromConfFile (string $charName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/sections.conf");
+	string $nextLine;
+	string $sectionsList[];
+
+	$fileID = `fopen $filePath "r"`;
+	$nextLine = `fgetline $fileID`;
+	fclose $fileID;
+	
+	tokenize $nextLine " * " $sectionsList;
+
+	return $sectionsList;
+}
+
+// ---------------------------------
+// Select controls from pose "thumb"
+// ---------------------------------
+global proc poseMan_selectControlsFromPose (string $charName, string $sectionName, string $poseName) {
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+    string $buffer[];
+	string $controlsFromPoseData;
+    global string $gCurrentCharNamespace;
+	
+	select -cl;
+	
+    $fileID = `fopen ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/" + $poseName) "r"`;
+    
+    // leemos una linea
+    $nextLine = `fgetline $fileID`;
+
+    while ( !`feof $fileID` ) {
+		// La lína es ctrl:
+        if (`substring $nextLine 1 5` == "ctrl:") {
+            tokenize $nextLine ":" $buffer;
+            $nombreDelObjeto = $buffer[1];
+			$controlsFromPoseData += ("select -add " + $gCurrentCharNamespace + $nombreDelObjeto + ";");
+        }
+		
+        $nextLine = `fgetline $fileID`;
+    }    
+    fclose $fileID;
+	
+	eval($controlsFromPoseData);
+}
+
+// -----------------------
+// Reorder sections window
+// -----------------------
+global proc poseMan_reorderSections (string $characterName) {
+	global int $gSizeableFlag;
+	global string $gCurrentChar;
+
+	if (`window -exists reorderWindow`) {
+		deleteUI -window reorderWindow;
+	}
+
+	string $reorderWindow = `window reorderWindow`;
+
+		string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" poseMan_deleteSectionLayout`;
+			columnLayout -adj 1 -rs 1;
+			string $sectionsListLayout = `textScrollList -numberOfRows 8 -allowMultiSelection 0`;
+			string $sectionsList[] = `poseMan_getSectionsFromConfFile($gCurrentChar)`;
+			
+            string $sectionsListNoNumber[];
+			int $sizeOfSectionChars;
+            
+			for ($i=0;$i<size($sectionsList);$i++) {
+				textScrollList -e -append $sectionsList[$i] $sectionsListLayout;
+			}		
+			
+			button -l "Up" -c ("poseMan_goUp(\""+$sectionsListLayout+"\")");
+			button -l "Down" -c ("poseMan_goDown(\""+$sectionsListLayout+"\")");
+			separator -h 10;
+			button -l "OK" -c ("poseMan_addAllSectionsFromReorder($gCurrentChar, `textScrollList -q -ai "+$sectionsListLayout+"`);deleteUI "+$reorderWindow+"");
+			window -e -sizeable $gSizeableFlag -w 250 -h 220 -title "Reorder sections" $reorderWindow;
+             
+	showWindow $reorderWindow;
+}
+
+// --------------------
+// Reorder poses window
+// --------------------
+global proc poseMan_reorderPoses (string $tabName) {
+	global int $gSizeableFlag;
+	global string $gCurrentChar;
+	
+	int $tabIndex = `tabLayout -q -sti $tabName`;
+	string $sectionsList[] = `poseMan_getSectionsFromConfFile($gCurrentChar)`;
+	string $currentSection = $sectionsList[$tabIndex-1];
+	
+	$gProjectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	if (`filetest -r ($gProjectURL + "/poseman/" + $gCurrentChar + "/" + $currentSection + "/poses.conf")`) {
+		// Existen poses	
+		if (`window -exists reorderWindow`) {
+			deleteUI -window reorderWindow;
+		}
+
+		string $reorderWindow = `window reorderWindow`;
+
+			string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" poseMan_reorderPosesLayout`;
+				columnLayout -adj 1 -rs 1;
+				string $posesListLayout = `textScrollList -numberOfRows 8 -allowMultiSelection 0`;
+				string $posesList[] = poseMan_getPosesFromConfFile($gCurrentChar, $currentSection);
+			
+	            string $posesListNoNumber[];
+				int $sizeOfSectionChars;
+            
+				for ($i=0;$i<size($posesList);$i++) {
+					textScrollList -e -append $posesList[$i] $posesListLayout;
+				}		
+			
+				button -l "Up" -c ("poseMan_goUp(\""+$posesListLayout+"\")");
+				button -l "Down" -c ("poseMan_goDown(\""+$posesListLayout+"\")");
+				separator -h 10;
+				button -l "OK" -c ("poseMan_addAllPosesFromReorder($gCurrentChar, \"" + $currentSection + "\", `textScrollList -q -ai "+$posesListLayout+"`);deleteUI "+$reorderWindow+"");
+				window -e -sizeable $gSizeableFlag -w 250 -h 220 -title "Reorder poses" $reorderWindow;
+             
+		showWindow $reorderWindow;
+	} else {
+		warning "There isn't poses";
+	}
+}
+
+// ----------------------------
+// Go Up proc of reorder window
+// ----------------------------
+global proc poseMan_goUp (string $layoutName) {
+	// Guardamos todos los items
+	string $allItems[] = `textScrollList -q -ai $layoutName`;
+	
+	// El id seleccionado	
+	int $selectedItemList[]	= `textScrollList -q -sii $layoutName`;
+	 
+	if ($selectedItemList[0]>1) {
+		int $selectedItem = ($selectedItemList[0]);
+		int $topItem = $selectedItem-1;
+		
+		string $seleccionado = $allItems[$selectedItem-1];
+		string $elDeArriba   = $allItems[$topItem-1];
+		
+		$allItems[$selectedItem-1] = $elDeArriba;
+		$allItems[$topItem-1] = $seleccionado;
+			
+		textScrollList -e -ra $layoutName;	
+		
+		for ($i=0;$i<size($allItems);$i++) {
+			textScrollList -e -append $allItems[$i] $layoutName;
+		}
+		
+		textScrollList -e -sii $topItem $layoutName;
+	}
+}
+
+// ------------------------------
+// Go Down proc of reorder window
+// ------------------------------
+global proc poseMan_goDown (string $layoutName) {
+	// Guardamos todos los items
+	string $allItems[] = `textScrollList -q -ai $layoutName`;
+	
+	// El id seleccionado	
+	int $selectedItemList[]	= `textScrollList -q -sii $layoutName`;
+	
+	if ($selectedItemList[0]<size($allItems)) {	
+		int $selectedItem = ($selectedItemList[0]);
+		int $DownItem = $selectedItem+1;
+	
+		string $seleccionado = $allItems[$selectedItem-1];
+		string $elDeArriba   = $allItems[$DownItem-1];
+	
+		$allItems[$selectedItem-1] = $elDeArriba;
+		$allItems[$DownItem-1] = $seleccionado;
+		
+		textScrollList -e -ra $layoutName;	
+	
+		for ($i=0;$i<size($allItems);$i++) {
+			textScrollList -e -append $allItems[$i] $layoutName;
+		}
+	
+		textScrollList -e -sii $DownItem $layoutName;
+	}
+}
+
+// --------------------------------
+// Refresh the extended mode window
+// --------------------------------
+global proc poseMan_refreshExtendedModeWindow () {
+	int $cleanModeWith = `window -q -w cleanModeWindow`;
+	
+	int $nColumns = $cleanModeWith/80;
+		
+	poseMan_setExpandedMode ($nColumns, $cleanModeWith);	
+	
+}
+
+// ------------------------
+// Capture character avatar
+// ------------------------
+global proc poseMan_captureCharacterAvatar (string $charName) {
+	global int $gSizeableFlag;
+	
+	string $poseManCameraName = "poseManCamera";
+		if( `objExists $poseManCameraName`==false) {
+			string $poseManCamera[] = `camera -n $poseManCameraName`;
+			viewSet -p $poseManCamera[0];
+			$poseManCameraName = `camera -q -n $poseManCamera[0]`;
+			int $poseManCameraIndex = size($poseManCameraName);
+			string $poseManCameraShortName=  `substring $poseManCameraName 1 ($poseManCameraIndex-1)`;
+			rename $poseManCameraName $poseManCameraShortName;
+			$poseManCameraName = $poseManCameraShortName;
+			hide $poseManCameraName;
+		} else {
+			print ("// Camera exists, skiping camera creation\n");
+		}	
+	
+	if (`window -exists capturePoseWindow`) {
+		deleteUI -window capturePoseWindow;
+	}
+
+	string $capturePoseWindow =`window capturePoseWindow`;
+	string $tmp_colum = `columnLayout`;
+	
+	// Visor
+    	frameLayout -p $tmp_colum -w 240 -h 240 -cll 0 -cl 1 -lv 0;
+			paneLayout -w 240 -h 240;    
+	    	string $createPoseCamera = `modelPanel -mbv false -camera $poseManCameraName`;  
+			modelEditor -e -grid 0 -da smoothShaded $createPoseCamera;
+			modelEditor -e -allObjects 0 $createPoseCamera;
+			modelEditor -e -nurbsSurfaces  1 $createPoseCamera;
+			modelEditor -e -polymeshes  1 $createPoseCamera;
+			modelEditor -e -subdivSurfaces  1 $createPoseCamera;
+
+
+		string $accionesLayout = `frameLayout -p $tmp_colum -cll 1 -cl 0 -w 247 -h 240 -lv 0`;
+
+		columnLayout -p $accionesLayout;
+		// Current Char
+		text -w 200 -l "Current Character" -fn "boldLabelFont" -align "left";
+        text -w 200 -l $charName -align "left";
+
+		// Create Pose
+		button -h 26 -w 235 -l "CAPTURE AVATAR" -c ("poseMan_addCharacterAvatar(\""+$charName+"\");deleteUI "+$capturePoseWindow+";delete "+$poseManCameraName+"");
+    
+	window -e  -sizeable $gSizeableFlag -t "Capture Character Avatar" -w 247 -h 330 $capturePoseWindow;
+	frameLayout -e -w 240 $accionesLayout;
+
+	showWindow $capturePoseWindow;
+
+}
+
+// -------------------------
+// Save PoseMan file project
+// -------------------------
+global proc poseMan_zipProjectFileBrowser () {
+    fileBrowserDialog -ds 1 -wt "Save PoseMAN project file" -m 2 -fc "poseMan_zipProject" -an "Save" -om "SaveAs"; 
+}
+
+// ---------------
+// The zip project
+// ---------------
+global proc poseMan_zipProject ( string $filename, string $fileType ) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $prjName = ("Project: " + `poseMan_getProjectName($projectURL)`);
+	
+	system ("zip -r -D " + $filename + ".zip" + " " + $projectURL + "/poseman/*");
+}
+
+// -------------------------
+// Process mel file commands
+// -------------------------
+global proc int poseMan_procMelFile (string $fileName) {
+    int $fileStatus;
+   	string $nextLine;
+   	string $fileData;
+    
+    if (`filetest -r $fileName`) {
+        
+      	$fileID = `fopen $fileName "r"`;
+	    $nextLine = `fgetline $fileID`;
+	
+	    while ( !`feof $fileID` ) {
+		    $fileData += $nextLine;
+    		$nextLine = `fgetline $fileID`;
+	    }
+		
+    	fclose $fileID;	
+	    eval ($fileData);
+	    
+	    $fileStatus = 1;
+	    
+    } else {
+	
+        $fileStatus = 0;
+    }
+    
+    return $fileStatus;
+}
+
+// ----------------------------------
+// Move Poses between sections Window
+// ----------------------------------
+global proc poseMan_movePoseUI (string $charName, string $sectionName, string $poseName) {
+	global int $gSizeableFlag;
+	
+	if (`window -exists movePoseWindow`) {
+		deleteUI -window movePoseWindow;
+	}
+
+	string $movePoseWindow = `window movePoseWindow`;
+
+		string $mainLayout = `frameLayout -lv 0 -bv 0 -bs "etchedIn" poseMan_deleteSectionLayout`;
+			columnLayout -adj 1 -rs 1;
+			string $sectionsListLayout = `textScrollList -numberOfRows 8 -allowMultiSelection 0`;
+			string $sectionsList[] = `poseMan_getSectionsFromConfFile($charName)`;
+			
+            string $sectionsListNoNumber[];
+			int $sizeOfSectionChars;
+            
+			for ($i=0;$i<size($sectionsList);$i++) {
+				textScrollList -e -dcc ("poseMan_movePose (\""+$charName+"\", \""+$sectionName+"\", \""+$poseName+"\", `textScrollList -q -si "+$sectionsListLayout+"`)") -append $sectionsList[$i] $sectionsListLayout;
+			}
+			
+			button -l "Cancel" -c ("deleteUI -window "+$movePoseWindow);
+            button -l "Move Pose" -c ("poseMan_movePose (\""+$charName+"\", \""+$sectionName+"\", \""+$poseName+"\", `textScrollList -q -si "+$sectionsListLayout+"`)");
+
+            window -e -sizeable $gSizeableFlag -w 250 -h 196 -title "Select the section where move the pose" $movePoseWindow;
+             
+	showWindow $movePoseWindow;
+}
+
+// -------------------------------
+// Move the Poses between sections
+// -------------------------------
+global proc poseMan_movePose (string $charName, string $sectionName, string $poseName, string $targetSection[]) {
+	global string $imgExtension;
+	string $thumbName;
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	
+	$thumbName = (`substring $poseName 1 (size($poseName)-5)` + $imgExtension);
+	
+	string $poseOriginal = ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/" + $poseName);
+	string $thumbOriginal= ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/" + $thumbName);	
+	string $poseTarget	 = ($projectURL + "/poseman/" + $charName + "/" + $targetSection[0] + "/" + $poseName);
+	string $thumbTarget	 = ($projectURL + "/poseman/" + $charName + "/" + $targetSection[0] + "/" + $thumbName);
+	
+	
+	if (`filetest -r $poseTarget`) {
+		error ("// Ya existe ese nombre de poses\n");
+	} else {	
+		// mover el fichero de pose .pose
+		sysFile -rename $poseTarget $poseOriginal;
+		
+		// mover el fichero de thumbnail .bmp/.xpm
+		sysFile -rename $thumbTarget $thumbOriginal;
+		
+		// actualizamos los poses.conf correspondientes.
+		// Quitamos la pose de la sección de origen
+		poseMan_removePoseFromConfigFile ($charName, $sectionName, $poseName);
+		
+		// Añadimos la pose a la sección de destino
+		string $poseNameNoExt = `substring $poseName 1 (size($poseName)-5)`;
+		poseMan_addPoseToConfigFile ($charName, $targetSection[0], $poseNameNoExt);
+		
+		// Borramos la ventana "Mover pose"
+		deleteUI -window movePoseWindow;
+		
+		poseMan_refreshMainWindow;
+	}
+}
+
+// ----------------------------------------------
+// Update Pose from viewport (just same controls)
+// ----------------------------------------------
+global proc poseMan_updatePose (string $charName, string $sectionName, string $poseName) {
+	// Objetos previos seleccionados
+	string $listaObjsPrevia[] = `ls -sl`;
+
+	// Select control from pose
+	poseMan_selectControlsFromPose ($charName, $sectionName, $poseName);
+	
+	string $listaObjs[] = `ls -sl`;
+	
+	// Escribimos la pose con los controles seleccionados
+	poseMan_writePoseFile ($charName, $sectionName, $poseName, $listaObjs);
+	
+	// Volvemos a seleccionar los objetos previos
+	select -cl;
+	for ($i=0;$i<size($listaObjsPrevia);$i++) {
+		select -add $listaObjsPrevia[$i];
+	}
+	
+	print ("// "+(`substring $poseName 1 (size($poseName)-5)`)+" pose updated\n");
+}
+
+// -----------------------------
+// Add selected controls to pose
+// -----------------------------
+global proc poseMan_addControlsToPose (string $charName, string $sectionName, string $poseName) {
+	// Aplicamos la pose
+	poseMan_applyPoseFast ($charName, $sectionName, $poseName);
+	
+	// Primero guardamos todos los controles en un array
+	string $newControls[] = `ls -sl`;
+	
+	// Ahora seleccionamos los controles actuales de la pose
+	poseMan_selectControlsFromPose ($charName, $sectionName, $poseName);
+	// y los guardamos en otro array
+	string $poseControls[] = `ls -sl`;
+	
+	// Sumamos los dos arrays, con lo que tenemos la lista de los objetos en una nueva lista
+	string $allControls[];
+	$allControls = poseMan_mixArrays ($newControls, $poseControls);
+	
+	// Escribimos la pose con los controles seleccionados
+	poseMan_writePoseFile ($charName, $sectionName, $poseName, $allControls);
+	
+	// Volvemos a seleccionar los objetos previos
+	select -cl;
+	for ($i=0;$i<size($newControls);$i++) {
+		select -add $newControls[$i];
+	}
+
+	print ("// "+(`substring $poseName 1 (size($poseName)-5)`)+" pose updated with new controls\n");
+	
+}
+
+// ----------------------------------
+// Remove selected controls from pose
+// ----------------------------------
+global proc poseMan_removeControlsFromPose (string $charName, string $sectionName, string $poseName) {
+	// Aplicamos la pose
+	poseMan_applyPoseFast ($charName, $sectionName, $poseName);
+	
+	// Primero guardamos todos los controles en un array
+	string $controlsToRemove[] = `ls -sl`;
+	
+	// Ahora seleccionamos los controles actuales de la pose
+	poseMan_selectControlsFromPose ($charName, $sectionName, $poseName);
+	
+	
+	// y los guardamos en otro array
+	string $poseControls[] = `ls -sl`;
+	
+	// restamos a toda la seleccion los controles para quitar
+	for ($i=0;$i<size($controlsToRemove);$i++) {
+		select -d $controlsToRemove[$i];
+	}
+	
+	// Guardamos el resultado 
+	string $allControls[] = `ls -sl`;
+	
+	// Escribimos la pose con los controles seleccionados
+	poseMan_writePoseFile ($charName, $sectionName, $poseName, $allControls);
+	
+	print ("// "+(`substring $poseName 1 (size($poseName)-5)`)+" pose updated with controls removed\n");
+}
+
+// -------------------
+// Get pose data again
+// -------------------
+global proc poseMan_rewritePoseData (string $charName, string $sectionName, string $poseName) {
+	// Primero guardamos todos los controles en un array
+	string $controlsToRewrite[] = `ls -sl`;
+	
+	// Escribimos la pose con los controles seleccionados
+	poseMan_writePoseFile ($charName, $sectionName, $poseName, $controlsToRewrite);
+
+}
+
+// -------------------------------------
+// Global procedure to write a file pose
+// -------------------------------------
+global proc poseMan_writePoseFile (string $charName, string $sectionName, string $poseName, string $poseControls[]) {
+	string $poseData = "// PoseMAN pose file\n\n";
+	string $atributosKeyable[];
+	string $buffer[], $buffer2[];
+	int $nTokens, $nTokens2;
+	string $nombreSinNS = "";
+
+	// Vamos objeto por objeto
+	for ($i=0;$i<size($poseControls);$i++) {
+		
+		// obtenemos los atributos son keyables
+		$atributosKeyable = (`listAttr -k -u $poseControls[$i]`);
+		
+		// Procesamos el nombre del objeto para quiarle el/los namespace/s		
+		// Primero separamos los diferentes objetos de la "ruta" del nombre compuesto tipo: nombre|nombre|nombre|etc..
+		$nTokens = `tokenize $poseControls[$i] "|" $buffer`;
+		
+		for ($k=0;$k<$nTokens;$k++) {
+			// Ahora por cada uno, le quitamos el namespace
+			$nTokens2 = `tokenize $buffer[$k] ":" $buffer2`;
+			$nombreSinNS += ($buffer2[size($buffer2)-1] + "|");
+			$buffer2 = {""};
+		}
+		
+		$nombreSinNS = `substring $nombreSinNS 1 (size($nombreSinNS)-1)`;
+		
+		$poseData += ("ctrl:" + $nombreSinNS + "\n");
+		
+		// Ahora pasamos atributo por atributo recogiendo el valor
+		for ($j=0;$j<size($atributosKeyable);$j++) {
+			// recojemos los valores
+			if (`getAttr -type ($poseControls[$i]+"."+$atributosKeyable[$j])`=="double3" || `getAttr -type ($poseControls[$i]+"."+$atributosKeyable[$j])`=="string") {
+				// Nada
+			} else {
+				float $valor = (`getAttr ($poseControls[$i]+"."+$atributosKeyable[$j])`);
+				$poseData += ($nombreSinNS + " * " + $atributosKeyable[$j] + " * " + $valor + " * " + "1" + "\n");
+			}
+		}
+		
+		// $poseData += ("// set keyframe at all keyeable attrs\nsetKeyframe (\""+$listaObjs[$i]+"\");\n");
+		$poseData += ("\n");
+		
+		$nombreSinNS = "";
+	}
+
+	$poseData += "// End of PoseMAN file";
+
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseURLFull = ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/");
+	
+	$fileID = `fopen ($poseURLFull + $poseName) "w"`;
+	fprint $fileID $poseData;
+	fclose $fileID;
+}
+
+// --------------
+// Sum two arrays
+// --------------
+global proc string[] poseMan_mixArrays (string $a1[], string $a2[]) {
+	string $newArray[];
+
+	for ($i=0;$i<size($a1);$i++) {
+		$newArray[$i]=$a1[$i];
+	}
+
+	for ($i=0;$i<size($a2);$i++) {
+		$newArray[$i+size($a1)]=$a2[$i];
+	}
+
+	return $newArray;
+}
+
+// ------------------
+// Convert " " to "_"
+// ------------------
+global proc string poseMan_spacesToDown (string $cadena) {
+	string $buffer[];
+	string$fixString;
+
+	tokenize $cadena " " $buffer;
+
+	for ($i=0;$i<size($buffer);$i++) {
+		$fixString += ($buffer[$i] + "_" );
+	}
+
+	$fixString = `substring $fixString 1 (size($fixString)-1)`;
+
+	return $fixString;
+}
+
+// --------------------------
+// Create capture pose window
+// --------------------------
+global proc poseMan_reCaptureNewPoseUI (string $charName, string $sectionName, string $poseName) {
+	global int $gSizeableFlag;
+	
+	// Comprobamos la seleccion
+    string $poseManCameraName = "poseManCamera";
+		if( `objExists $poseManCameraName`==false) {
+			string $poseManCamera[] = `camera -n $poseManCameraName`;
+			viewSet -p $poseManCamera[0];
+			$poseManCameraName = `camera -q -n $poseManCamera[0]`;
+			int $poseManCameraIndex = size($poseManCameraName);
+			string $poseManCameraShortName=  `substring $poseManCameraName 1 ($poseManCameraIndex-1)`;
+			rename $poseManCameraName $poseManCameraShortName;
+			$poseManCameraName = $poseManCameraShortName;
+			setAttr ($poseManCameraName + ".focalLength") 100;
+			hide $poseManCameraName;
+		} else {
+			print ("// Camera exists, skiping camera creation\n");
+		}
+        
+	string $charactersList[] = `poseMan_getCharacterFromHD`;
+	string $sectionsList[] = `poseMan_getSectionsFromConfFile($charName)`;
+	
+	if (`window -exists capturePoseWindow`) {
+		deleteUI -window capturePoseWindow;
+	}
+
+	string $capturePoseWindow =`window capturePoseWindow`;
+	string $mainCol = `columnLayout`;
+	
+	// Visor
+    	frameLayout -p $mainCol -w 240 -h 240 -cll 0 -cl 1 -lv 0;
+		paneLayout -w 240 -h 240;    
+    	string $createPoseCamera = `modelPanel -mbv false -camera $poseManCameraName`;  
+		modelEditor -e -grid 0 -da smoothShaded $createPoseCamera;
+		modelEditor -e -allObjects 0 $createPoseCamera;
+		modelEditor -e -nurbsSurfaces  1 $createPoseCamera;
+		modelEditor -e -polymeshes  1 $createPoseCamera;
+		modelEditor -e -subdivSurfaces  1 $createPoseCamera;
+
+
+	string $accionesLayout = `frameLayout -p $mainCol -cll 1 -cl 0 -w 247 -h 240 -lv 0`;
+		columnLayout -p $accionesLayout;
+		// Current Char
+		text -w 200 -l "Character" -fn "boldLabelFont" -align "left";
+        text -w 200 -l $charName -align "left";
+
+	    // Current Section
+		text -w 200 -l "Section" -fn "boldLabelFont" -align "left";
+        text -w 200 -l $sectionName -align "left";
+        
+	    // Current Section
+		text -w 200 -l "Pose" -fn "boldLabelFont" -align "left";
+        text -w 200 -l `substring $poseName 1 (size($poseName)-5)` -align "left";
+
+		// Create Pose from reference
+		button -h 26 -w 235 -l "CREATE" -c ("poseMan_reCaptureNewPose(\""+$charName+"\", \""+$sectionName+"\", \""+$poseName+"\");deleteUI "+$capturePoseWindow+";delete "+$poseManCameraName+"");
+		
+	window -e -mnb 0 -mxb 0 -rtf 0 -sizeable $gSizeableFlag -t "Recapture Pose Thumbnail" -w 247 -h 394 capturePoseWindow;
+	frameLayout -e -w 240 $accionesLayout;
+
+	showWindow $capturePoseWindow;
+}
+
+// ------------------------------------
+// Capture JUST the thumbnail of a Pose
+// ------------------------------------
+global proc poseMan_reCaptureNewPose (string $charName, string $sectionName, string $poseName) {	
+    string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseURLFull = ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/");
+	string $thumbPoseName = `substring $poseName 1 (size($poseName)-5)`;
+	int $currentTime = `currentTime -q`;
+
+	select -cl;
+	
+	if (`about -windows`) {
+		setAttr "defaultRenderGlobals.imageFormat" 20;
+		sysFile -delete  ($poseURLFull + $thumbPoseName + ".bmp");
+		playblast -v false -frame $currentTime -w 160 -h 160 -orn 0 -cf ($poseURLFull + $thumbPoseName + ".bmp") -fmt "image";
+	} else {
+		sysFile -delete  ($poseURLFull + $thumbPoseName + ".xpm");
+		//setCurrentRenderer mayaHardware;
+		setAttr "defaultRenderGlobals.imageFormat" 7;
+		playblast -v false -frame $currentTime -w 160 -h 160 -orn 0 -cf ($poseURLFull + $thumbPoseName + ".iff") -fmt "image";
+		system ("imgcvt " + ($poseURLFull + $thumbPoseName + ".iff") + " " + ($poseURLFull + $thumbPoseName + ".xpm"));
+		sysFile -delete  ($poseURLFull + $thumbPoseName + ".iff");
+	}
+	
+	poseMan_refreshMainWindow;
+}
+
+// --------------------
+// PoseMAN Spread sheet
+// --------------------
+global proc poseMan_poseManSpread () {
+	global int $gSizeableFlag;
+	
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseMAN_URL = ($projectURL + "/poseman/");
+	
+	string $characters[];
+	string $sections[];
+	string $poses[];	
+
+	string $comandoG;
+   	$characters = `poseMan_getCharacterFromHD`;
+	
+	//$sections	= `poseMan_getSectionsFromConfFile ($characters[0])`;
+	//$poses		= poseMan_getPosesList ($characters[0], $sections[0]);
+	
+	if (`window -exists poseManSpreadSheetWindow`) { deleteUI poseManSpreadSheetWindow; }
+	
+	string $spreadPoseMan = `window poseManSpreadSheetWindow`;
+	columnLayout -adj 1;
+	frameLayout -cll 0 -lv 0 -bv 0.;
+		rowLayout -numberOfColumns 3 -columnWidth3 200 200 200;	
+			columnLayout;
+				string $char_TSL = `textScrollList -numberOfRows 12 -w 200 spreadSheet_charactersTextLayout`;
+				// Imprimimos los persoanjes en el textScrollList	
+				for ($i=0;$i<size($characters);$i++) {					
+					textScrollList -e -sc ("poseMan_refreshSectionsFromChar_Spread (\"spreadSheet_charactersTextLayout\", \"spreadSheet_sectionsTextLayout\")") -append $characters[$i] $char_TSL;
+				}
+				
+				button -w 200 -h 20 -l "New" -c "poseMan_addNewCharacterUI";
+				button -w 200 -h 20 -l "Duplicate";
+				button -w 200 -h 20 -l "Delete" -c "poseMan_deleteCharacterFrom_Spread(\"spreadSheet_charactersTextLayout\")";
+				button -w 200 -h 20 -l "Rename";
+				
+			setParent..;
+				
+			columnLayout;
+				string $sections_TSL = `textScrollList -numberOfRows 12 -w 200 spreadSheet_sectionsTextLayout`;
+				// Imprimimos los persoanjes en el textScrollList
+				for ($i=0;$i<size($sections);$i++) {
+				//	textScrollList -e -sc ("poseMan_refreshPosesFromSection_Spread (\"spreadSheet_charactersTextLayout\", \"spreadSheet_sectionsTextLayout\", \"spreadSheet_posesTextLayout\")") -append $sections[$i] $sections_TSL;
+				//textScrollList -e -sc "sphere" -append "f" spreadSheet_sectionsTextLayout;
+				}
+				
+				rowLayout -numberOfColumns 2 -columnWidth2 100 100;
+					button -w 100 -h 20 -l "Move UP" -al "center";
+					button -w 100 -h 20 -l "Move DOWN" -al "center";
+				setParent..;
+				
+				button -w 200 -h 20 -l "Duplicate";
+				button -w 200 -h 20 -l "Delete";
+				button -w 200 -h 20 -l "Rename";
+			setParent..;
+			
+			columnLayout;
+				string $poses_TSL = `textScrollList -numberOfRows 12 -w 200 spreadSheet_posesTextLayout`;
+				// Imprimimos los persoanjes en el textScrollList	
+				for ($i=0;$i<size($poses);$i++) {
+					textScrollList -e -sc "sphere" -append $poses[$i] $poses_TSL;
+				}				
+				rowLayout -numberOfColumns 2 -columnWidth2 100 100;
+					button -w 100 -h 20 -l "Move UP" -al "center";
+					button -w 100 -h 20 -l "Move DOWN" -al "center";
+				setParent..;
+				
+				button -w 200 -h 20 -l "Duplicate";
+				button -w 200 -h 20 -l "Delete";
+				button -w 200 -h 20 -l "Rename";		
+			setParent..;
+		setParent..;
+	setParent..;
+	
+	frameLayout -cll 0 -lv 0 -bv 0.;
+		columnLayout -adj 1;
+			button -h 30 -bgc 0.7 0.75 0.85 -l "SAVE CHANGES";
+		setParent..;
+	setParent..;
+		
+	window -e -t "PoseMAN SpreadSheet" -sizeable $gSizeableFlag -w 610 -h 298 $spreadPoseMan;
+	showWindow $spreadPoseMan;
+}
+
+// ---------------------------------
+// Refresh sections from spreadsheet
+// ---------------------------------
+global proc poseMan_refreshSectionsFromChar_Spread (string $layoutName, string $sectionLayoutName) {	
+	// identificamos el item (personaje) seleccinado
+	string $theItem[];
+	$theItem = `textScrollList -q -si $layoutName`;
+	
+	string $sections[] = `poseMan_getSectionsFromConfFile ($theItem[0])`;
+
+	// borramos el layout de secciones
+	textScrollList -e -ra $sectionLayoutName;
+	// lo rellenamos
+	for ($i=0;$i<size($sections);$i++) {
+		textScrollList -e -sc ("poseMan_refreshPosesFromSection_Spread (\"spreadSheet_charactersTextLayout\", \"spreadSheet_sectionsTextLayout\", \"spreadSheet_posesTextLayout\")") -append $sections[$i] $sectionLayoutName;
+	}
+	
+	// Seleccionamos la 1ª sección
+	textScrollList -e -sii 1 $sectionLayoutName;
+	
+	// Actualizamos las poses
+	poseMan_refreshPosesFromSection_Spread ($layoutName, $sectionLayoutName, "spreadSheet_posesTextLayout");
+
+}
+
+// ------------------------------
+// Refresh poses from spreadsheet
+// ------------------------------
+global proc poseMan_refreshPosesFromSection_Spread (string $charLayoutName, string $sectionLayoutName, string $posesLayoutName) {	
+	// identificamos el item (sección) seleccinado
+	string $charItem[];
+	$charItem = `textScrollList -q -si $charLayoutName`;
+	
+	string $sectionItem[];
+	$sectionItem = `textScrollList -q -si $sectionLayoutName`;
+	
+	// recojemos las poses de la sección
+	string $poses[];
+	$poses = poseMan_getPosesFromHD($charItem[0], $sectionItem[0]);
+
+	textScrollList -e -ra $posesLayoutName;
+	for ($i=0;$i<size($poses);$i++) {
+		textScrollList -e -append (`substring $poses[$i] 1 (size($poses[$i])-5)`) $posesLayoutName;
+	}	
+}
+
+// ------------------------------------------
+// Delete character selected from spreadsheet
+// ------------------------------------------
+global proc poseMan_deleteCharacterFrom_Spread (string $charLayoutName) {	
+	// identificamos el item (personaje) seleccinado
+	string $charItem[];
+	$charItem = `textScrollList -q -si $charLayoutName`;
+	
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+		
+	// Borramos el personaje
+	sysFile -rename ($projectURL + "/poseman/" + $charItem[0] + ".deleted") ($projectURL + "/poseman/" + $charItem[0]);
+		
+	$gCurrentChar = "";
+    
+    // poseMan_refreshMainWindow;
+}
+
+// -------------------------------------
+// Return differences between two arrays
+// -------------------------------------
+proc string[] poseMan_getDifferences (string $firstArray[], string $secondArray[]) {
+	
+	string $newSecctionsFromFile[];
+	$existe = false;
+		
+	for($i=0;$i<size($firstArray);$i++) {
+		
+		// vamos comparandola con las del hd
+		for ($j=0;$j<size($secondArray);$j++) {
+			if ($firstArray[$i] == $secondArray[$j]) {
+				$existe = true;
+				break;
+			}
+		}
+		
+		if (!$existe) {
+			$newSecctionsFromFile[size($newSecctionsFromFile)] = $firstArray[$i];
+		} else {
+			$existe = false;
+		}		
+	}
+	
+	return $newSecctionsFromFile;
+}
+
+// ----------------------------------------------
+// Update Assets (Characters, Sections and poses)
+// ----------------------------------------------
+global proc poseMan_updateAssets () {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseMAN_URL = ($projectURL + "/poseman/");
+	global string $gCurrentChar;
+	string $sectionsFromHD[];
+	string $sectionsFromConf[];
+	string $sectionsNew[];
+	string $posesFromHD[];
+	int $nPosesCount;
+	
+	if ($gCurrentChar != "") {
+		// Comprobamos sections.conf		
+		$sectionsFromHD = poseMan_getSectionsFromHD ($gCurrentChar);
+		$sectionsFromConf = poseMan_getSectionsFromConfFile ($gCurrentChar);
+	
+		if (!`filetest -r ($poseMAN_URL + $gCurrentChar + "/sections.conf")`) {
+			// No existe así que creamos uno y metemos todas las secciones dentro
+			print ("// sections.conf doesn't exist, writing one...\n");		
+			poseMan_createConfFileAndaddSectionToConfigFile ($gCurrentChar, $sectionsFromHD);
+		} else {
+			// Existe y la vamos a actualizar en el caso que exista diferencia.
+			$sectionsNew 	= poseMan_getDifferences ($sectionsFromHD, $sectionsFromConf);
+			for ($i=0;$i<size($sectionsNew);$i++) {
+				poseMan_addSectionToConfigFile ($gCurrentChar, $sectionsNew[$i]);
+			}
+		}
+	
+		// Comprobamos poses.conf
+		for ($k=0;$k<size($sectionsFromHD);$k++) {
+			// No existe así que creamos uno y metemos todas las secciones dentro siempre que exista al menos una pose
+			$posesFromHD = poseMan_getPosesFromHD ($gCurrentChar, $sectionsFromHD[$k]);
+			$nPosesCount = size($posesFromHD);			
+			if (`filetest -r ($poseMAN_URL +$gCurrentChar + "/" + $sectionsFromHD[$k] + "/poses.conf")`==false) {
+				if ($nPosesCount > 0) {
+					print ("// poses.conf of " +$sectionsFromHD[$k] + " doesn't exist, writing and updating one...\n");		
+					poseMan_createConfFileAndaddPosesToConfigFile ($gCurrentChar, $sectionsFromHD[$k]);
+				}
+			}
+		}
+	}	
+}
+
+// ------------------------------------------------------------------------------
+// Add sections when user create them from HD and there isn't exist sections.conf
+// ------------------------------------------------------------------------------
+global proc poseMan_createConfFileAndaddSectionToConfigFile (string $charName, string $sectionsName[]) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/sections.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $buffer[];
+	int $i;	
+	
+	if (size($sectionsName)>0) {
+		for ($i=0;$i<size($sectionsName);$i++) {
+			$fileData += ($sectionsName[$i] + " * ");
+		}
+	} else {
+		$fileData = " * ";
+	}
+
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;
+	fclose $fileID;
+}
+
+// ------------------------------------------------------------------------
+// Add poses when user create them from HD and there isn't exist poses.conf
+// ------------------------------------------------------------------------
+global proc poseMan_createConfFileAndaddPosesToConfigFile (string $charName, string $sectionName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/poses.conf");
+	string $nextLine;
+	string $fileData = "";
+	string $poses[];
+
+	$poses = poseMan_getPosesFromHD ($charName, $sectionName);	
+	
+	for ($i=0;$i<size($poses);$i++) {		
+		$fileData += ($poses[$i] + " * ");
+	}
+	
+	$fileID = `fopen $filePath "w"`;	
+	fprint $fileID $fileData;
+	fclose $fileID;	
+}
+
+// -------------------------------
+// Get array of characters From HD
+// -------------------------------
+global proc string[] poseMan_getCharacterFromHD () {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseMAN_URL = ($projectURL + "/poseman/");
+	string $chars[];
+	string $charsAll[];
+	string $buffer[];
+	
+	if (`about -windows`) {
+		$chars = `getFileList -folder $poseMAN_URL -filespec "*."`;
+	} else {
+		$charsAll = `getFileList -folder $poseMAN_URL`;
+		for ($i=0;$i<size($charsAll);$i++) {
+			tokenize $charsAll[$i] "." $buffer;
+			if ($buffer[1] == "deleted" || $charsAll[$i] == ".DS_Store") {
+			} else {
+				$chars[size($chars)] = $charsAll[$i];
+			}
+		}		
+	}
+	return $chars;
+}
+
+// -------------------------------
+// Get array of sections From HD
+// -------------------------------
+global proc string[] poseMan_getSectionsFromHD (string $charName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseMAN_URL = ($projectURL + "/poseman/");
+	string $sections[];
+	string $allSections[];
+	string $buffer[];
+	
+	if (`about -windows`) {
+		$sections = `getFileList -folder ($poseMAN_URL + $charName + "/") -filespec "*."`;
+	} else {
+		$allSections = `getFileList -folder ($poseMAN_URL + $charName + "/")`;
+		for ($i=0;$i<size($allSections);$i++) {
+			tokenize $allSections[$i] "." $buffer;
+			if ($buffer[1] == "deleted" || $allSections[$i] == ".DS_Store" || $buffer[1] == "conf" || $buffer[1] == "conf~" || $buffer[1] == "avatar") {
+			} else {
+				$sections[size($sections)] = $allSections[$i];
+			}
+		}		
+	}
+	return $sections;
+}
+
+// --------------------------
+// Get array of poses From HD
+// --------------------------
+global proc string[] poseMan_getPosesFromHD (string $charName, string $sectionName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $poseMAN_URL = ($projectURL + "/poseman/");
+	string $poses[];
+
+	if (`about -windows`) {
+		$poses = `getFileList -folder ($poseMAN_URL + $charName + "/" + $sectionName + "/") -filespec "*.pose"`;
+	} else {
+		$poses = `getFileList -folder ($poseMAN_URL + $charName + "/" + $sectionName + "/") -filespec "*.pose"`;
+	}
+	
+	return $poses;
+}
+
+// -------------------------------------------------
+// Get array of poses From Conf File (order purpose)
+// -------------------------------------------------
+global proc string[] poseMan_getPosesFromConfFile (string $charName, string $sectionName) {
+	string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+	string $filePath = ($projectURL + "/poseman/" + $charName +"/" + $sectionName + "/poses.conf");
+	
+	string $nextLine;
+	string $poses[];
+
+	if (`filetest -r $filePath`) {			
+		$fileID = `fopen $filePath "r"`;
+		$nextLine = `fgetline $fileID`;
+		fclose $fileID;
+		
+		tokenize $nextLine " * " $poses;
+
+	}
+	
+	return $poses;
+}
+
+// -------------------------
+// read check box key on pose
+// -------------------------
+global proc poseMan_manageCheckBoxKeyOnPose () {
+	global string $gSetKeyOnPose;
+	global string $keyOnPoseLayout;	
+	$gSetKeyOnPose = `menuItem -q -cb $keyOnPoseLayout`;
+}
+
+// ---------------------------
+// Show / Hide Character Image
+// ---------------------------
+global proc poseMan_ShowHideCharAvatar () {
+	global string $gMainLayout;
+	global string $showHideCharacterImageMenuItem;
+	global int $gCharacterImage;
+	int $highValue;
+		
+	$gCharacterImage = `menuItem -q -cb $showHideCharacterImageMenuItem`;
+	
+	if ($gCharacterImage == 0) {
+		$highValue = -80;
+	}
+	
+	if ($gCharacterImage == 1) {
+		$highValue = 0;
+	}
+	
+	formLayout -e
+		-attachForm characterAvatarLayout "top" $highValue
+	$gMainLayout;
+}
+
+// ---------------------------
+// Show / Hide Character Image
+// ---------------------------
+global proc poseMan_HideCharAvatar () {
+	global string $gMainLayout;
+	global int $gCharacterImage;
+	global string $showHideCharacterImageMenuItem;
+
+	formLayout -e
+		-attachForm characterAvatarLayout "top" -80
+	$gMainLayout;
+	
+	$gCharacterImage = 0;
+	
+	menuItem -e -cb 0 $showHideCharacterImageMenuItem;
+}
+
+//--------------------------------------
+// Get an array with pose data from file
+//--------------------------------------
+global proc string[] poseMan_getPosedataFromFile (string $charName, string $sectionName, string $poseName) {
+  string $projectURL = "Q:/TNN/01_ASSET_LIBRARY/ANIMATIONS/POSES";
+    string $buffer[];
+	int $count;
+    global string $gCurrentCharNamespace;
+	string $filePoseData[];
+    $fileID = `fopen ($projectURL + "/poseman/" + $charName + "/" + $sectionName + "/" + $poseName) "r"`;
+    
+    // leemos una linea
+    $nextLine = `fgetline $fileID`;
+
+	// leemos todas las lineas
+	while ( !`feof $fileID` ) {
+		// La línea es // o \n
+        if (`substring $nextLine 1 2` == "//" || `substring $nextLine 1 2` == "\n" || `substring $nextLine 1 5` == "ctrl:") {
+        } else {
+            tokenize $nextLine " * " $buffer;
+            
+            $nombreDelObjeto = $buffer[0];
+            $propiedadDelObjeto = $buffer[1];
+            $valorDelObjeto = $buffer[2];
+			
+			// Componemos la línea de mixAttr
+			$filePoseData[$count] = ($nombreDelObjeto + "*" + $propiedadDelObjeto + "*" + $valorDelObjeto+"\n");
+			$count++;
+        }
+        $nextLine = `fgetline $fileID`;	
+    }
+    
+	// Cerramos el archivo
+   fclose $fileID;
+
+	return $filePoseData;	    
+}
+
+// --------------------
+// Slider mix main proc
+// --------------------
+global proc sliderMix (string $charName, string $sectionName, string $poseName) {
+	global string $poseDataOnFile[];
+	global string $poseDataOnMaya[];
+	string $buffer[];
+	global string $gCurrentCharNamespace;
+	
+	// Obtenemos los datos de la pose en el archivo	
+	$poseDataOnFile = poseMan_getPosedataFromFile ($charName, $sectionName, $poseName);
+	
+	// Obtenemos los datos de la pose en el visor de maya
+	for ($i=0;$i<size($poseDataOnFile);$i++) {
+		
+		tokenize $poseDataOnFile[$i] "*" $buffer;		
+		$objeto = $buffer[0];
+		$propiedad = $buffer[1];
+		$valor = `getAttr ($gCurrentCharNamespace + $objeto + "." + $propiedad)`;
+		
+		$poseDataOnMaya[$i] = ($objeto + "*" + $propiedad + "*" + $valor + "\n");	
+	}
+	
+	poseMan_sliderWindow ($poseName);
+
+}
+
+// ----------------------
+// Slider pose mix window
+// ----------------------
+global proc poseMan_sliderWindow (string $poseName) {
+	    if (`window -exists sliderMixPoseWindow`) {
+        deleteUI -window sliderMixPoseWindow;
+    }
+string $sliderMixPoseWindow = `window -title "Mix pose" sliderMixPoseWindow`;
+
+	string $sliderMixPoseLayout = `formLayout`;
+	string $poseNameNoExt = `substring $poseName 1 (size($poseName)-5)`;
+	string $textSlider = `text -align "center" -l ("Mix slider pose - " + $poseNameNoExt)`;
+	string $theSlider = `floatSliderGrp -h 100 -adj 1 -minValue 0 -maxValue 1 -dc "getSliderValue" -pre 3  mixPoseSlider`;
+
+	formLayout -e
+		
+		-af $textSlider "top" 2
+		-af $textSlider "left" 2
+		-af $textSlider "right" 2
+	
+		-ac $theSlider "top" 10 $textSlider
+		-af $theSlider "left" 2
+		-af $theSlider "right" 2
+	
+	$sliderMixPoseLayout;
+
+window -e -w 400 -h 80 $sliderMixPoseWindow;
+
+showWindow $sliderMixPoseWindow;
+}
+
+// ---------------------------
+// Slider dragproc (the mixer)
+// ---------------------------
+global proc getSliderValue() {
+	global string $poseDataOnFile[];
+	global string $poseDataOnMaya[];
+	global string $gCurrentCharNamespace;
+	float $mixedValue;
+	float $mix;
+	string $buffer[], $buffer2[];
+	
+	string $objeto_o;
+	string $propiedad_o;
+	float $valor_o;
+	
+	string $objeto_t;
+	string $propiedad_t;
+	float $valor_t;
+	
+	// Obtenemos el nivel de mezcla
+	$mix = `floatSliderGrp -q -v mixPoseSlider`;
+	
+	for ($i=0;$i<size($poseDataOnFile);$i++) {
+		// Sacamos los valores del original	
+		tokenize $poseDataOnFile[$i] "*" $buffer;
+		$objeto_o = $buffer[0];
+		$propiedad_o = $buffer[1];
+		$valor_o = $buffer[2];
+		
+		// Sacamos los valores del target
+		tokenize $poseDataOnMaya[$i] "*" $buffer2;
+		$objeto_t = $buffer2[0];
+		$propiedad_t = $buffer2[1];
+		$valor_t = $buffer2[2];
+        
+		// Calculamos la mezcla	
+		$mixedValue = ($valor_o*$mix) + ($valor_t*(1-$mix));
+	
+		// Aplicamos la mezcla
+		setAttr ($gCurrentCharNamespace + $objeto_t + "."+ $propiedad_t) $mixedValue;
+	}
+}
+poseManGlobal();

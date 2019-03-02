@@ -1,0 +1,124 @@
+global int 	$jobNumInit = -1;
+global	int	$jobNumFocus = -1;
+global	int	$cheked = 0;
+global string $refreshWindow="AutoRefresh";
+
+global proc autoRefreshTextures()
+{
+
+	/*CREATE  -  WINDOW*/			//====================================
+		global string $refreshWindow;
+
+		if (`window -exists $refreshWindow`)
+		{
+
+			deleteUI $refreshWindow;
+
+		}
+		window -rtf true -title "Auto Refresh Textures" $refreshWindow;
+	 	string $form = `formLayout`;
+
+
+	/*CREATE UI  -  STOP BUTTON*/		//====================================
+		string $stopTrackingButton = `button -label "Stop Auto Refresh"`;
+		button -edit -command "stopWindowTracking" $stopTrackingButton;
+
+
+	/*LAYOUT UIs  -  */				//====================================
+	 	string $column = `columnLayout -adjustableColumn true`;
+	 	formLayout -edit
+
+
+		//ATTACH	-	CREATE BUTTON
+	 		-attachForm     $stopTrackingButton     "top"    5
+	 		-attachForm     $stopTrackingButton     "left"   5
+
+		$form;
+		showWindow $refreshWindow;
+		startWindowTracking;
+	}
+
+global proc stopWindowTracking(){
+	global string $refreshWindow;
+	global int $jobNumInit;
+	global int $jobNumFocus;
+
+	if(`scriptJob -ex $jobNumInit`){
+		scriptJob -kill $jobNumInit -force;	
+	}
+	if(`scriptJob -ex $jobNumFocus`){
+		scriptJob -kill $jobNumFocus -force;	
+	}
+
+	deleteUI $refreshWindow;
+}
+
+
+global proc startWindowTracking() {
+	global string $refreshWindow;
+	global int $jobNumInit;
+
+
+	if(`scriptJob -ex $jobNumInit`){
+		scriptJob -kill $jobNumInit -force;	
+	}
+	$jobNumInit = `scriptJob -parent $refreshWindow -killWithScene -e "idleHigh" detectActiveWindow -protected`;
+	//print("TRACKING"+"\n");
+
+}
+
+
+global proc detectActiveWindow() {
+
+	global string $refreshWindow;
+	global int 	$jobNumFocus;
+	global int 	$jobNumInit;
+	global int 	$cheked;
+	int $chekedPrev;
+
+	string $queryWindow=`getPanel -underPointer`;
+	
+	if (sizeBytes($queryWindow)==0){
+		$chekedPrev=$cheked;
+		$cheked=1;
+	} else $cheked=0;
+
+	if ($chekedPrev!=$cheked){
+		if(`scriptJob -ex $jobNumFocus`){
+			scriptJob -kill $jobNumFocus -force;	
+		}
+		$jobNumFocus = `scriptJob -parent $refreshWindow -killWithScene -runOnce true -e  "ModelPanelSetFocus" refreshSelectedFile -protected`;
+		//print("FOUND"+"\n");
+	}
+}
+
+
+global proc refreshSelectedFile() {
+	global int 	$jobNumFocus;
+	global int 	$jobNumInit;
+
+	if(`scriptJob -ex $jobNumFocus`){
+		scriptJob -killAll;	
+	}
+	refreshTextures;
+	//print("Put File node Refresh in there"+"\n");
+
+	if(`scriptJob -ex $jobNumInit`){
+		scriptJob -kill $jobNumInit -force;	
+	}	
+	startWindowTracking();
+}
+
+global proc refreshTextures()
+{
+	string $NameBuffer;
+	string $attrName; 
+	string $fileNodes[] = `ls -type file`;
+   
+	int    $i;                                 //A counter
+	for($i = 0; $i < size($fileNodes); $i++) {                                                        
+		$attrName = ($fileNodes[$i] + ".fileTextureName");
+		$NameBuffer = getAttr($attrName);
+		setAttr -type "string" $attrName $NameBuffer;
+	}
+}

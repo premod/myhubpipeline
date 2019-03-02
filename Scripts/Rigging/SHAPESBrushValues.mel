@@ -1,0 +1,106 @@
+// ----------------------------------------------------------------------------------------------
+//
+// SHAPESBrushValues.mel
+//
+// tool values for the SHAPES brush
+//
+// Ingo Clemens
+// www.braverabbit.com
+//
+// copyright brave rabbit, Ingo Clemens 2014-2016
+//
+// brush version: 1.8
+//
+// ----------------------------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------------------------
+//
+// THE SOFTWARE PRODUCT IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR
+// IMPLIED, INCLUDING, BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+// PURPOSE AND NON-INFRINGEMENT OF THIRD-PARTY RIGHTS. THE ENTIRE RISK AS TO THE QUALITY AND
+// PERFORMANCE OF THE SOFTWARE PRODUCT IS WITH YOU.
+// NEITHER BRAVE RABBIT NOR ITS SUPPLIERS WARRANT THAT THE FUNCTIONS CONTAINED IN THE SOFTWARE
+// PRODUCT WILL MEET YOUR REQUIREMENTS OR THAT THE OPERATION OF THE SOFTWARE PRODUCT WILL BE
+// UNINTERRUPTED OR ERROR-FREE. BRAVE RABBIT IS NOT OBLIGATED TO PROVIDE ANY UPDATES TO THE
+// SOFTWARE.
+// IN NO EVENT SHALL THE AUTHOR OF THIS SOFTWARE PRODUCT BE LIABLE FOR ANY SPECIAL, CONSEQUENTIAL,
+// INCIDENTAL, DIRECT OR INDIRECT DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR
+// LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, FOR PERSONAL INJURY, LOSS OF BUSINESS
+// INFORMATION, OR ANY OTHER PECUNIARY LOSS) ARISING OUT OF THE USE OF OR INABILITY TO USE THIS
+// PRODUCT, EVEN IF THE AUTHOR OF THIS SOFTWARE PRODUCT IS AWARE OF THE POSSIBILITY OF SUCH
+// DAMAGES AND KNOWN DEFECTS, ANY CLAIM BY A THIRD PARTY AND EVEN IF THE REMEDY FAILS OF ITS
+// ESSENTIAL PURPOSE.
+//
+// ----------------------------------------------------------------------------------------------
+
+
+global proc SHAPESBrushValues( string $toolName )
+{
+	string $icon = "SHAPESBrush.png";
+	string $help = "";
+	toolPropertySetCommon $toolName $icon $help;
+	
+	frameLayout -e -en true -cl false shpUI_brushFrame;
+	SHAPESBrushOptionValues $toolName;
+	
+	toolPropertySelect SHAPESBrush;
+}
+
+global proc SHAPESBrushOptionValues( string $toolName )
+{
+	int $intVal;
+	float $floatVal;
+	
+	$intVal = eval("SHAPESBrushContext -q -t " + $toolName);
+	sbPropertiesSetSymbolCheckBox $intVal sbBrushColumn;
+	
+	$floatVal = eval("SHAPESBrushContext -q -s " + $toolName);
+	floatSliderGrp -e -v $floatVal sbBrushSizeSlider;
+	$floatVal = eval("SHAPESBrushContext -q -sm " + $toolName);
+	floatSliderGrp -e -v $floatVal sbSmoothValueSlider;
+	$floatVal = eval("SHAPESBrushContext -q -st " + $toolName);
+	floatSliderGrp -e -v $floatVal sbSecondaryValueSlider;
+	
+	$floatVal = eval("SHAPESBrushContext -q -sst " + $toolName);
+	if ($floatVal == 0.1)
+		checkBoxGrp	-e -v1 1 sbLargeValueStepsCheck;
+	else
+		checkBoxGrp	-e -v1 0 sbLargeValueStepsCheck;
+	
+	$intVal = eval("SHAPESBrushContext -q -if " + $toolName);
+	checkBox -e -v $intVal sbInvertFreezeCheck;
+	
+	$intVal = `optionVar -q SHAPESIgnoreBrushHistoryWarning`;
+	checkBoxGrp	-e -v1 $intVal sbIgnoreHistoryCheck;
+	
+	$intVal = eval("SHAPESBrushContext -q -c " + $toolName);
+	sbPropertiesSetSymbolCheckBox $intVal sbCurveColumn;
+	
+	$intVal = eval("SHAPESBrushContext -q -sym " + $toolName);
+	sbPropertiesSetSymmetryAxis $intVal;
+	
+	$floatVal = eval("SHAPESBrushContext -q -tol " + $toolName);
+	floatSliderGrp -e -v $floatVal sbToleranceSlider;
+	
+	$intVal = eval("SHAPESBrushContext -q -f " + $toolName);
+	checkBoxGrp -e -v1 $intVal sbFalloffCheck;
+	
+	$intVal = eval("SHAPESBrushContext -q -r " + $toolName);
+	checkBoxGrp	-e -v1 $intVal sbSmoothRelaxCheck;
+	
+	checkBox -e -v `sbPropertiesGetUsePlaneState` sbUsePlaneCheck;
+	
+	$floatVal = `optionVar -q SHAPESBrushPlaneAngle`;
+	floatField -e -v $floatVal sbPlaneAngleField;
+	
+	$intVal = eval("SHAPESBrushContext -q -d " + $toolName);
+	intField -e -v $intVal sbDepthField;
+	
+	$intVal = 1;
+	if (`displayPref -q -wsa` == "none")
+		$intVal = 0;
+	checkBoxGrp	-e -v1 $intVal sbShowWireframeCheck;
+	
+	$intVal = eval("SHAPESBrushContext -q -dc " + $toolName);
+	checkBoxGrp -e -v1 $intVal sbShowCircleCheck;
+}

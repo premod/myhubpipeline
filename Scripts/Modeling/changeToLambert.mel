@@ -1,0 +1,23 @@
+global proc changeToLambert()
+{
+string $selList[] = `ls -sl`;
+if(size($selList)==0){
+warning "First Select Object(s) and Run";
+}else	{
+string $selMat[] = `ls -mat`;
+for($each in $selMat){
+delete $each;
+}
+string $selTex[] = `ls -tex`; 
+for($each in $selTex){
+delete $each;
+sets -e -forceElement initialShadingGroup;
+}
+string $selUtilities[] = `ls -typ "place2dTexture"`;
+for($each in $selUtilities){
+delete $each;
+string $selBump[] = `ls -typ "bump2d"`;
+for($each in $selBump){
+delete $each;
+}}}}		
+

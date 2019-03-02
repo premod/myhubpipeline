@@ -1,0 +1,245 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+/*
+ * FUNCTION NAME	lG_sheetWin
+ * DESCRIPTION		Creates UI for the Light Sheet 
+ * CALLED BY		lightGirl
+ * INPUT	None
+ * RETURN	None
+ */
+
+global proc lG_sheetWin()
+{
+	string $initSel[] = `ls -sl`;
+	
+	global int $g_lG_linkSheetToLightGirl;
+	
+	global string $g_lG_allLights[];
+	
+	select -r $g_lG_allLights;
+
+	// create UI layout - vars for global sizing
+	int $uiLabelWidth = 100;
+	int $uiInputWidth = 130;
+	int $uiWidth = $uiLabelWidth + $uiInputWidth + 50;
+	
+	// delete UI function on close/open
+	if ( `window -exists lG_sheetWin` == true )
+		deleteUI lG_sheetWin;
+	window 
+		-title "[lG] Sheet" 
+		-iconName "sheet"
+		-maximizeButton true 
+		-minimizeButton true
+		-sizeable true
+		-resizeToFitChildren false
+		-menuBar true
+		-menuBarVisible true 
+		-wh 604 280
+		lG_sheetWin;
+	// LOAD MENU -->
+	////////////////
+	menu
+		-label "Load"
+		-tearOff false;
+	menuItem
+    		-label "Ambient Lights"
+		-command ("lG_lightGirlLoadLights 3 lG_sheetWin \"\" \"\" 0")
+		-ann "Load ambient lights"
+		lMenuAmbientItem;
+	menuItem
+    		-label "Directional Lights"
+		-command ("lG_lightGirlLoadLights 4 lG_sheetWin \"\" \"\" 0")
+		-ann "Load directional lights"
+		lMenuDirectItem;
+	menuItem
+    		-label "Point Lights"
+		-command ("lG_lightGirlLoadLights 1 lG_sheetWin \"\" \"\" 0")
+		-ann "Load point lights"
+		lMenuPointItem;
+	menuItem
+    		-label "Spot Lights"
+		-command ("lG_lightGirlLoadLights 0 lG_sheetWin \"\" \"\" 0")
+		-ann "Load spot lights"
+		lMenuSpotItem;
+	menuItem
+    		-label "Area Lights"
+		-command ("lG_lightGirlLoadLights 2 lG_sheetWin \"\" \"\" 0")
+		-ann "Load area lights"
+		lMenuAreaItem;
+	menuItem
+    		-label "Volume Lights"
+		-command ("lG_lightGirlLoadLights 9 lG_sheetWin \"\" \"\" 0")
+		-ann "Load volume lights"
+		lMenuVolumeItem;
+	menuItem
+		-divider 1
+		lMenuDivider7a;
+	menuItem
+    		-label "All Lights"
+		-command ("lG_lightGirlLoadLights 6 lG_sheetWin \"\" \"\" 0")
+		-ann "Load lights"
+		lMenuSelectAllItem;
+	menuItem
+    		-label "Selected Lights"
+		-command ("lG_lightGirlLoadLights 5 lG_sheetWin \"\" \"\" 0")
+		-ann "Load currently selected lights"
+		lMenuSelectItem;
+	menuItem
+    		-label "Visible Lights"
+		-command ("lG_lightGirlLoadLights 7 lG_sheetWin \"\" \"\" 0")
+		-ann "Load visible lights"
+		lMenuSelectVisItem;
+	menuItem
+		-divider 1
+		lMenuDivider7b;
+	menuItem
+    		-label "Lights Casting Shadows"
+		-command ("lG_lightGirlLoadLights 8 lG_sheetWin \"\" \"\" 0")
+		-ann "Load shadow casting lights"
+		lMenuSelectShadowItem;
+	
+	// light sets...
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Light Sets"
+		-ann "Manage light sets"
+		-to 1
+		-sm 1
+		lMenuSelectSetItem;
+		
+		menuItem
+			-label "Create Light Set"
+			-command ("lG_createLightSet")
+			-ann "Create a new light set using lights loaded in interface";
+		
+		menuItem
+			-label "Load Light Set"
+			-pmc "lG_populateSetsMenu lG_loadLightSet lMenuLoadLightSets_lG_sheetWin lG_sheetWin"
+			-ann "Load a specific light set"
+			-sm 1
+			lMenuLoadLightSets_lG_sheetWin;
+			setParent -m ..;
+		
+		/*
+		menuItem
+			-label "Add Light Set"
+			-sm 1
+			-pmc "lG_populateSetsMenu lG_addLightSet lMenuAddLightSets_lG_sheetWin lG_sheetWin"
+			-ann "Add a specific light set to the existing loaded sets"
+			lMenuAddLightSets_lG_sheetWin;
+			setParent -m ..;
+		*/
+			
+		menuItem
+			-label "Remove Light Set"
+			-pmc "lG_populateSetsMenu lG_removeLightSet lMenuRemoveLightSets_lG_sheetWin lG_sheetWin"
+			-ann "Remove an existing light set"
+			-sm 1
+			lMenuRemoveLightSets_lG_sheetWin;
+			setParent -m ..;
+		
+	menu
+		-label "View"
+		-tearOff false;
+	//menuItem
+	//	-cb $g_lG_linkSheetToLightGirl
+    	//	-label "Link to lightGirl"
+	//	-en 1
+	//	-command ("$g_lG_linkSheetToLightGirl = !$g_lG_linkSheetToLightGirl;")
+	//	-ann "";
+	//menuItem
+	//	-divider 1;
+	menuItem
+		-cb 1
+    		-label "Show Keyable Only"
+		-command ("lG_toggleSheetAttrDispStyle")
+		-ann "Toggle the visibility of keyable attributes or all attributes";
+	//menuItem
+	//	-en 0
+	//	-cb 0
+    	//	-label "Use Fixed Attribute List"
+	//	-command ("lG_toggleUseFixedAttributeList")
+	//	-ann "Filter the attribute spreadsheet to show specific attributes";
+
+	// begin actual form content
+	string $lsForm = `formLayout -numberOfDivisions 100`;
+						string $activeList = `selectionConnection -activeList`;
+						spreadSheetEditor 
+							-longNames true 
+							-mainListConnection $activeList 
+							-lck 
+							-keyableOnly true 
+							-showShapes true
+							lightSheetEditor;
+					//setParent ..;
+				//setParent ..;
+			//setParent ..;
+		
+		// buttonz...
+		string $lsRefresh = `button
+				-label "Update"
+				-command "lG_sheetWin \"\" \"\" 0"`;
+		string $lsClose = `button
+				-label "Close"
+				-command "deleteUI lG_sheetWin"`;
+
+	// set form layouts
+	formLayout -edit
+		-attachForm lightSheetEditor "top" 2
+		-attachForm lightSheetEditor "left" 2
+		-attachControl lightSheetEditor "bottom" 2 $lsRefresh
+		-attachForm lightSheetEditor "right" 2
+
+		-attachNone $lsRefresh "top"
+		-attachForm $lsRefresh "left" 2
+		-attachForm $lsRefresh "bottom" 2
+		-attachPosition $lsRefresh "right" 2 50
+
+		-attachNone $lsClose "top"
+		-attachPosition $lsClose "left" 2 50
+		-attachForm $lsClose "bottom" 2
+		-attachForm $lsClose "right" 2
+
+		$lsForm;
+
+	showWindow lG_sheetWin;
+	select -r $initSel;
+}
+
+global proc lG_toggleSheetAttrDispStyle()
+{
+	int $keyableOnly = !(`spreadSheetEditor -q -keyableOnly lightSheetEditor`);
+	spreadSheetEditor
+		-e
+		-keyableOnly $keyableOnly
+		lightSheetEditor;
+}
+	
+global proc lG_toggleUseFixedAttributeList()
+{
+	spreadSheetEditor
+		-e
+		-fixedAttrList "Intensity"
+		lightSheetEditor;
+}

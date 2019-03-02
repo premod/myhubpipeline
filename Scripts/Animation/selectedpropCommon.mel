@@ -1,0 +1,26 @@
+global proc selectedpropCommon()
+{
+	string $buffer[];	
+	string $propname[] =`textScrollList -q -si propslist`;
+	for($k=0; $k<size($propname); $k++)
+	{ 
+		string $listFolders[] = {"CHARS","SETS","PROPS"};
+		for($each in $listFolders)
+		{
+			string $charsDirectory="Q:/THE99/PRODUCTION/REFERENCES/COMMON/"+$each+"/";
+			string $allFiles[] = `getFileList -folder $charsDirectory -filespec "*.ma"`;
+			for($name in $allFiles)
+			{
+				$numTokens = `tokenize $name "." $buffer`;
+				if($propname[$k] == $buffer[0])
+				{
+					string $forNS = `basenameEx($propname[$k])`;
+					string $fileDir = $charsDirectory;
+					string $fileName = $fileDir+$propname[$k]+".ma";	
+					file -rdi 1 -ns $forNS $fileName;
+					file -r  -ns $forNS $fileName;
+				}
+			} 	
+		}
+	}
+}	

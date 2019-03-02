@@ -1,0 +1,39 @@
+//zbw_cleanTransferUV 
+//by Zeth Willie 
+//install in scripts folder and run "zbw_cleanTransferUV" 
+//select object w/ uv's then object to be transferred to then run 
+//zeth@catbuks.com 
+global proc zbw_cleanTransferUV() 
+{ 
+	string $sel[] = `ls -l -sl`;
+	int $sizeSel = size($sel); 
+	if ($sizeSel != 2)
+	{ 
+	error "hey. 2 objects. Select source then target";
+	} 
+	string $source = $sel[0]; 
+	string $target = $sel[1]; 
+	print ($source+"\n"); 
+	print ($target + "\n"); 
+//try to do it by just reading SECOND shape node (first is shape, then ORIG, then other shape) 
+	string $targetShapes[] = `listRelatives -f -s $target`; 
+	string $targetOrig = $targetShapes[1]; 
+//dummy check that this is orig object (is it intermediate? does it contain "orig"?) 
+	if ((`getAttr ($targetOrig+".intermediateObject")`) && (endsWith ($targetOrig, "Orig")))
+	{ 
+//turn off intermediate object setting on orig 
+	setAttr ($targetOrig + ".intermediateObject") 0; 
+//transfer uv's to "orig" shape of target 
+	select -r $source; 
+	select -add $targetOrig; 
+	transferAttributes -pos 0 -nml 0 -uvs 2 -col 2 -spa 4 -suv "map1" -tuv "map1" -sm 3 -fuv 0 -clb 1; 
+	select -cl; 
+//delete history on target orig then turn back on intermediate object attr 
+	delete -ch $targetOrig; 
+	setAttr ($targetOrig + ".intermediateObject") 1; 
+	} 
+	else 
+	{ error "couldn't find the orig shape of the target object. make sure it's a bound/deformed thing"; 
+} 
+}
+zbw_cleanTransferUV; 

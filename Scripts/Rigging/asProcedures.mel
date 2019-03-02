@@ -1,0 +1,2492 @@
+//     AdvancedSkeleton
+//     Version 2.00_beta2
+// 
+// 
+// AdvancedSkeleton is is a collection of Maya tools for doing character setup.
+//   
+// INSTALLATION: 
+// Run the SETUP file (setup.exe) 
+// Choose the Destination Folder.
+// NOTE: destination folder must be your Maya user directory 
+// eg: C:\Documents and Settings\user\My Documents\maya\8.5\
+// Continue installation.
+// Start Maya. 
+// Now you will find a new Shelf called 'advancedSkeleton':  
+// 
+// For detailed instructions go to: www.animationstudios.com.au
+// 
+// Copyright (C)2007 Animation Studios
+// 
+// email: support@animationstudios.com.au
+// Last Modified 21/02/2007
+
+global proc asScriptLocator (){}
+
+global proc string asScriptLocation ()
+{
+string $whatIs=`whatIs asScriptLocator`;
+string $fullPath=`substring $whatIs 25 999`;
+string $buffer[];
+int $numTok=`tokenize $fullPath "/" $buffer`;
+int $numLetters=size($fullPath);
+int $numLettersLastFolder=size($buffer[$numTok-1]);
+string $scriptLocation=`substring $fullPath 1 ($numLetters-$numLettersLastFolder)`;
+return $scriptLocation;
+}
+
+global proc float asCharSize (string $topNode)
+{
+float $charSize;
+string $allChildren[]=`listRelatives -ad -f -type joint $topNode`;
+float $highestJointY=0;
+float $lowestJointY=0;
+float $temp[3];
+for ($child in $allChildren)
+	{
+	$temp=`xform -q -ws -t $child`;
+	if ($temp[1]>$highestJointY)
+		$highestJointY=$temp[1];
+	if ($temp[1]<$lowestJointY)
+		$lowestJointY=$temp[1];
+	}
+$charSize=$highestJointY-$lowestJointY;
+//if ($charSize<1)
+//	$charSize=10;
+return $charSize;
+}
+
+global proc float asgetCharHeight (string $nameSpace)
+{
+float $height;
+if (`objExists ($nameSpace+"All")`)
+	$height=`getAttr ($nameSpace+"All.height")`;
+return $height;
+}
+
+global proc string asUniqueName (string $longName)
+{
+string $uniqueName;
+string $tempString[];
+int $numTok=`tokenize $longName "|" $tempString`;
+string $shortName=$tempString[$numTok-1];
+$tempString=`ls $shortName`;
+string $tempNode;
+if (size($tempString)>1)
+	{
+	$tempNode=`createNode transform`;
+	createNode -n $shortName -p $tempNode transform;
+	$uniqueName=`createNode -n $shortName -p $tempNode transform`;
+	delete $tempNode;
+	rename $longName $uniqueName;
+	}
+else
+	$uniqueName=$shortName;
+return $uniqueName;
+}
+
+global proc asImportFitSkeleton ()
+{
+string $asScriptLocation=`asScriptLocation`;
+string $file=$asScriptLocation+"/FitSkeletons/"+`optionMenu -q -v asFitOptionMenu`;
+if (`file -q -ex $file`)
+	file -import -rpr "AdvancedSkeleton" -options "v=0" $file;
+}
+
+global proc addFitSkelAttrJoints (string $type)
+{
+string $sel[]=`ls -sl`;
+string $plusMinus,$multDiv,$loc,$locShape;
+string $tempString[],$multDivs[],$attrs[];
+if (!size($sel))
+	warning "Select 1 joint\n";
+for ($i=0;$i<size($sel);$i++)
+	{
+	$tempString=`listRelatives -f -c $sel[$i]`;
+	$childJoint="";
+	for ($y=0;$y<size($tempString);$y++)
+		if (`objectType $tempString[$y]`=="joint")
+			$childJoint=$tempString[$y];
+	if (`objectType $sel[$i]`!="joint" || $childJoint=="" || !size($tempString))
+		continue;
+	if (`attributeExists twistJoints $sel[$i]` || `attributeExists bendJoints $sel[$i]`)
+		error ("FitSkeleton Attribute already added!\n");
+	else
+		addAttr -k 1 -ln $type -at long -min 0 -max 10 -dv 2 $sel[$i];
+	$plusMinus=`createNode -n ($sel[$i]+"_multDiv") plusMinusAverage`;
+	connectAttr ($sel[$i]+"."+$type) ($plusMinus+".input1D[0]");
+	setAttr ($plusMinus+".input1D[1]") 1;
+	$multDiv=`createNode -n ($sel[$i]+"_multDiv") multiplyDivide`;
+	setAttr ($multDiv+".operation") 2;
+	connectAttr ($childJoint+".translate") ($multDiv+".input1");
+	connectAttr ($plusMinus+".output1D") ($multDiv+".input2.input2X");
+	connectAttr ($plusMinus+".output1D") ($multDiv+".input2.input2Y");
+	connectAttr ($plusMinus+".output1D") ($multDiv+".input2.input2Z");
+	for ($y=1;$y<11;$y++)
+		{
+		$tempString=`spaceLocator`;
+		$loc=`rename $tempString[0] ($sel[$i]+"_"+$type+"Locator"+$y)`;
+		$tempString=`listRelatives -s $loc`;
+		$locShape=$tempString[0];
+		$attrs=`listAttr -k $loc`;
+		setAttr ($locShape+".overrideEnabled") 1;
+		setAttr ($locShape+".overrideColor") 31;
+		addAttr -k 0 -dv $y -min 0 -max 10 -ln twistPosition -at double $loc;
+		parent $loc $sel[$i];
+		xform -os -t 0 0 0 -ro 0 0 0 -s 0.5 0.5 0.5 $loc;
+		$multDivs[$y]=`createNode -n ($sel[$i]+"_multDiv"+$y) multiplyDivide`;
+		connectAttr ($multDiv+".output") ($multDivs[$y]+".input1");
+		connectAttr ($loc+".twistPosition") ($multDivs[$y]+".input2.input2X");
+		setAttr ($multDivs[$y]+".input2.input2Y") $y;
+		setAttr ($multDivs[$y]+".input2.input2Z") $y;
+		connectAttr ($multDivs[$y]+".output") ($loc+".translate");
+
+		$multDivsVis[$y]=`createNode -n ($sel[$i]+"_multDivsVis") multiplyDivide`;
+		connectAttr ($sel[$i]+"."+$type) ($multDivsVis[$y]+".input1.input1X");
+		setAttr ($multDivsVis[$y]+".input2.input2X") ((1.00/(2*$y))+0.001);
+		connectAttr ($multDivsVis[$y]+".outputX") ($loc+".visibility");
+		for ($attr in $attrs)
+			setAttr -l 1 -k 0 ($loc+"."+$attr);
+		}
+	}
+select $sel;
+}
+
+global proc addFitSkelGlobal ()
+{
+string $sel[]=`ls -sl`;
+string $tempString[];
+string $loc,$locShape;
+if (!size($sel))
+	warning "Select 1 joint\n";
+for ($i=0;$i<size($sel);$i++)
+	{
+	if (`objectType $sel[$i]`!="joint")
+		continue;
+	if (`attributeExists "global" $sel[$i]`)
+		error ("FitSkeleton Attribute already added!\n");
+	else
+		{
+		addAttr -k 1 -ln "global" -at long -min 0 -max 10 -dv 10 $sel[$i];
+		addAttr -k 0 -ln "globalConnect" -at long -min 0 -max 10 -dv 10 $sel[$i];
+		connectAttr ($sel[$i]+".global") ($sel[$i]+".globalConnect");
+		}
+	$tempString=`spaceLocator`;
+	$loc=`rename $tempString[0] ($sel[$i]+"_globalLocator")`;
+	$tempString=`listRelatives -s $loc`;
+	$locShape=$tempString[0];
+	$attrs=`listAttr -k $loc`;
+	setAttr ($locShape+".overrideEnabled") 1;
+	setAttr ($locShape+".overrideColor") 6;
+	parent $loc $sel[$i];
+	xform -os -t 0 0 0 -ro 0 0 0 -s 1 1 1 $loc;
+	for ($attr in $attrs)
+		setAttr -l 1 -k 0 ($loc+"."+$attr);
+	}
+select $sel;
+}
+
+global proc removeFitSkelAttr (string $attr)
+{
+string $sel[]=`ls -sl`;
+string $children[];
+for ($obj in $sel)
+	{
+	if (`attributeExists $attr $obj`)
+		deleteAttr ($obj+"."+$attr);
+	$children=`listRelatives -c $obj`;
+	for ($child in $children)
+		if (`gmatch $child ("*_"+$attr+"Locator*")`)
+			delete $child;
+
+	if (`attributeExists ($attr+"Connect") $obj`)
+		deleteAttr ($obj+"."+$attr+"Connect");
+	}
+}
+
+global proc asLockAttr (string $object, int $trans, int $rot, int $scale, int $vis)
+{
+setAttr -l $trans -k (!$trans) ($object+".translateX");
+setAttr -l $trans -k (!$trans) ($object+".translateY");
+setAttr -l $trans -k (!$trans) ($object+".translateZ");
+setAttr -l $rot -k (!$rot) ($object+".rotateX");
+setAttr -l $rot -k (!$rot) ($object+".rotateY");
+setAttr -l $rot -k (!$rot) ($object+".rotateZ");
+setAttr -l $scale -k (!$scale) ($object+".scaleX");
+setAttr -l $scale -k (!$scale) ($object+".scaleY");
+setAttr -l $scale -k (!$scale) ($object+".scaleZ");
+setAttr -l $vis -k (!$vis) ($object+".visibility");
+}
+
+global proc string asLabel (string $obj)
+{
+string $label;
+if (size(`ls -ap $obj`)>1)
+	error ("More than one object matches name: "+$obj+"\n");
+if (!`objExists $obj`)
+	return "AA";
+if (!`attributeExists "type" $obj`)
+	return "BB";
+int $labelNum=`getAttr ($obj+".type")`;
+if (!`getAttr ($obj+".drawLabel")`)
+	return "";
+if ($labelNum==0)
+	$label="None";
+if ($labelNum==1)
+	$label="Root";
+if ($labelNum==2)
+	$label="Hip";
+if ($labelNum==4)
+	$label="Foot";
+if ($labelNum==5)
+	$label="Toe";
+if ($labelNum==10)
+	$label="Shoulder";
+if ($labelNum==12)
+	$label="Hand";
+if ($labelNum==15)
+	$label="PropA";
+if ($labelNum==16)
+	$label="PropB";
+if ($labelNum==17)
+	$label="PropC";
+if ($labelNum==18)
+	{
+	$label=`getAttr ($obj+".otherType")`;
+	}
+return $label;
+}
+
+global proc asFollow (string $driver, string $driven, string $target)
+{
+if (!`objExists $target`)
+	return;
+string $setRange=$driver+"SetRangeFollow";
+if (!`attributeExists "follow" $driver`)
+	{
+	addAttr -k 1 -ln follow -at double -min 0 -max 10 -dv 0 $driver;
+	createNode -n $setRange setRange;
+	sets -add ("AllSet") $setRange;
+	setAttr ($setRange+".maxX") 1;
+	setAttr ($setRange+".minY") 1;
+	setAttr ($setRange+".oldMaxX") 10;
+	setAttr ($setRange+".oldMaxY") 10;
+	connectAttr ($driver+".follow") ($setRange+".value.valueX");
+	connectAttr ($driver+".follow") ($setRange+".value.valueY");
+	}
+float $temp[]=`xform -q -ws -t $driven`;
+createNode -n ($driven+"Static") transform;
+asAlign ($driven+"Static") $driven 1 1 0 0;
+parent ($driven+"Static") ("IKStatic");
+string $tempString[]=`parentConstraint -mo ($driven+"Static") $target $driven`;
+string $constraint=$tempString[0];
+select $constraint;
+connectAttr ($setRange+".outValue.outValueY") ($constraint+"."+$driven+"Static"+"W0");
+connectAttr($setRange+".outValue.outValueX") ($constraint+"."+$target+"W1");
+}
+
+global proc string asResolveIKendJoint (string $IKstartJoint, string $jointLabel)
+{
+string $IKendJoint,$IKendJointLabel,$previousIKendJoint;
+if (`gmatch $jointLabel "Shoulder*"`)
+	$IKendJointLabel="Hand*";
+if (`gmatch $jointLabel "Hip*"`)
+	$IKendJointLabel="Foot*";
+if (`gmatch $jointLabel "Root*"`)
+	$IKendJointLabel="Chest*";
+if (`gmatch $jointLabel "0*"`)
+	$IKendJointLabel="[0-9]*";
+string $children[]=`listRelatives -ad -type joint $IKstartJoint`;
+string $childLabel;
+int $labelNum,$previousLabelNum;
+for ($x=size($children)-1;$x>-1;$x--)
+	{
+	$childLabel=`asLabel $children[$x]`;
+	if (`gmatch $childLabel $IKendJointLabel`)
+		{
+		$IKendJoint=$children[$x];
+
+		if (`gmatch $childLabel "[0-9]*"`)
+			$labelNum=`match "[0-9]*" $childLabel`;
+		if ($previousLabelNum>$labelNum)
+			{
+			$IKendJoint=$previousIKendJoint;
+			break;
+			}
+		if (`gmatch $childLabel "[0-9]*"`)
+			{
+			$previousLabelNum=`match "[0-9]*" $childLabel`;
+			$previousIKendJoint=$children[$x];
+			}
+		if (!`gmatch $jointLabel "0*"`)
+			break;
+		}
+	}
+return $IKendJoint;
+}
+
+global proc asSetRefreshOptionVar ()
+{
+if ((`getModifiers`/4) %  2)
+	optionVar -iv asRefresh 1;
+else
+	optionVar -iv asRefresh 0;
+}
+
+global proc asAlign (string $object, string $alignToObject, int $translate, int $rotate, int $jointOrient, int $rotateOrder)
+{
+global string $gMainProgressBar;
+string $parents[]=`listRelatives -p $object`;
+string $orientConstraint[];
+float $rotation[];
+parent $object $alignToObject;
+if ($translate)
+	xform -os -t 0 0 0 $object;
+if ($rotateOrder)
+	setAttr ($object+".rotateOrder") `getAttr ($alignToObject+".rotateOrder")`;
+if ($rotate)
+	xform -os -ro 0 0 0 $object;
+if (`objExists $parents[0]`)
+	parent $object $parents[0];
+else
+	parent -w $object;
+if ($jointOrient)
+	{
+	$orientConstraint=`orientConstraint $alignToObject $object`;
+	$rotation=`xform -q -os -ro $object`;
+	delete $orientConstraint[0];
+	setAttr -type float3 ($object+".jointOrient") $rotation[0] $rotation[1] $rotation[2];
+//	setAttr -type float3 ($object+".rotate") 0 0 0;
+	}
+
+if (`optionVar -q asRefresh`)
+	refresh;
+if (`progressBar -q -st $gMainProgressBar`=="Creating AdvancedSkeleton")
+	progressBar -e -s 1 $gMainProgressBar;
+}
+
+global proc asToggleFitSkeleton  ()
+{
+
+string $transforms[]=`ls -type transform`;
+for ($node in $transforms)
+	{
+	if (`gmatch $node ("*FitSkeleton")`)
+		{
+		setAttr -l 0 ($node+".visibility");
+		setAttr -l 1 ($node+".visibility") (!`getAttr ($node+".visibility")`);
+		}
+	if (`gmatch $node ("*MotionSystem")`)
+		setAttr ($node+".template") (!`getAttr ($node+".template")`);
+	if (`gmatch $node ("*DeformationSystem")`)
+		setAttr ($node+".template") (!`getAttr ($node+".template")`);
+	}
+}
+
+global proc string asRlaParent (string $joint)
+{
+string $rlaParent,$label;
+string $joints[]=`listRelatives -p -f $joint`;
+while ($joints[0]!="")
+	{
+	if (size(`ls -ap $joints[0]`)!=1)
+		continue;
+	$label=`asLabel $joints[0]`;
+	if (!`gmatch $label "Twist*"`)
+		{
+		$rlaParent=$joints[0];
+		break;
+		}
+	$joints=`listRelatives -p -f $joints[0]`;
+	}
+
+return $rlaParent;
+}
+
+global proc string asRlaChild (string $joint)
+{
+string $rlaChild,$label;
+string $tempString[]=`listRelatives -ad -f -type joint $joint`;
+for ($x=size($tempString)-1;$x>-1;$x--)
+	{
+	if (size(`ls -ap $tempString[$x]`)!=1)
+		continue;
+	$label=`asLabel $tempString[$x]`;
+	if (!`gmatch $label "Twist*"`)
+		{
+		$rlaChild=$tempString[$x];
+		break;
+		}
+	}
+return $rlaChild;
+}
+
+global proc addSelectorBipedToShelf ()
+{
+global string $gShelfTopLevel;
+string $currentShelf = `tabLayout -query -selectTab $gShelfTopLevel`;
+setParent $currentShelf;
+
+string $cmd="source \""+`internalVar -usd`+"AdvancedSkeleton/Selector/biped.mel\";asSelectorbiped;";
+string $image=`internalVar -usd`+"AdvancedSkeleton/Selector/biped/biped_background32.bmp";
+shelfButton 
+	-command $cmd
+	-annotation "Selector:biped"
+	-image1 $image;
+}
+
+global proc asReadIconsFile (string $iconsFile)
+{
+string $beforeObj[]=`ls -l -as`;
+string $afterObj[];
+int $fromBefore[];
+createNode -n "iconsGroup" transform;
+setAttr "iconsGroup.visibility" 0;
+int $readLine;
+$fileId=`fopen $iconsFile "r"`;
+string $nextLine = `fgetline $fileId`;
+string $previousLine;
+while ( size( $nextLine ) > 0 )
+	{
+	if (!$readLine)
+		if (`gmatch $nextLine "\t*"`)
+			{
+			$previousLine += $nextLine;
+			$nextLine = `fgetline $fileId`;
+			continue;
+			}
+	if (`gmatch $nextLine "createNode nurbsCurve*"`)
+		{
+		$readLine=1;
+		eval ($previousLine);
+		$previousLine = $nextLine;
+		$nextLine = `fgetline $fileId`;
+		continue;
+		}
+	if ($readLine)
+		if (`gmatch $nextLine "\t*"`)
+			{
+			$previousLine += $nextLine;
+			$nextLine = `fgetline $fileId`;
+			continue;
+			}
+		else
+			{
+			$readLine=0;
+			eval ($previousLine);
+			}
+	$previousLine=$nextLine;
+	$nextLine = `fgetline $fileId`;
+	}
+fclose $fileId;
+$afterObj=`ls -l -as`;
+for ($i=0;$i<size($afterObj);$i++)
+	for ($y=0;$y<size($beforeObj);$y++)
+		if ($afterObj[$i]==$beforeObj[$y])
+			$fromBefore[$i]=1;
+for ($i=0;$i<size($afterObj);$i++)
+	if (!$fromBefore[$i])
+		parent $afterObj[$i] "iconsGroup";
+}
+
+global proc freezeSkinCluster (string $skinCluster)
+{
+if (!`objExists $skinCluster`)
+	return;
+int $numMatrix;
+float $jointMatrix[];
+string $tempString[]=`ls -showType $skinCluster`;
+
+$numMatrix=`getAttr -s ($skinCluster+".bindPreMatrix")`;
+for ($i=0;$i<$numMatrix;$i++)
+	{
+	$tempString=`listConnections -s 1 -d 1 ($skinCluster+".matrix["+$i+"]")`;
+	if (!`objExists $tempString[0]`)
+		continue;
+	$jointMatrix=`getAttr ($tempString[0]+".worldInverseMatrix")`;
+	setAttr ($skinCluster+".bindPreMatrix["+$i+"]") -type "matrix" $jointMatrix[0] $jointMatrix[1] $jointMatrix[2] $jointMatrix[3] $jointMatrix[4] $jointMatrix[5] $jointMatrix[6] $jointMatrix[7] $jointMatrix[8] $jointMatrix[9] $jointMatrix[10] $jointMatrix[11] $jointMatrix[12] $jointMatrix[13] $jointMatrix[14] $jointMatrix[15];
+	}
+}
+
+global proc asMirrorByJointOrient (string $joint, string $side)
+{
+select -cl;
+joint -n tempJoint;
+parent tempJoint ($joint+"_R");
+setAttr -type float3 tempJoint.translate 0 0 0;
+setAttr -type float3 tempJoint.rotate 0 0 0;
+setAttr -type float3 tempJoint.jointOrient 0 0 0;
+mirrorJoint -mirrorYZ -mirrorBehavior;
+$tempString=`listRelatives -p ($joint+$side)`;
+parent ($joint+$side) tempJoint1;
+setAttr -type float3 ($joint+$side+".rotate") 0 0 0;
+setAttr -type float3 ($joint+$side+".jointOrient") 0 0 0;
+parent ($joint+$side) $tempString[0];
+delete tempJoint tempJoint1;
+}
+
+global proc freezeJointCluster (string $jointCluster)
+{
+if (!`objExists $jointCluster`)
+	{
+	warning ("Can not find jointCluster: \""+$jointCluster+"\" !\n");
+	return;
+	}
+float $jointMatrix[]=`getAttr ($jointCluster+".bindPreMatrix")`;
+string $tempString[];
+$tempString=`listConnections -s 1 -d 1 ($jointCluster+".matrix")`;
+$jointMatrix=`getAttr ($tempString[0]+".worldInverseMatrix")`;
+setAttr ($jointCluster+".bindPreMatrix") -type "matrix" $jointMatrix[0] $jointMatrix[1] $jointMatrix[2] $jointMatrix[3] $jointMatrix[4] $jointMatrix[5] $jointMatrix[6] $jointMatrix[7] $jointMatrix[8] $jointMatrix[9] $jointMatrix[10] $jointMatrix[11] $jointMatrix[12] $jointMatrix[13] $jointMatrix[14] $jointMatrix[15];
+}
+
+
+//--************************Procs for Utilities*************************--//
+
+
+global proc asResetGlobalRebuildChar ()
+{
+global string $asRebuildChar;
+$asRebuildChar="";
+}
+
+global proc asAdvancedRebuild ()
+{
+global string $gMainProgressBar;
+global string $asRebuildChar;
+global int $asFitModeScriptJobNr1;
+evalDeferred ("progressBar -e -ep "+$gMainProgressBar);
+//asGoToBuildPose;
+int $asFitMode;
+if ($asFitModeScriptJobNr1)
+	if (`scriptJob -ex $asFitModeScriptJobNr1`)
+		$asFitMode=1;
+if ($asFitMode)
+	evalEcho ("asFitMode");
+string $asScriptLocation=`asScriptLocation`;
+string $sourceAdvancedSkeleton=("source \""+$asScriptLocation+"advancedSkeleton.mel\"");
+if (!`exists advancedSkeleton`)
+	eval ($sourceAdvancedSkeleton);
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+$asRebuildChar="WWW";
+evalDeferred ("asResetGlobalRebuildChar");
+int $rebuildConnections=`checkBox -q -v RebuildCheckBox`;
+string $sel[]=`ls -sl`;
+string $tempString[],$tempString2[],$sources[],$destinations[],$sourcesNoPlug[],$destinationsNoPlug[];
+string $fitSkeleton=$nameSpace+"FitSkeleton";
+if (!`objExists $fitSkeleton`)
+	error "No skeleton to rebuild\n";
+string $roots[]=`listRelatives -type transform -c $fitSkeleton`;
+if ($roots[0]=="FitSkeletonOffset");
+	$roots=`listRelatives -type transform -c $roots[0]`;
+float $temp[3]=`xform -q -ws -t $roots[0]`;
+if ($temp[0]<-0.001 || $temp[0]>0.001)
+	{
+	warning ("1st Joint ("+$roots[0]+") must have translateX set to 0 !, (current worldSpaceTX value="+$temp[0]+")");
+	select $roots[0];
+	return;
+	}
+parent -w $roots;
+if (`objExists "FitSkeletonOffset"`)
+	delete "FitSkeletonOffset";
+string $allSetMembers[]=`sets -q ($nameSpace+"AllSet")`;
+progressBar -e -st "Analyzing AdvancedSkeleton" -bp -ii 0 -min 0 -max (size($allSetMembers)*2) $gMainProgressBar;
+
+//Pre Rebuild
+float $mx[];
+string $userAttrs[],$children[],$connections[],$connectionsObj[],$connectCmdsSource[],$connectCmdsDest[];
+string $addAttrCmds[],$cmds[],$connectCmds[],$skinClusters[],$jointClusters[];
+string $sn,$ln,$at,$k,$dv,$minMax;
+string $charSet,$objectType,$tr,$xyz;
+int $childIsMember,$alreadyConnected;
+int $locked;
+int $e[2];
+float $range[2];
+float $vals[2];
+
+//Pre Rebuild userDefinedAttr
+for ($i=0;$i<size($allSetMembers);$i++)
+	{
+	progressBar -e -s 1 $gMainProgressBar;
+	$userAttrs=`listAttr -ud $allSetMembers[$i]`;
+	for ($y=0;$y<size($userAttrs);$y++)
+		{
+		$tempString=`listAttr -sn ($allSetMembers[$i]+"."+$userAttrs[$y])`;
+		$sn=$tempString[0];
+		$ln=$userAttrs[$y];
+		$at=`getAttr -typ ($allSetMembers[$i]+"."+$userAttrs[$y])`;
+		if (`gmatch $at "*Array"`)
+			continue;
+		$dv=`getAttr ($allSetMembers[$i]+"."+$userAttrs[$y])`;
+		$k=`getAttr -k ($allSetMembers[$i]+"."+$userAttrs[$y])`;
+		if ($at=="string")
+			continue;
+		if (`gmatch $ln "*W[0-9]"`)
+			continue;
+		$minMax="";
+		if (`attributeQuery -re -n $allSetMembers[$i] $ln`)
+			{
+			$range=`attributeQuery -r -n $allSetMembers[$i] $ln`;
+			$minMax="-hasMinValue 1 -min "+$range[0]+" -hasMaxValue 1 -max "+$range[1];
+			}
+		$addAttrCmds[size($addAttrCmds)]="if (!`attributeExists "+$userAttrs[$y]+" "+$allSetMembers[$i]+"`)"
+					+"	addAttr -k "+$k+" -sn "+$sn+" -ln "+$ln+" -at "+$at+" -dv "+$dv+" "+$minMax+" "+$allSetMembers[$i]+";";
+		}
+	}
+
+//Pre Rebuild Locking
+if (`objExists ($nameSpace+"All")`)
+	if (`attributeExists "locked" ($nameSpace+"All")`)
+		$locked=`getAttr ($nameSpace+"All.locked")`;
+
+//Pre Rebuild Parenting
+for ($i=0;$i<size($allSetMembers);$i++)
+	{
+	progressBar -e -s 1 $gMainProgressBar;
+	$children=`listRelatives -c $allSetMembers[$i]`;
+	for ($y=0;$y<size($children);$y++)
+		{
+		$tempString=`ls $children[$y]`;
+		if (size($tempString)>1)
+			error ("ObjectName not unique "+$children[$y]+"\n");
+		$childIsMember=0;
+		for ($z=0;$z<size($allSetMembers);$z++)
+			if ($children[$y]==$allSetMembers[$z])
+				$childIsMember=1;
+		if (!$childIsMember)
+			{
+			$tempString=`ls -s $children[$y]`;
+			if ($tempString[0]!="")
+				$cmds[size($cmds)]="parent -r -s "+$children[$y]+" "+$allSetMembers[$i]+";";
+			else if (`getAttr ($children[$y]+".inheritsTransform")`)
+				$cmds[size($cmds)]="parent "+$children[$y]+" "+$allSetMembers[$i]+";";
+			else
+				$cmds[size($cmds)]="parent -r "+$children[$y]+" "+$allSetMembers[$i]+";";
+			}
+		}
+	if (!$rebuildConnections)
+		continue;
+
+	//Incoming connections
+	$connections=`listConnections -p 1 -c 1 -s 1 -d 0 $allSetMembers[$i]`;
+	$connectionsObj=`listConnections -c 1 -s 1 -d 0 $allSetMembers[$i]`;
+	for ($y=0;$y<size($connections);$y=$y+2)
+		{
+		if (!`objExists $connectionsObj[$y+1]`)
+			continue;
+		if (`sets -im ($nameSpace+"AllSet") $connectionsObj[$y+1]`)
+			continue;
+		if ($connections[$y+1]=="Group.message")
+			continue;
+		$objectType=`objectType $connectionsObj[$y+1]`;
+		if ($objectType=="objectSet" || $objectType=="ikSCsolver" || $objectType=="ikRPsolver" || $objectType=="hikSolver" || $objectType=="ikSplineSolver")
+			continue;
+		if ($connections[$y+1]=="time1.outTime")
+			continue;
+		$connectCmds[size($connectCmds)]="if (`getAttr -l "+$connections[$y]+"`)  setAttr -l 0 "+$connections[$y]+";";
+		$connectCmds[size($connectCmds)]="connectAttr -f "+$connections[$y+1]+" "+$connections[$y]+";";
+		$connectCmdsSource[size($connectCmds)-1]=$connections[$y+1];
+		$connectCmdsDest[size($connectCmds)-1]=$connections[$y];
+		}
+
+	//Outgoing connections
+	$connections=`listConnections -p 1 -c 1 -s 0 -d 1 $allSetMembers[$i]`;
+	$connectionsObj=`listConnections -c 1 -s 0 -d 1 $allSetMembers[$i]`;
+	for ($y=0;$y<size($connections);$y=$y+2)
+		{
+		if (!`objExists $connectionsObj[$y+1]`)
+			continue;
+		if (`sets -im ($nameSpace+"AllSet") $connectionsObj[$y+1]`)
+			continue;
+		$objectType=`objectType $connectionsObj[$y+1]`;
+		if ($objectType=="materialInfo" || $objectType=="partition")
+			continue;
+		if ($objectType=="objectSet" || $objectType=="ikSCsolver" || $objectType=="ikRPsolver" || $objectType=="hikSolver" || $objectType=="ikSplineSolver")
+			continue;
+		if ($objectType=="skinCluster")
+			$skinClusters[size($skinClusters)]=$connectionsObj[$y+1];
+		if ($objectType=="jointCluster")
+			$jointClusters[size($jointClusters)]=$connectionsObj[$y+1];
+		$connectCmds[size($connectCmds)]="connectAttr -f "+$connections[$y]+" "+$connections[$y+1]+";";
+		$connectCmdsSource[size($connectCmds)-1]=$connections[$y];
+		$connectCmdsDest[size($connectCmds)-1]=$connections[$y+1];
+		}
+
+	//transformLimits
+	if (`objectType $allSetMembers[$i]`=="joint")
+		{
+		$tr="r";
+		for ($y=0;$y<2;$y++)
+			{
+			if ($y==1)
+				continue;
+//				$tr="t";
+			$xyz="x";
+			for ($z=0;$z<3;$z++)
+				{
+				if ($z==1)
+					$xyz="y";
+				if ($z==2)
+					$xyz="z";
+				$e=`eval ("transformLimits -q -e"+$tr+$xyz+" "+$allSetMembers[$i])`;
+				if ($e[0] || $e[1])
+					{
+					$vals=`eval ("transformLimits -q -"+$tr+$xyz+" "+$allSetMembers[$i])`;
+					$cmds[size($cmds)]="transformLimits -"+$tr+$xyz+" "+$vals[0]+" "+$vals[1]+" -e"+$tr+$xyz+" "+$e[0]+" "+$e[1]+" "+$allSetMembers[$i]+";";
+					}
+				}
+			}
+		}
+	}
+
+//Pre Rebuild CurveShapes
+string $controlSetMembers[]=`sets -q ($nameSpace+"ControlSet")`;
+string $curveShape;
+int $spans,$degree,$numCVs;
+float $cvPos[3];
+for ($i=0;$i<size($controlSetMembers);$i++)
+	{
+	$tempString=`listRelatives -s $controlSetMembers[$i]`;
+	$curveShape=$tempString[0];
+	if (!`objExists $curveShape`)
+		continue;
+	if (`objectType $curveShape`!="nurbsCurve")
+		continue;
+	$spans=`getAttr ($curveShape+".spans")`;
+	$degree=`getAttr ($curveShape+".degree")`;
+	$numCVs=$spans+$degree;
+	for ($y=0;$y<$numCVs;$y++)
+		{
+		$cvPos=`getAttr ($curveShape+".controlPoints["+$y+"]")`;
+		$cmds[size($cmds)]="setAttr "+$curveShape+".controlPoints["+$y+"] "+$cvPos[0]+" "+$cvPos[1]+" "+$cvPos[2]+" "+";";
+		}
+	}
+
+//Pre Rebuild CharacterSet
+$tempString=`ls -type character`;
+if (size($tempString))
+	{
+	$charSet=$tempString[0];
+	$sources=`listConnections -p 1 -s 1 -d 0 $charSet`;
+	$sourcesNoPlug=`listConnections -p 0 -s 1 -d 0 $charSet`;
+	for ($i=0;$i<size($sources);$i++)
+		if (`sets -im AllSet $sourcesNoPlug[$i]`)
+			{
+			$destinations=`listConnections -p 1 -s 0 -d 1 $sources[$i]`;
+			$destinationsNoPlug=`listConnections -p 0 -s 0 -d 1 $sources[$i]`;
+			for ($y=0;$y<size($destinations);$y++)
+				if ($destinationsNoPlug[$y]==$charSet)
+					disconnectAttr $sources[$i] $destinations[$y];
+			}
+	}
+
+//Rebuild
+$allSetMembers[size($allSetMembers)]=($nameSpace+"Group");
+$allSetMembers[size($allSetMembers)]=($nameSpace+"Sets");
+$allSetMembers[size($allSetMembers)]=($nameSpace+"AllSet");
+$allSetMembers[size($allSetMembers)]=($nameSpace+"ControlSet");
+$allSetMembers[size($allSetMembers)]=($nameSpace+"DeformSet");
+for ($i=0;$i<size($allSetMembers);$i++)
+	if (`objExists $allSetMembers[$i]`)
+		$allSetMembers[$i]=`rename $allSetMembers[$i] ("prefix_"+$allSetMembers[$i])`;
+	else
+		$allSetMembers[$i]="";
+
+
+select $roots;
+progressBar -e -ep $gMainProgressBar;
+advancedSkeleton;
+
+//Post Rebuild
+for ($cmd in $addAttrCmds)
+	if (catchQuiet (`eval ($cmd)`)) warning ("Failed: "+$cmd+"\n");
+for ($i=0;$i<size($connectCmds);$i++)
+	{
+	$alreadyConnected=0;
+	if (`objExists $connectCmdsSource[$i]` && `objExists $connectCmdsDest[$i]`)
+		if (`isConnected -iuc $connectCmdsSource[$i] $connectCmdsDest[$i]`)
+			$alreadyConnected=1;
+	if (!$alreadyConnected)
+		if (catchQuiet (`eval ($connectCmds[$i])`)) warning ("Failed: "+$connectCmds[$i]+"\n");
+	}
+for ($cmd in $cmds)
+	if (catchQuiet (`eval ($cmd)`)) warning ("Failed: "+$cmd+"\n");
+
+//reset bindPose
+string $bindPose;
+string $newSetMembers[]=`sets -q ($nameSpace+"AllSet")`;
+for ($i=0;$i<size($newSetMembers);$i++)
+	{
+	if (`objectType $newSetMembers[$i]`=="joint")
+		{
+		select $newSetMembers[$i];
+		$tempString=`dagPose -q -bp`;
+		$bindPose=$tempString[0];
+		if (`objExists $bindPose`)
+			{
+			$tempString=`listConnections ($newSetMembers[$i]+".bindPose")`;
+			if ($tempString[0]==$bindPose)
+				{
+				select -add $bindPose;
+				dagPose -rs;
+				}
+			}
+		}
+}
+
+for ($i=0;$i<size($allSetMembers);$i++)
+	if (`gmatch $allSetMembers[$i] "*CurveInfo*"`)
+		if (`objExists $allSetMembers[$i]`)
+			delete $allSetMembers[$i];
+for ($i=0;$i<size($allSetMembers);$i++)
+	if (`objExists $allSetMembers[$i]`)
+		delete $allSetMembers[$i];
+
+$skinClusters=`stringArrayRemoveDuplicates $skinClusters`;
+$jointClusters=`stringArrayRemoveDuplicates $jointClusters`;
+for ($i=0;$i<size($skinClusters);$i++)
+	freezeSkinCluster $skinClusters[$i];
+for ($i=0;$i<size($jointClusters);$i++)
+	freezeJointCluster $jointClusters[$i];
+
+if ($locked)
+	asLockSkeleton 1;
+
+eval ("dgdirty -a");
+catch (`select $sel`);
+
+for ($i=0;$i<size($allSetMembers);$i++)
+	if (`objExists $allSetMembers[$i]`)
+		delete $allSetMembers[$i];
+}
+
+global proc asLockSkeleton (int $onOff)
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+string $tempString[];
+if ($nameSpace==":")
+	$nameSpace="";
+
+if (`objExists ($nameSpace+"All")`)
+	if (`attributeExists "locked" ($nameSpace+"All")`)
+		{
+		setAttr -l 0 ($nameSpace+"All.locked");
+		setAttr -l 1 ($nameSpace+"All.locked") $onOff;
+		}
+string $allSetMembers[]=`sets -q ($nameSpace+"AllSet")`;
+string $attrs[],$udAttrs[];
+int $isUd;
+
+
+if (`objExists jointLayer`)
+	delete jointLayer;
+
+if (!$onOff)
+	return;
+
+string $jointLayer=`createNode -n jointLayer displayLayer`;
+setAttr ($jointLayer+".displayType") 2;
+
+for ($i=0;$i<size($allSetMembers);$i++)
+	{
+	if (`objectType $allSetMembers[$i]`=="joint")
+		connectAttr -f ($jointLayer+".drawInfo") ($allSetMembers[$i]+".drawOverride");
+
+	if (`objectType $allSetMembers[$i]`=="nurbsCurve")
+		{
+		$tempString=`listRelatives -p $allSetMembers[$i]`;
+		setAttr ($tempString[0]+".overrideEnabled") 1;
+		}
+	}
+}
+
+global proc asSelectDeformJoints ()
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (`objExists ($nameSpace+"DeformSet")`)
+	select `sets -q ($nameSpace+"DeformSet")`;
+}
+
+global proc asCreatePartialJoints ()
+{
+string $dialog=`confirmDialog -t "Confirm"
+	-m "Create Partial Joints for all deformJoints ?"
+	-b "OK" -b "Cancel" -db "Cancel"
+	-ds "Cancel"`;
+if ($dialog!="OK")
+	return;
+
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (!`objExists ($nameSpace+"DeformSet")`)
+	return;
+
+float $charHeight=`asgetCharHeight $nameSpace`;
+int $sideFactor;
+string $deformJointsList[]=`sets -q ($nameSpace+"DeformSet")`;
+string $children[],$partialJoints[],$zeroJoint[],$parents[],$buffer[],$tempString[];
+for ($i=0;$i<size($deformJointsList);$i++)
+	{
+	$children=`listRelatives -type joint -c $deformJointsList[$i]`;
+	$parents=`listRelatives -type joint -p $deformJointsList[$i]`;
+	if (!size($children) || !size($parents) || `gmatch $deformJointsList[$i] "*Part[0-9]*"`)
+		continue;
+	if (`gmatch $deformJointsList[$i] "*_L"`)
+		$sideFactor=-1;
+	else
+		$sideFactor=1;
+	select -cl;
+	tokenize $deformJointsList[$i] "_" $buffer;
+	$partialJoints[$i]=$buffer[0]+"50_"+$buffer[1];
+	$partialJoints[$i]=$buffer[0]+"_"+$buffer[1]+"_50";
+	$zeroJoint[$i]=$buffer[0]+"0_"+$buffer[1];
+	if (`objExists $partialJoints[$i]`)
+		error ("PartialJoints already exists");
+	joint -n $partialJoints[$i];
+	setAttr ($partialJoints[$i]+".rotateOrder") `getAttr ($deformJointsList[$i]+".rotateOrder")`;
+	addAttr -ln partialJoint -at bool $partialJoints[$i];
+	asAlign $partialJoints[$i] $deformJointsList[$i] 1 1 1 0;
+	sets -add ($nameSpace+"DeformSet") $partialJoints[$i];
+	parent $partialJoints[$i] $deformJointsList[$i];
+//	move -r -ls -wd ($sideFactor*$charHeight/5000) 0 0 $partialJoints[$i];
+	select $parents[0];
+	joint -n $zeroJoint[$i];
+	setAttr ($zeroJoint[$i]+".rotateOrder") `getAttr ($deformJointsList[$i]+".rotateOrder")`;
+	addAttr -ln partialJoint -at bool $zeroJoint[$i];
+//	asAlign $zeroGrp[$i] $deformJointsList[$i] 1 1 0 0;
+//	parent $zeroGrp[$i] $parents[0];
+	$tempString=`orientConstraint $zeroJoint[$i] $deformJointsList[$i] $partialJoints[$i]`;
+	setAttr ($tempString[0]+".interpType") 2;
+	$tempString=`pointConstraint $deformJointsList[$i] $partialJoints[$i]`;
+	setAttr ($tempString[0]+".offsetX") ($sideFactor*$charHeight/5000);
+	}
+select -cl;
+for ($i=0;$i<size($deformJointsList);$i++)
+	{
+	$children=`listRelatives -type joint -c $deformJointsList[$i]`;
+	$parents=`listRelatives -type joint -p $deformJointsList[$i]`;
+	if (!size($children) || !size($parents) || `gmatch $deformJointsList[$i] "*Part[0-9]*"`)
+		continue;
+	select -add $partialJoints[$i];
+	}
+}
+
+global proc asDeletePartialJoints ()
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (!`objExists ($nameSpace+"DeformSet")`)
+	return;
+
+string $DeformationSystemNodes[]=`listRelatives -ad ($nameSpace+"DeformationSystem")`;
+for ($i=0;$i<size($DeformationSystemNodes);$i++)
+	if (`attributeExists partialJoint $DeformationSystemNodes[$i]`)
+		delete $DeformationSystemNodes[$i];
+}
+
+global proc asHideMotionSystem (int $onOff)
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+setAttr ($nameSpace+"MotionSystem.visibility") (!$onOff);
+}
+
+global proc asHideBoxes (int $onOff)
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (!`objExists ($nameSpace+"BoxesGeometry")`)
+	error ($nameSpace+"BoxesGeometry does not exists !\n");
+setAttr -l 0 ($nameSpace+"BoxesGeometry.visibility");
+setAttr -l ($onOff) ($nameSpace+"BoxesGeometry.visibility") (!$onOff);
+if (!$onOff)
+	setAttr -l ($onOff) ($nameSpace+"BoxesGeometry.visibility");
+}
+
+global proc MakeBoxes ()
+{
+asSetRefreshOptionVar;
+
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+
+/*
+if (`objExists ($nameSpace+"BoxesGeometry")`)
+	{
+	warning ("BoxGeometry already exists for character\n");
+	return;
+	}
+*/
+
+string $dialog=`confirmDialog -t "Box Option"
+	-m "Keep Constuction History on Polygon Boxes?" -b "Keep History"
+	-b "Discard History" -db "Discard History"
+	-b "Cancel" -ds "Cancel"`;
+
+if ($dialog=="Cancel")
+	return;
+
+if (!`gmatch "Keep History" $dialog`)
+	$history=0;
+else if (!`gmatch "Discard History" $dialog`)
+	$history=1;
+
+if (!`objExists ($nameSpace+"BoxesGeometry")`)
+	{
+	createNode -n ($nameSpace+"BoxesGeometry") transform;
+	parent ($nameSpace+"BoxesGeometry") ($nameSpace+"Geometry");
+	}
+float $charHeight=`asgetCharHeight $nameSpace`;
+
+string $deformJointsList[]=`sets -q ($nameSpace+"DeformSet")`;
+string $tempString[],$children[];
+string $polyCube,$childJoint,$upLoc;
+float $lenght;
+float $y,$z;
+float $temp[];
+int $sideFactor;
+vector $childVec;
+for ($i=0;$i<size($deformJointsList);$i++)
+	{
+	if (`objExists ($deformJointsList[$i]+"_Box")`)
+		continue;
+	if (`gmatch $deformJointsList[$i] "*_L"`)
+		$sideFactor=-1;
+	else
+		$sideFactor=1;
+	$children=`listRelatives -c -type joint $deformJointsList[$i]`;
+	if (!size($children))
+		continue;
+	$childJoint=$children[0];
+	$lenght=`getAttr ($childJoint+".translateX")`;
+	$tempString=`polyCube -n ($deformJointsList[$i]+"_Box") -ch $history -sx 1 -sy 1 -sz 1 -w 1 -h 1 -d 1`;
+	$polyCube=$tempString[0];
+	xform -ws -piv -0.5 0 0 $polyCube;
+	xform -os -s ($lenght) ($charHeight/20) ($charHeight/20) $polyCube;
+	parentConstraint $deformJointsList[$i] $polyCube;
+	setAttr ($deformJointsList[$i]+"_Box.translateX") ($lenght/2);
+	parent $polyCube ($nameSpace+"BoxesGeometry");
+	asLockAttr ($deformJointsList[$i]+"_Box") 1 1 0 0;
+
+	if (`optionVar -q asRefresh`)
+		refresh;
+	}
+select -cl;
+}
+
+global proc DeleteBoxes ()
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (`objExists ($nameSpace+"BoxesGeometry")`)
+	delete ($nameSpace+"BoxesGeometry");
+}
+
+global proc asMirrorBoxes (int $L2R)
+{
+waitCursor -state on;
+evalDeferred "waitCursor -st 0";
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+string $allBoxes[]=`listRelatives -type transform -c ($nameSpace+"BoxesGeometry")`;
+string $matchBox;
+float $scale[3],$pos[3];
+int $vs[];
+for ($i=0;$i<size($allBoxes);$i++)
+	{
+	if ($L2R)
+		$matchBox=`substitute "_L_Box" $allBoxes[$i] "_R_Box"`;
+	else
+		$matchBox=`substitute "_R_Box" $allBoxes[$i] "_L_Box"`;
+
+	if ($allBoxes[$i]==$matchBox || `gmatch $allBoxes[$i] "*_M_Box"`)
+		continue;
+
+	$scale=`getAttr ($allBoxes[$i]+".scale")`;
+	setAttr -type float3 ($matchBox+".scale") (-1*$scale[0]) $scale[1] $scale[2];
+	$vs=`polyEvaluate -v $allBoxes[$i]`;
+	for ($y=0;$y<$vs[0];$y++)
+		{
+		$pos=`xform -q -ws -t ($allBoxes[$i]+".vtx["+$y+"]")`;
+		xform -ws -t (-1*$pos[0]) $pos[1] $pos[2] ($matchBox+".vtx["+$y+"]");
+		}
+	}
+}
+
+global proc asDeleteBoolean ()
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+
+string $all[]=`ls -type transform`;
+for ($obj in $all)
+	if (`gmatch $obj ($nameSpace+"*Bool_*")`)
+			delete $obj;
+}
+
+global proc asCreateBoolean ()
+{
+global string $gMainProgressBar;
+
+string $dialog=`confirmDialog -t "Boolean"
+	-m "Attempt to Boolean selected geometry with Boxes?"
+	-b "OK" -db "OK"
+	-b "Cancel" -ds "Cancel"`;
+if ($dialog!="OK")
+	return;
+
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (!`objExists ($nameSpace+"BoxesGeometry")`)
+	error "No Boxes in scene !";
+string $boxes[]=`listRelatives -type transform -c ($nameSpace+"BoxesGeometry")`;
+
+string $objs[]=`ls -sl`;
+if (size($objs)<1)
+	error "No Objects Selected !";
+dgdirty -a;
+evalDeferred ("progressBar -e -ep "+$gMainProgressBar);
+progressBar -e -st "Creating Booleans" -bp -ii 1 -min 0 -max (size($objs)) $gMainProgressBar;
+int $vs[];
+string $tempString[];
+string $dupObj,$dupBox,$joint,$puppet;
+for ($i=0;$i<size($objs);$i++)
+{
+for ($y=0;$y<size($boxes);$y++)
+	{
+	if (`progressBar -q -ic $gMainProgressBar`)
+		{break;progressBar -e -ep $gMainProgressBar;}
+	tokenize $boxes[$y] "_" $tempString;
+	$joint=$tempString[0]+"_"+$tempString[1];
+	if (`objExists ($tempString[0]+"Bool"+"_"+$tempString[1])`)
+		warning ("Object \""+$tempString[0]+"Bool"+"_"+$tempString[1]+"\" Already exists...\n");
+	$bool=`createNode -n ($tempString[0]+"Bool"+"_"+$tempString[1]) transform`;
+	delete $bool;
+	$dupObj=$objs[$i]+"_"+$boxes[$y];
+	duplicate -n $dupObj $objs[$i];
+	$tempString=`listRelatives -p $dupObj`;
+	if ($tempString[0]!="")
+		parent -w $dupObj;
+	setAttr ($dupObj+".visibility") 0;
+	$dupBox=$objs[$i]+"_"+$boxes[$y]+"Box";
+	duplicate -n $dupBox $boxes[$y];
+	parent -w $dupBox;
+	select -r $dupObj $dupBox;
+	refresh;
+	$tempString=`polyBoolOp -n $dupObj -op 3 -ch 0 $dupObj $dupBox`;
+	if (`objExists $dupObj`) delete $dupObj;
+	if (`objExists $dupBox`) delete $dupBox;
+	rename $tempString[0] $bool;
+	$vs=`polyEvaluate -v $bool`;
+	if (!$vs[0])
+		delete  $bool;
+	else
+		parent $bool $joint;
+	}
+}
+progressBar -e -ep $gMainProgressBar;
+}
+
+/*
+global proc asTwistSystem (string $joint, string $side, string $parent, string $parentSide, string $rotateJoint, float $b, float $height)
+{
+createNode -n ("TwistFollow"+$joint+$side) transform;
+sets -add ("AllSet") ("TwistFollow"+$joint+$side);
+parent ("TwistFollow"+$joint+$side) TwistSystem;
+	setAttr -l 1 ("TwistFollow"+$joint+$side+".visibility") 0;
+parentConstraint ($rotateJoint+$side) ("TwistFollow"+$joint+$side);
+createNode -n ("TwistFollowParent"+$joint+$side) transform;
+sets -add ("AllSet") ("TwistFollowParent"+$joint+$side);
+parent ("TwistFollowParent"+$joint+$side) TwistSystem;
+	setAttr -l 1 ("TwistFollowParent"+$joint+$side+".visibility") 0;
+if (`objExists ($parent+$parentSide)`)
+	parentConstraint ($parent+$parentSide) ("TwistFollowParent"+$joint+$side);
+else
+	parentConstraint "All" ("TwistFollowParent"+$joint+$side);
+//parent ($rotateJoint+$joint+$side) ("TwistFollowParent"+$joint+$side);
+
+select ($joint+$side);
+joint -n ("UnTwist"+$joint+$side);
+sets -add ("AllSet") ("UnTwist"+$joint+$side);
+parent ("UnTwist"+$joint+$side) ("TwistFollowParent"+$joint+$side);
+setAttr -type float3 ("UnTwist"+$joint+$side+".translate") 0 0 0;
+joint -n ("UnTwistEnd"+$joint+$side);
+sets -add ("AllSet") ("UnTwistEnd"+$joint+$side);
+setAttr ("UnTwistEnd"+$joint+$side+".translateX") ($b*$height/31);
+if (`gmatch $parent "IKCurve*"`)
+	asAlign ("UnTwistEnd"+$joint+$side) ($joint+$side) 1 0 0 0;
+ikHandle -n ("UnTwistIK"+$joint+$side) -ns 2 -sol "ikRPsolver" -sj ("UnTwist"+$joint+$side) -ee ("UnTwistEnd"+$joint+$side);
+sets -add ("AllSet") ("UnTwistIK"+$joint+$side);
+parent ("UnTwistIK"+$joint+$side) ("TwistFollow"+$joint+$side);
+if (!`gmatch $parent "IKCurve*"`)
+	{
+	createNode -n ("UnTwistPoleVector"+$joint+$side) transform;
+	sets -add ("AllSet") ("UnTwistPoleVector"+$joint+$side);
+	parent ("UnTwistPoleVector"+$joint+$side) ("TwistFollowParent"+$joint+$side);
+	$temp=`xform -q -ws -t ("UnTwist"+$joint+$side)`;
+	xform -ws -t $temp[0] $temp[1] $temp[2] ("UnTwistPoleVector"+$joint+$side);
+	poleVectorConstraint ("UnTwistPoleVector"+$joint+$side) ("UnTwistIK"+$joint+$side);
+	}
+}
+*/
+
+global proc asCreatecharacter () 
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+string $sel[]=`ls -sl`;
+select -cl;
+
+string $controlObjects[]=`sets -q ($nameSpace+"ControlSet")`;
+waitCursor -state on;
+evalDeferred "waitCursor -st 0";
+
+for ($i=0;$i<`size ($controlObjects)`;$i++)
+	select -add $controlObjects[$i];
+string $characterNode=`character -name ($nameSpace+"CharacterNode")` ;
+print ("Character \""+$characterNode+"\" was created\n");
+}
+
+global proc asKillcharacter () 
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (!`objExists ($nameSpace+"CharacterNode")`)
+	{
+	warning ("CharacterNode \""+$nameSpace+"CharacterNode\" does not exists\n");
+	return;
+	}
+
+string $schedule=`character -q -sc ($nameSpace+"CharacterNode")`;
+if ($schedule=="")
+	delete ($nameSpace+"CharacterNode");
+else
+	{
+	int $clipIndex;
+	int $numData;
+	string $Data[];
+	string $flag="";
+	string $clips[]=`clipSchedule -q -ci $schedule`;
+	for ($i=0;$i<size ($clips);$i++)
+		{
+		clear $Data;
+		$numData=`tokenize $clips[$i] "," $Data`;
+		$clipIndex=$Data[1];
+		$flag=$flag+" -ci "+$clipIndex;
+		}
+		
+	if (`size ($clips)`<1)
+		warning "Character has no clips\n";
+	else
+		{
+		$bakeCmd="bakeClip"+$flag+" -name \"killingCharacter\" "+($nameSpace+"CharacterNode"); 
+		eval ($bakeCmd);
+		clip -e -active "killingCharacter" ($nameSpace+"CharacterNode");
+		delete "killingCharacter" ($nameSpace+"CharacterNode");
+		print "Character was killed\n";
+		}
+	}
+}
+
+global proc asScaleControlCurves ()
+{
+float $scale=`floatField -q -v ScaleCCFloatField`;
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+string $controlObjects[]=`sets -q ($nameSpace+"ControlSet")`;
+string $controlCurves[];
+string $tempString[];
+for ($i=0;$i<size($controlObjects);$i++)
+	{
+	$tempString=`listRelatives -s $controlObjects[$i]`;
+	if (!size($tempString))
+		continue;
+	select -cl;
+	refresh;
+	for ($y=0;$y<100;$y++)
+		select -add ($tempString[0]+".cv["+$y+"]");
+	scale -r $scale $scale $scale;
+	}
+select -cl;
+}
+
+global proc asMirrorControlCurves (int $L2R)
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+string $controlObjects[]=`sets -q ($nameSpace+"ControlSet")`;
+string $shapes[];
+string $oppositeShape;
+float $pos[];
+int $form,$spans,$degrees,$numCv;
+for ($i=0;$i<size($controlObjects);$i++)
+	{
+	$shapes=`listRelatives -s $controlObjects[$i]`;
+	if ($shapes[0]=="")
+		continue;
+	$objType=`objectType $shapes[0]`;
+	if ($objType!="nurbsCurve")
+		continue;
+
+	if ($L2R)
+		{
+		if (!`gmatch $shapes[0] "*_LShape*"`)
+			continue;
+		}
+	else
+		{
+		if (!`gmatch $shapes[0] "*_RShape*"`)
+			continue;
+		}
+
+	if ($L2R)
+		$oppositeShape=`substitute "_LShape" $shapes[0] "_RShape"`;
+	else
+		$oppositeShape=`substitute "_RShape" $shapes[0] "_LShape"`;
+
+	if (!`objExists $oppositeShape`)
+		continue;
+
+	$form=`getAttr ($shapes[0]+".form")`;
+	$spans=`getAttr ($shapes[0]+".spans")`;
+	$degrees=`getAttr ($shapes[0]+".degree")`;
+	if ($form==2)
+		$numCv=$spans;
+	else
+		$numCv=$spans+$degrees;
+
+	for ($y=0;$y<$numCv+1;$y++)
+		{
+		$pos=`xform -q -ws -t ($shapes[0]+".cv["+$y+"]")`;
+		xform -ws -t (-1*$pos[0]) $pos[1] $pos[2] ($oppositeShape+".cv["+$y+"]");
+		}
+	}
+}
+
+global proc asLimitElbowsKnees (string $armLeg, int $onOff)
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+
+string $side,$hip,$effector;
+string $tempString[];
+float $currentAngleY,$currentAngleZ;
+int $abort;
+for ($i=0;$i<3;$i++)
+	{
+	if ($i==1)
+		$side="_R";
+	if ($i==2)
+		$side="_L";
+	$controlCurve=$nameSpace+"FKIKControlCurve"+$armLeg+$side;
+	if (!`objExists $controlCurve`)
+		continue;
+	$startJoint=`getAttr ($controlCurve+".startJoint")`;
+	$middleJoint=`getAttr ($controlCurve+".middleJoint")`;
+	if (`getAttr -k ("FKCurve"+$middleJoint+$side+".rotateX")`)
+		$Axis="X";
+	if (`getAttr -k ("FKCurve"+$middleJoint+$side+".rotateY")`)
+		$Axis="Y";
+	if (`getAttr -k ("FKCurve"+$middleJoint+$side+".rotateZ")`)
+		$Axis="Z";
+	$axis=`tolower $Axis`;
+	$currentAngle=`getAttr ($middleJoint+$side+".rotate"+$Axis)`;
+	evalEcho ("transformLimits -r"+$axis+" "+$currentAngle+" 180 -er"+$axis+" "+$onOff+" "+$onOff+" "+$middleJoint+$side);
+	evalEcho ("transformLimits -r"+$axis+" "+$currentAngle+" 180 -er"+$axis+" "+$onOff+" "+$onOff+" IK"+$middleJoint+$side);
+	}
+dgdirty -a;
+}
+
+global proc asCreateMoCap ()
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+float $charHeight=`asgetCharHeight $nameSpace`;
+if (`objExists ($nameSpace+"MoCap")`)
+	error "MoCap skeleton already exists !";
+if (!`objExists ($nameSpace+"All")`)
+	error "No AdvancedSKeleton In Scene!";
+string $deformJoints[]=`listRelatives -type joint -ad ($nameSpace+"DeformationSystem")`;
+string $keyDeformJoints[],$tempString[],$parent[],$name[],$extra[];
+string $extr;
+for ($a=$i=0;$a<size($deformJoints);$a++)
+	{
+	tokenize $deformJoints[$a] "_" $tempString;
+	$extr="FKExtra"+$tempString[0]+"_"+$tempString[1];
+	if (`gmatch $deformJoints[$a] "*Part[0-9]*"`)
+		continue;
+	$keyDeformJoints[$i]=$deformJoints[$a];
+	$extra[$i]=$extr;
+	$tempString[0]=$keyDeformJoints[$i];
+	for ($y=0;$y<99;$y++)
+		{
+		$tempString=`listRelatives -p $tempString[0]`;
+		if (!`gmatch $tempString[0] "*Part[0-9]*"`)
+			{
+			tokenize $tempString[0] "_" $tempString;
+			$parent[$i]=$tempString[0]+"_MoCap_"+$tempString[1];
+			break;
+			}
+		}
+	tokenize $keyDeformJoints[$i] "_" $tempString;
+	$name[$i]=$tempString[0]+"_MoCap_"+$tempString[1];
+	$i++;
+	}
+
+if (`objExists connectTo`)
+	delete connectTo;
+createNode -n connectTo addMatrix;
+
+for ($i=0;$i<size($name);$i++)
+	{
+	select -cl;
+	joint -n $name[$i];
+	if ($i==size($name)-1)
+		{
+		createNode -n ($nameSpace+"MoCap") transform;
+		createNode -n ($nameSpace+"RootOffset") transform;
+		asAlign ($nameSpace+"RootOffset") RootExtraRoot_M 1 0 0 0;
+		parent ($nameSpace+"MoCap") ($nameSpace+"Group");
+		parent ($nameSpace+"RootOffset") ($nameSpace+"MoCap");
+		parent $name[$i] ($nameSpace+"RootOffset");
+		connectAttr ($name[$i]+".translate") ("RootExtraRoot_M.translate");
+		}
+	asAlign $name[$i] $keyDeformJoints[$i] 1 1 1 0;
+	setAttr ($name[$i]+".rotateOrder") 1;
+	setAttr ($extra[$i]+".rotateOrder") 1;
+
+	if ($i==size($name)-1)
+		{
+		addAttr -k 1 -longName ($name[$i]+"translate") -numberOfChildren 3 -at double3 connectTo;
+		addAttr -k 1 -ln ($name[$i]+"translateX") -at doubleAngle -parent ($name[$i]+"translate") connectTo;
+		addAttr -k 1 -ln ($name[$i]+"translateY") -at doubleAngle -parent ($name[$i]+"translate") connectTo;
+		addAttr -k 1 -ln ($name[$i]+"translateZ") -at doubleAngle -parent ($name[$i]+"translate") connectTo;
+		connectAttr ("connectTo."+$name[$i]+"translate") ($name[$i]+".translate");
+		}
+	addAttr -k 1 -longName ($name[$i]+"rotate") -numberOfChildren 3 -at double3 connectTo;
+	addAttr -k 1 -ln ($name[$i]+"rotateX") -at doubleAngle -parent ($name[$i]+"rotate") connectTo;
+	addAttr -k 1 -ln ($name[$i]+"rotateY") -at doubleAngle -parent ($name[$i]+"rotate") connectTo;
+	addAttr -k 1 -ln ($name[$i]+"rotateZ") -at doubleAngle -parent ($name[$i]+"rotate") connectTo;
+	createNode -n ($name[$i]+"miltiplyDivide") multiplyDivide;
+	setAttr -type float3 ($name[$i]+"miltiplyDivide.input2") -1 -1 1;
+	connectAttr ("connectTo."+$name[$i]+"rotateX") ($name[$i]+"miltiplyDivide.input1.input1Z");
+	connectAttr ("connectTo."+$name[$i]+"rotateY") ($name[$i]+"miltiplyDivide.input1.input1X");
+	connectAttr ("connectTo."+$name[$i]+"rotateZ") ($name[$i]+"miltiplyDivide.input1.input1Y");
+	connectAttr ($name[$i]+"miltiplyDivide.output") ($name[$i]+".rotate");
+	}
+for ($i=0;$i<size($name);$i++)
+	{
+	if (`objExists $parent[$i]`)
+		parent $name[$i] $parent[$i];
+	}
+for ($i=0;$i<size($name);$i++)
+	{
+	if (`objExists ($name[$i]+"_blendColor")`)
+		delete ($name[$i]+"_blendColor");
+	createNode -n ($name[$i]+"_blendColor") blendColors;
+	connectAttr ($name[$i]+".rotate") ($name[$i]+"_blendColor.color1");
+	addAttr -k 1 -ln "blend" -at double -min 0 -max 1 -dv 1 $name[$i];
+	connectAttr ($name[$i]+".blend") ($name[$i]+"_blendColor.blender");
+	connectAttr ($name[$i]+"_blendColor.output") ($extra[$i]+".rotate");
+	}
+setAttr ($nameSpace+"MoCap.translateZ") ($charHeight/-3);
+}
+
+global proc asReadBVH ()
+{
+global string $gMainProgressBar;
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+string $filename=`fileDialog -dm "*.bvh"`;
+if (!`file -q -ex $filename`)
+	return;
+
+int $i=-1;
+int $x,$lineNum,$frameNr,$motionBegin,$motionHasBegun;
+int $jointNum,$chNum;
+int $numChannels[];
+float $offsetX,$offsetY,$offsetZ,$value;
+float $rot[];
+$fileId=`fopen $filename "r"`;
+string $nextLine = `fgetline $fileId`;
+while ( size( $nextLine ) > 0 )
+	{
+	if (`gmatch $nextLine "Frame Time:*"`)
+		$motionBegin=1;
+	if ($motionBegin)
+		$lineNum++;
+	$nextLine = `fgetline $fileId`;
+	}
+$motionBegin=0;
+fclose $fileId;
+$fileId=`fopen $filename "r"`;
+$nextLine = `fgetline $fileId`;
+string $joints[],$buffer[],$channels[],$localChannels[];
+float $currentTime=`currentTime -q`;
+int $autoKeyframe=`autoKeyframe -q -state`;
+autoKeyframe -state 0;
+currentTime -e -20;
+if (`objExists connectFrom`)
+	delete connectFrom;
+createNode -n connectFrom addMatrix;
+progressBar -e -st "AdvancedSkeleton" -bp -ii 1 -min 0 -max ($lineNum+1) $gMainProgressBar;
+evalDeferred ("progressBar -e -ep "+$gMainProgressBar);
+while ( size( $nextLine ) > 0 )
+	{
+	if (`progressBar -q -ic $gMainProgressBar`)
+		{
+		progressBar -e -ep $gMainProgressBar;
+		fclose $fileId;
+		}
+
+	tokenize $nextLine $buffer;
+	if (`gmatch $nextLine "*}*"`)
+		pickWalk -d up;
+	if (`gmatch $nextLine "*JOINT*"` || `gmatch $nextLine "*ROOT*"` || `gmatch $nextLine "*End Site*"`)
+		{
+		$i++;
+		$joints[$i]=$buffer[1];
+		if ($joints[$i]=="Site")
+			$joints[$i]=$joints[$i]+$i;
+		joint -n ("MoCap"+$joints[$i]);
+		setAttr ("MoCap"+$joints[$i]+".rotateOrder") 2;
+		if (`gmatch $nextLine "*JOINT*"`)
+			setKeyframe ("MoCap"+$joints[$i]+".rotate");
+		if (`gmatch $nextLine "*ROOT*"`)
+			{
+			addAttr -k 1 -longName ($joints[$i]+"translate") -numberOfChildren 3 -at double3 connectFrom;
+			addAttr -k 1 -ln ($joints[$i]+"translateX") -at doubleAngle -parent ($joints[$i]+"translate") connectFrom;
+			addAttr -k 1 -ln ($joints[$i]+"translateY") -at doubleAngle -parent ($joints[$i]+"translate") connectFrom;
+			addAttr -k 1 -ln ($joints[$i]+"translateZ") -at doubleAngle -parent ($joints[$i]+"translate") connectFrom;
+			connectAttr ("MoCap"+$joints[$i]+".translateX") ("connectFrom."+$joints[$i]+"translateX");
+			connectAttr ("MoCap"+$joints[$i]+".translateY") ("connectFrom."+$joints[$i]+"translateY");
+			connectAttr ("MoCap"+$joints[$i]+".translateZ") ("connectFrom."+$joints[$i]+"translateZ");
+			}
+		if (!`gmatch $joints[$i] "Site*"`)
+			{
+			addAttr -k 1 -longName ($joints[$i]+"rotate") -numberOfChildren 3 -at double3 connectFrom;
+			addAttr -k 1 -ln ($joints[$i]+"rotateX") -at doubleAngle -parent ($joints[$i]+"rotate") connectFrom;
+			addAttr -k 1 -ln ($joints[$i]+"rotateY") -at doubleAngle -parent ($joints[$i]+"rotate") connectFrom;
+			addAttr -k 1 -ln ($joints[$i]+"rotateZ") -at doubleAngle -parent ($joints[$i]+"rotate") connectFrom;
+			connectAttr ("MoCap"+$joints[$i]+".rotateX") ("connectFrom."+$joints[$i]+"rotateX");
+			connectAttr ("MoCap"+$joints[$i]+".rotateY") ("connectFrom."+$joints[$i]+"rotateY");
+			connectAttr ("MoCap"+$joints[$i]+".rotateZ") ("connectFrom."+$joints[$i]+"rotateZ");
+			}
+		}
+	if (`gmatch $nextLine "*OFFSET*"`)
+		{
+		$offsetX=$buffer[1];
+		$offsetY=$buffer[2];
+		$offsetZ=$buffer[3];
+		setAttr -type float3 ("MoCap"+$joints[$i]+".translate") $offsetX $offsetY $offsetZ;
+		}
+	if (`gmatch $nextLine "*CHANNELS*"`)
+		{
+		$numChannels[$i]=$buffer[1];
+		for ($x=2;$x<size($buffer);$x++)
+			$channels[$i]=$channels[$i]+`asReWord $buffer[$x]`+";";
+		}
+
+	if ($motionBegin)
+		$motionHasBegun=1;
+	if (`gmatch $nextLine "Frame Time:*"`)
+		$motionBegin=1;
+	if ($motionHasBegun)
+		{
+		progressBar -e -s 1 $gMainProgressBar;
+		$jointNum=0;
+		tokenize $channels[$jointNum] ";" $localChannels;
+		$chNum=-1;
+		for ($y=0;$y<size($buffer);$y++)
+			{
+			$chNum++;
+			if ($chNum>$numChannels[$jointNum]-1)
+				{
+				$jointNum++;
+				if (`gmatch $joints[$jointNum] "Site*"`)
+					$jointNum++;
+				tokenize $channels[$jointNum] ";" $localChannels;
+				$chNum=0;
+				}
+			$value=$buffer[$y];
+			currentTime -e ($frameNr+1);
+			if (`gmatch $localChannels[$chNum] "*rotate*"`)
+				{
+				if ($localChannels[$chNum]=="rotateX")
+					$rot[0]=$value;
+				if ($localChannels[$chNum]=="rotateY")
+					$rot[1]=$value;
+				if ($localChannels[$chNum]=="rotateZ")
+					$rot[2]=$value;
+				if ($chNum==2 || $chNum==5)
+					{
+					asSetMoCapRot ("MoCap"+$joints[$jointNum]) $rot;
+					setKeyframe ("MoCap"+$joints[$jointNum]+".rotate");
+					}
+				}
+			else
+				setKeyframe -v $value ("MoCap"+$joints[$jointNum]+"."+$localChannels[$chNum]);
+			}
+		$frameNr++;
+		}
+	$nextLine = `fgetline $fileId`;
+	}
+progressBar -e -ep $gMainProgressBar;
+currentTime -e $currentTime;
+autoKeyframe -state $autoKeyframe;
+fclose $fileId;
+
+asConnections;
+}
+
+global proc asSetMoCapRot (string $obj, float $rot[])
+{
+setAttr -type float3 ($obj+".rotate") 0 0 0;
+float $rotX=$rot[0];
+float $rotY=$rot[1];
+float $rotZ=$rot[2];
+rotate -r -os 0 0 $rotZ $obj;
+rotate -r -os $rotX 0 0 $obj;
+rotate -r -os 0 $rotY 0 $obj;
+}
+
+global proc asConnections ()
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if (`objExists ($nameSpace+"connectFrom")` && `objExists ($nameSpace+"connectTo")`)
+connectWindowWith ($nameSpace+"connectFrom") ($nameSpace+"connectTo");
+}
+
+global proc string asReWord (string $bvhWord)
+{
+if ($bvhWord=="Xposition")
+	return "translateX";
+if ($bvhWord=="Yposition")
+	return "translateY";
+if ($bvhWord=="Zposition")
+	return "translateZ";
+if ($bvhWord=="Xrotation")
+	return "rotateX";
+if ($bvhWord=="Yrotation")
+	return "rotateY";
+if ($bvhWord=="Zrotation")
+	return "rotateZ";
+return "";
+}
+
+global proc asBakeAnimation ()
+{
+string $nameSpace=`optionMenu -q -v asUtilitiesOptionMenu`;
+if ($nameSpace==":")
+	$nameSpace="";
+if (!`objExists ($nameSpace+"DeformationSystem")`)
+	return;
+select -cl;
+string $allDecendents[]=`listRelatives -ad ($nameSpace+"DeformationSystem")`;
+for ($i=0;$i<size($allDecendents);$i++)
+	{
+	if (`objectType -i joint $allDecendents[$i]`)
+		select -add $allDecendents[$i];
+	}
+BakeSimulationOptions;
+}
+
+global proc string asRotOrderString (int $rotOrder)
+{
+string $rotOrderString;
+if ($rotOrder==0)
+	$rotOrderString="xyz";
+if ($rotOrder==1)
+	$rotOrderString="yzx";
+if ($rotOrder==2)
+	$rotOrderString="zxy";
+if ($rotOrder==3)
+	$rotOrderString="xzy";
+if ($rotOrder==4)
+	$rotOrderString="yxz";
+if ($rotOrder==5)
+	$rotOrderString="zyx";
+return $rotOrderString;
+}
+
+global proc asCreateNode (string $type, string $name, float $posX, float $posY, float $posZ,
+						      float $rotX, float $rotY, float $rotZ, int $rotOrder, int $flip)
+{
+string $sel[]=`ls -sl`;
+select -cl;
+createNode -n $name $type;
+string $tempString[]=`ls -showType $name`;
+if ($tempString[1]=="locator")
+	{
+	rename $name ($name+"Shape");
+	$tempString=`listRelatives -p ($name+"Shape")`;
+	rename $tempString[0] $name;
+	}
+//string $rotOrderString=`asRotOrderString $rotOrder`;
+//xform -roo $rotOrderString $name;
+setAttr ($name+".rotateOrder") $rotOrder;
+xform -ws -t $posX $posY $posZ -ro $rotX $rotY $rotZ $name;
+if (size ($sel))
+	{
+	parent $name $sel[0];
+	select $name;
+	}
+
+float $rot[];
+if ($flip)
+	{
+	select -cl;
+	joint -n tempJoint;
+	setAttr tempJoint.rotateOrder $rotOrder;
+	xform -ws -t $posX $posY $posZ -ro $rotX $rotY $rotZ tempJoint;
+	mirrorJoint -mirrorYZ -mirrorBehavior;
+	$rot=`xform -q -ws -ro tempJoint1`;
+	xform -ws -ro $rot[0] $rot[1] $rot[2] $name;
+	delete tempJoint tempJoint1;
+	}
+select $name;
+}
+
+global proc asByPassSDK (int $onOff)
+{
+string $sel[]=`ls -sl`;
+string $joints[]=`ls -type joint`;
+string $connections1[],$connectionsUnitConv1[],$connections1Attr[],$connections2[],$tempString[];
+string $newAnimCurve,$newAnimCurveName,$obj,$attr;
+float $value,$time;
+int $locked;
+for ($joint in $joints)
+	{
+	$connections1=`listConnections -scn 1 -s 1 -d 0 $joint`;
+	$connectionsUnitConv1=`listConnections -s 1 -d 0 $joint`;
+	$connections1Attr=`listConnections -s 1 -d 0 -c 1 $joint`;
+	for ($i=0;$i<size($connections1);$i++)
+		{
+		$locked=0;
+		$node=$connections1[$i];
+		if (!`objExists $node`)
+			continue;
+		if (`isAnimCurve $node`)
+			{
+			$connections2=`listConnections -s 1 -d 0 -p 1 ($node+".input")`;
+			if (!size($connections2) ||  (!`attributeExists "output" $connections1[$i]`))
+				continue;
+
+			if ($onOff)
+				{
+				if (`isConnected ($connections1[$i]+".output") $connections1Attr[($i*2)]`)
+					{
+					tokenize $connections1Attr[($i*2)] "." $tempString;
+					$obj=$tempString[0];
+					$attr=$tempString[1];
+					if (`getAttr -l ($obj+"."+$attr)`)
+						{
+						$locked=1;
+						setAttr -l 0 ($obj+"."+$attr);
+						}
+					disconnectAttr ($connections1[$i]+".output") ($obj+"."+$attr);
+					if ($locked)
+						setAttr -l 1 ($obj+"."+$attr);
+					addAttr -ln ("temp"+$attr) -at double $obj;
+					connectAttr ($connections1[$i]+".output") ($obj+".temp"+$attr);
+					}
+				}
+			else
+				{
+				tokenize $connections1Attr[($i*2)] "." $tempString;
+				if (!`gmatch $tempString[1] "temp*"`)
+					continue;
+				$obj=$tempString[0];
+				$attr=`substring $tempString[1] 5 99`;
+				if (`getAttr -l ($obj+"."+$attr)`)
+					{
+					$locked=1;
+					setAttr -l 0 ($obj+"."+$attr);
+					}
+				$value=`getAttr ($obj+"."+$attr)`;
+				$time=`getAttr $connections2[0]`;
+				if (!`setKeyframe -float $time -v $value $connections1[$i]`)
+					keyframe -e -vc $value -f $time $connections1[$i];
+
+				connectAttr ($connections1[$i]+".output") ($obj+"."+$attr);
+				if (`attributeExists ("temp"+$attr) $obj`)
+					deleteAttr ($obj+".temp"+$attr);
+				if (`objectType $connectionsUnitConv1[$i]`=="unitConversion")
+					delete $connectionsUnitConv1[$i];
+
+				if ($locked)
+					setAttr -l 1 ($obj+"."+$attr);
+				}
+			}
+		}
+	}
+select $sel;
+}
+
+global proc asCopyKeys (string $sourceCurve, string $destinationCurve)
+{
+string $sourceType=`nodeType $sourceCurve`;
+int $numKeys;
+
+$numKeys=`keyframe -query -keyframeCount $destinationCurve`;
+for ($i=0;$i<($numKeys-1);$i++)
+	cutKey -in 0 $destinationCurve;
+if ($numKeys)
+	keyframe -index 0 -fc 999 $destinationCurve;
+
+$numKeys=`keyframe -query -keyframeCount $sourceCurve`;
+float $time[],$value[];
+string $inTan[],$outTan[];
+for ($i=0;$i<$numKeys;$i++)
+	{
+	if (`gmatch $destinationCurve "*_tmp"`)
+		$time=`keyframe -in $i -q -fc $sourceCurve`;
+	else
+		$time=`keyframe -in $i -q -tc $sourceCurve`;
+	$value=`keyframe -in $i -q -vc $sourceCurve`;
+	$inTan=`keyTangent -in $i -q -itt $sourceCurve`;
+	$outTan=`keyTangent -in $i -q -ott $sourceCurve`;
+	if (`gmatch $destinationCurve "*_tmp"`)
+		setKeyframe -time $time[0] -v $value[0] -itt $inTan[0] -ott $outTan[0] $destinationCurve;
+	else
+		setKeyframe -f $time[0] -v $value[0] -itt $inTan[0] -ott $outTan[0] $destinationCurve;
+	}
+cutKey -in $numKeys $destinationCurve;
+}
+
+global proc string[] asFitNodeInfo (string $node, string $info)
+{
+int $numMoreReturn;
+string $return[],$moreReturn[],$buffer[];
+string $connections[]=`listConnections -s 1 -d 0 $node`;
+string $plugs[]=`listConnections -s 1 -d 0 -p 1 -c 1 $node`;
+for ($i=0;$i<size($connections);$i++)
+	{
+	$isJoint=0;
+	if ($plugs[$i*2]==($node+".inverseScale") || $plugs[$i*2]==($node+".drawOverride"))
+		continue;
+	if ($info=="name")
+		$return[size($return)]=$connections[$i];
+	else if ($info=="sourceNode")
+		{
+		tokenize $plugs[($i*2)+1] "." $buffer;
+		$return[size($return)]=$buffer[0];
+		}
+	else if ($info=="sourceConnect")
+		{
+		tokenize $plugs[($i*2)+1] "." $buffer;
+		$return[size($return)]=$buffer[1];
+		}
+	else if ($info=="destNode")
+		{
+		tokenize $plugs[($i*2)] "." $buffer;
+		$return[size($return)]=$buffer[0];
+		}
+	else if ($info=="destConnect")
+		{
+		tokenize $plugs[$i*2] "." $buffer;
+		$return[size($return)]=$buffer[1];
+		}
+	if (`objectType $connections[$i]`=="joint")
+		continue;
+	else
+		{
+		$moreReturn=`asFitNodeInfo $connections[$i] $info`;
+		$numMoreReturn=`size($moreReturn)`;
+		appendStringArray $return $moreReturn $numMoreReturn;
+		}
+	}
+return $return;
+}
+
+
+global proc int asParentCount (string $node, string $parent)
+{
+int $count,$return;
+string $longs[]=`ls -l $node`;
+string $tempString[];
+int $numTok=`tokenize $longs[0] "|" $tempString`;
+for ($i=$numTok-1;$i>-1;$i--)
+	{
+	if ($tempString[$i]==$parent)
+		{
+		$return=$count;
+		break;
+		}
+	else
+		$count++;
+	}
+return $return;
+}
+
+global proc asSDK (string $driver, float $driveStart, float $driveEnd, string $driven, float $drivenStart, float $drivenEnd)
+{
+float $originalDriveValue=`getAttr $driver`;
+setAttr $driver $driveStart;
+setAttr $driven $drivenStart;
+setDrivenKeyframe -cd $driver $driven;
+setAttr $driver $driveEnd;
+setAttr $driven $drivenEnd;
+setDrivenKeyframe -cd $driver $driven;
+setAttr $driver $originalDriveValue;
+}
+
+global proc asMacInit ()
+{
+string $dyld_library_path=`getenv "DYLD_LIBRARY_PATH"`;
+if ($dyld_library_path=="")
+     {
+     print ("$dyld_library_path env variable not found, attempting to set it now\n");
+     string $convertPath=`internalVar -usd`+"AdvancedSkeleton/convert";
+     putenv "PATH" (`getenv "PATH"`+":"+$convertPath);
+     putenv "DYLD_LIBRARY_PATH" $convertPath;
+     }
+}
+
+global proc asfileBrowse (string $tool, string $action)
+{
+string $fc,$ft;
+int $mode=0;
+if ($action=="Open")
+	{
+	$fc="asOpen "+$tool;
+	$ft="mel";
+	}
+if ($action=="SaveAs")
+	{
+	$fc="asSaveAs "+$tool;
+	$ft="mel";
+	$mode=1;
+	}
+if ($action=="Import")
+	{
+	$fc="as"+$tool+"BackgroundImport";
+	$ft="image";
+	}
+if (`about -win`)
+	fileBrowserDialog -m $mode -fc $fc -ft $ft -an $action;
+else
+	fileBrowser $fc $action $ft $mode;
+}
+
+global proc astoShelf (string $tool)
+{
+global string $gShelfTopLevel;
+string $projectPath=`text -q -l ("as"+$tool+"ProjectPath")`;
+string $projectName=`text -q -l ("as"+$tool+"ProjectName")`;
+if ($projectName=="untitled")
+	{
+	warning "Can not put \"untitled\" on shelf, save your project first\n";
+	return;
+	}
+
+string $cmd="source \""+$projectPath+$projectName+".mel\";as"+$tool+$projectName+";";
+string $ext=".bmp";
+if (`about -mac`)
+	$ext=".iff";
+if (`about -linux` || $tool=="Selector")
+	$ext=".xpm";
+$icon=$projectPath+$projectName+"/"+$projectName+"_background32"+$ext;
+string $setParent=`setParent -q`;
+if (`tabLayout -exists $gShelfTopLevel`)
+	{
+	string $currentShelf=`tabLayout -query -selectTab $gShelfTopLevel`;
+	setParent $currentShelf;
+	shelfButton -c $cmd -ann ($tool+":"+$projectName) -label ($tool+":"+$projectName)  -i1 $icon
+		-st`shelfLayout -query -style $currentShelf`
+		-width `shelfLayout -query -cellWidth $currentShelf`
+		-height `shelfLayout -query -cellHeight $currentShelf`;
+	}
+setParent $setParent;
+}
+
+global proc string asUniqueFile (string $file)
+{
+// Copies given file to a random named file, to avoid fileNode cache
+string $buffer[];
+int $numTok=`tokenize $file "/" $buffer`;
+string $path="";
+if (`gmatch $file "/*"`)
+	$path="/";
+for ($i=0;$i<($numTok-1);$i++)
+	$path+=$buffer[$i]+"/";
+int $numTok=`tokenize $file "." $buffer`;
+string $ext=$buffer[$numTok-1];
+string $randNumber=`rand 42`;
+string $uniqueFile=$path+"unique"+`substituteAllString $randNumber "." ""`+"."+$ext;
+sysFile -cp $uniqueFile $file;
+return $uniqueFile;
+}
+
+global proc string asConvertToXpm (string $file)
+{
+string $convertCmd="imconvert";
+if (`about -linux`)
+	$convertCmd="convert";
+string $buffer[];
+tokenize $file "." $buffer;
+string $xpmFile=$buffer[0]+".xpm";
+system ($convertCmd+" "+$file+" "+$xpmFile);
+return $xpmFile;
+}
+
+
+
+//--------------   IO Procs   --------------//
+
+
+global proc int asOpen (string $tool, string $fileName, string $fileType)
+{
+global int $fileLoading;
+string $sel[]=`ls -sl`;
+select -cl;
+string $projectName=`basename $fileName ".mel"`;
+string $projectPath=`dirname $fileName`+"/";
+string $asIconLocation=$projectPath+$projectName+"/";
+int $anim;
+string $bgExt=".tga";
+if (`about -mac`)
+	$bgExt=".iff";
+
+if ($tool=="Poser")
+	asPoserDesigner;
+
+evalEcho ("source \""+$fileName+"\";\n"
+	+"as"+$tool+$projectName);
+window -e -i 1 ("as"+$tool+$projectName);
+
+if ($tool=="Poser")
+	{
+	$fileLoading=1;
+	string $gridOrder[]=`gridLayout -q -go ("asPoser"+$projectName+"GridLayout")`;
+	int $nc=`gridLayout -q -nc ("asPoser"+$projectName+"GridLayout")`;
+	int $nr=`gridLayout -q -nr ("asPoser"+$projectName+"GridLayout")`;
+	intField -e -v $nc asPoserNc;
+	intField -e -v $nr asPoserNr;
+	asPoserUpdateGrid;
+	int $childNum,$lenght;
+	string $uiName="asPoserDefault";
+	string $loadData[];
+	$loadData[0]=$uiName;
+	for ($i=0;$i<size($gridOrder);$i++)
+		{
+		$childNum=$i+1;
+		if (`gmatch $gridOrder[$i] ("asPoser"+$projectName+"ColumnLayout*")`)
+			{
+			$image=`iconTextButton -q -i ("asPoser"+$projectName+"IconTextButton"+$childNum)`;
+			$loadData[1]=$image;
+//			$label=`iconTextButton -q -l ("asPoser"+$projectName+"IconTextButton"+$childNum)`;
+			$label=`text -q -l ("asPoser"+$projectName+"Text"+$childNum)`;
+			$loadData[2]=$label;
+			$cmd=`iconTextButton -q -c ("asPoser"+$projectName+"IconTextButton"+$childNum)`;
+			$cmd=`substitute ("asPoser"+$projectName)  ("\""+$cmd+"\"") $uiName`;
+			$lenght=size($cmd);
+			$loadData[3]=`substring $cmd 2 ($lenght-1)`;
+			$loadData[4]=$childNum;
+			$anim=0;
+			if (!`gmatch $cmd "asSetAttrs *"`)
+				$anim=1;
+			asNewPose $loadData $anim;
+			}
+		}
+	}
+if ($tool=="Selector")
+	{
+	asSelectorDesigner;
+	$fileLoading=1;
+	
+	window -e -w `window -q -w ("asSelector"+$projectName)` -h `window -q -h ("asSelector"+$projectName)` asSelectorMain;
+	asSelectorBackgroundImport ($asIconLocation+$projectName+"_background"+$bgExt) "image";
+	
+	int $width,$height,$msg0AsInt,$msg1AsInt;
+	string $iol;
+	string $buffer[],$msgs[];
+	string $ctls[]=`formLayout -q -ca ("asSelector"+$projectName+"FormLayout")`;
+	int $mirrorButtons=`optionVar -q asSelectorMirrorButtons`;
+	optionVar -iv asSelectorMirrorButtons 0;
+	for ($ctl in $ctls)
+		if (`iconTextButton -q -ex $ctl` && !`gmatch $ctl "*BGPicture"`)
+			{
+			tokenize $ctl ":" $buffer;
+			$msg0AsInt=$msgs[0]=$buffer[size($buffer)-2];
+			$msg1AsInt=$msgs[1]=$buffer[size($buffer)-1];
+			$width=`iconTextButton -q -w $ctl`;
+			$height=`iconTextButton -q -h $ctl`;
+			$iol=`iconTextButton -q -iol $ctl`;
+			$cmd=`iconTextButton -q -c $ctl`;
+			$cmd=`substitute ("\""+$projectName+"\"") (""+$cmd) "\"Default\""`;
+			$buttonName=`substitute $projectName $ctl ""`;
+			$ann=`control -q -ann $ctl`;
+			$msgs[2]=$iol;
+			$msgs[3]=$cmd;
+			$msgs[4]=$buttonName;
+			$msgs[6]=$ann;
+			renameUI $ctl ("deleteMeUI"+$ctl);
+			asSelectorDpc "asSelectorBGImage"  "asSelectorBGImage" $msgs ($msg0AsInt+$width) ($msg1AsInt+$height) 2;
+			}
+	optionVar -iv asSelectorMirrorButtons $mirrorButtons;
+	evalDeferred -lp asSelectorRefresh;
+	}
+
+evalDeferred ("deleteUI as"+$tool+$projectName);
+text -e -l $projectPath ("as"+$tool+"ProjectPath");
+text -e -l $projectName ("as"+$tool+"ProjectName");
+window -e -t ($tool+"Designer :"+$projectName) ("as"+$tool+"Main");
+$fileLoading=0;
+select $sel;
+
+return 1;
+}
+
+global proc int asSaveAs (string $tool, string $fileName, string $fileType)
+{
+string $sel[]=`ls -sl`;
+string $projectName,$file;
+string $buffer[];
+int $numFileNameChar=size ($fileName);
+tokenize $fileName "/" $buffer;
+string $file=$buffer[size($buffer)-1];
+int $numFileChar=size ($file);
+tokenize $file "." $buffer;
+$projectName=$buffer[0];
+string $tempTrn=`createNode transform`;
+$projectName=`createNode -p $tempTrn -n $projectName transform`;
+delete $tempTrn;
+tokenize $projectName "|" $buffer;
+$projectName=$buffer[size($buffer)-1];
+string $projectPath=`substring $fileName 1 ($numFileNameChar-$numFileChar)`;
+
+string $previousProjectPath=`text -q -l ("as"+$tool+"ProjectPath")`;
+string $previousProjectName=`text -q -l ("as"+$tool+"ProjectName")`;
+
+text -e -l $projectPath ("as"+$tool+"ProjectPath");
+text -e -l $projectName ("as"+$tool+"ProjectName");
+asSave $tool;
+
+select $sel;
+return 1;
+}
+
+global proc asSave (string $tool)
+{
+if (`text -q -l ("as"+$tool+"ProjectName")`=="untitled")
+	{
+	asfileBrowse $tool "SaveAs";
+	return;
+	}
+string $projectPath=`text -q -l ("as"+$tool+"ProjectPath")`;
+string $projectName=`text -q -l ("as"+$tool+"ProjectName")`;
+string $projectFile=$projectPath+$projectName+".mel";
+string $asIconLocation=$projectPath+$projectName+"/";
+string $ext=".bmp";
+string $bgExt=".xpm";
+if (`about -mac`)
+	$ext=$bgExt=".iff";
+if (`about -linux`)
+	$ext=".xpm";
+string $tmpDir=`internalVar -utd`;
+string $tmpIconDir=$tmpDir+"AdvancedSkeleton/"+$tool+"/untitled/";
+string $uiName="as"+$tool+$projectName;
+string $bgc;
+string $buffer[];
+string $fDet="//This file has been generated by AdvancedSkeleton"+$tool+"//\n";
+$fDet+="\n";
+$fDet+="global proc "+$uiName+" ()\n";
+$fDet+="{\n";
+$fDet+="if (`window -q -ex "+$uiName+"`)\n";
+$fDet+="\tdeleteUI "+$uiName+";\n";
+$fDet+="\n";
+$fDet+="string $asSelectorScriptLocation=`asSelectorScriptLocation`;\n";
+$fDet+="string $asIconLocation=$asSelectorScriptLocation+\""+$projectName+"/\";\n";
+$fDet+="window -mb 1 -t "+$projectName+" "+$uiName+";\n";
+$fDet+="menu -l Edit;\n";
+$fDet+="\tmenuItem -l Refresh -c \"asPopulateNameSpaceMenu "+$uiName+"\";\n";
+$fDet+="\tmenuItem -l \"Bake Dynamics\" -c \"asBakeDynamics "+$uiName+"\";\n";
+$fDet+="\tmenuItem -l \"Remove Bake\" -c \"asRemoveBakedDynamics "+$uiName+"\";\n";
+$fDet+="\tsetParent..;\n";
+$fDet+="menu -l Pose -aob 1;\n";
+$fDet+="\tmenuItem -l Copy -c \"asCopyToClipBloard "+$uiName+" 0\";\n";
+$fDet+="\tmenuItem -l Paste -en 0 "+$uiName+"PosePaste;\n";
+$fDet+="\tmenuItem -d 1;\n";
+$fDet+="\tmenuItem -l Reset -c \"asGoToBuildPose "+$uiName+"\";\n";
+$fDet+="\tmenuItem -l Mirror -c \"asMirror "+$uiName+"\";\n";
+$fDet+="\tmenuItem -optionBox 1 -c \"asMirrorOptions "+$uiName+"\";\n";
+$fDet+="\tsetParent..;\n";
+$fDet+="menu -l Anim;\n";
+$fDet+="\tmenuItem -l Copy -c \"asCopyToClipBloard "+$uiName+" 1\";\n";
+$fDet+="\tmenuItem -l Paste -en 0 "+$uiName+"AnimPaste;\n";
+$fDet+="\n";
+
+//remove old files & copy files from `untitled`
+string $fileList[];
+if (`file -q -ex ($projectPath+$projectName)`)
+	{
+	$fileList=`getFileList -fs ("*"+$ext) -fld ($projectPath+$projectName+"/")`;
+	for ($file in $fileList)
+		sysFile -del ($projectPath+$projectName+"/"+$file);
+	}
+else
+	sysFile -md ($projectPath+$projectName);
+$fileList=`getFileList -fld $tmpIconDir`;
+for ($file in $fileList)
+	if (!`gmatch $file "*.tif"`)
+		sysFile -cp ($projectPath+$projectName+"/"+`substitute ("untitled_") $file ($projectName+"_")`) ($tmpIconDir+$file);
+
+window -e -t ($tool+"Designer :"+$projectName) ("as"+$tool+"Main");
+string $asScriptLocation=`asScriptLocation`;
+string $asSelectorSelection=$asScriptLocation+"asSelectorSelection.mel";
+if (!`file -q -ex $asSelectorSelection`)
+	error ("Could not find file:\""+$asSelectorSelection+"\"\n");
+
+if ($tool=="Poser")
+	{
+	$fDet+="formLayout "+$uiName+"FormLayout;\n";
+	$fDet+="optionMenu -cc \"asCharChange "+$uiName+"\" "+$uiName+"OptionMenu;\n";
+	$fDet+="scrollLayout "+$uiName+"ScrollLayout;\n";
+	int $cw=`gridLayout -q -cw asPoserDefaultGridLayout`;
+	int $ch=`gridLayout -q -ch asPoserDefaultGridLayout`;
+	int $nc=`intField -q -v asPoserNc`;
+	int $nr=`intField -q -v asPoserNr`;
+	string $nameSpace=`optionMenu -q -v "asPoserDefaultOptionMenu"`;
+	$fDet+="gridLayout -cw "+$cw+" -ch "+$ch+" -nc "+$nc+" -nr "+$nr+" "+$uiName+"GridLayout;\n";
+
+
+	$fDet+="formLayout -e\n";
+	$fDet+="	-af "+$uiName+"OptionMenu \"top\" 0\n";
+	$fDet+="	-ac "+$uiName+"ScrollLayout \"top\" 0 "+$uiName+"OptionMenu\n";
+	$fDet+="	-af "+$uiName+"ScrollLayout \"bottom\" 0\n";
+	$fDet+="	-af "+$uiName+"ScrollLayout \"left\" 0\n";
+	$fDet+="	-af "+$uiName+"ScrollLayout \"right\" 0\n";
+	$fDet+="	"+$uiName+"FormLayout;\n";
+	$fDet+="\n";
+	$fDet+="\n";
+
+	string $gridOrder[]=`gridLayout -q -go asPoserDefaultGridLayout`;
+	int $childNum,$doConnectControl;
+	string $cmd,$label,$ann;
+	for ($i=0;$i<size($gridOrder);$i++)
+		{
+		$childNum=$i+1;
+		if (`gmatch $gridOrder[$i] "asPoser*"`)
+			{
+			$iconTextButton=("asPoserDefaultIconTextButton"+$childNum);
+			$floatSlider=("asPoserDefaultFloatSlider"+$childNum);
+			$text=("asPoserDefaultText"+$childNum);
+			$label=`text -q -l $text`;
+			$cmd=`iconTextButton -q -c $iconTextButton`;
+			$bgc="";
+			if (!`gmatch $cmd "asSetAttrs *"`)
+				$bgc=" -bgc 1 0 0";
+			$doConnectControl=`floatSlider -q -m $floatSlider`;
+			$ann=`floatSlider -q -ann $floatSlider`;
+			tokenize $cmd "\"" $buffer;
+			$buffer[0]=`substitute  "asPoserDefault" $buffer[0] $uiName`;
+			$fDet+="string $cmd=\""+$buffer[0]+"\";\n";
+			$fDet+="$cmd+=\"\\\"\";\n";
+			$numTok=`tokenize $buffer[1] ";" $buffer`;
+			for ($line in $buffer)
+				{
+				$fDet+="$cmd+=\""+$line+";\";\n";
+				}
+			$fDet+="$cmd+=\"\\\"\";\n";
+			$image=`iconTextButton -q -i $iconTextButton`;
+			tokenize ("\""+$image+"\"") "/" $buffer;
+			tokenize $buffer[size($buffer)-1] "." $buffer;
+			$imageNr=`match "[0-9]+$" $buffer[0]`;
+
+			$fDet+="setParent "+$uiName+"GridLayout;\n";
+			$fDet+="columnLayout "+$uiName+"ColumnLayout"+$childNum+";\n";
+			$fDet+="rowColumnLayout -nc 2 -cw 1 100 -cw 2 15 "+$uiName+"RowColumnLayout"+$childNum+";\n";
+			$fDet+="iconTextButton -w 100 -h 75 -i ($asIconLocation+\""+$projectName+"_"+$imageNr+$ext+"\") -c $cmd "+$uiName+"IconTextButton"+$childNum+";\n";
+			float $min=`floatSlider -q -min $floatSlider`;
+			float $max=`floatSlider -q -max $floatSlider`;
+			$fDet+="floatSlider -ann \""+$ann+"\" -m "+$doConnectControl+" -min "+$min+" -max "+$max+" -w 10 -h 75 -hr 0 "+$uiName+"FloatSlider"+$childNum+";\n";
+			$fDet+="text -h 15 -al \"center\" -fn \"smallBoldLabelFont\" -l "+$label+$bgc+" "+$uiName+"Text"+$childNum+";\n";
+
+			//place it
+			$fDet+="gridLayout -e -pos "+$uiName+"ColumnLayout"+$childNum+" "+$childNum+" "+$uiName+"GridLayout;\n";
+/*
+			//connectControl
+			if ($doConnectControl)
+				{
+				tokenize $line $buffer;
+				$fDet+="connectControl \""+$uiName+"FloatSlider"+$childNum+"\" \""+$buffer[0]+"\";\n";
+				}
+*/
+			//popups
+			$fDet+="asPoserupdateGridBlock "+$uiName+" "+$childNum+";\n";
+
+			$fDet+="\n";
+			}
+		}
+
+	$fDet+="\n";
+	$fDet+="asPopulateNameSpaceMenu as"+$tool+$projectName+";\n";
+	$fDet+="asCharChange "+$uiName+";\n";
+	$fDet+="evalDeferred \"showWindow;\";\n";
+	$fDet+="}\n";
+	}
+if ($tool=="Selector")
+	{
+	int $pictureWidth=`text -q -l asSelectorBackgroundWidth`;
+	int $pictureHeight=`text -q -l asSelectorBackgroundHeight`;
+	string $buffer[];
+	
+	string $allCtls[]=`formLayout -q -ca asSelectorDefaultFormLayout`;
+	string $ctlName[],$ctlType[],$ctlWidth[],$ctlHeight[],$ctlLeft[],$ctlTop[],$ctlImage[],$ctlCmd[],$ctlIol[],$ctlAnn[];
+	string $ctlKeyCmd[],$ctlLinearKeyCmd[];
+	string $ctlAlignFK2IKCmd[],$ctlAlignIK2FKCmd[],$ctlSwitchFK2IKCmd[],$ctlSwitchIK2FKCmd[];
+	string $buffer[],$tempString[],$menuItems[];
+	int $numTok;
+	string $shortImageFileName,$oldProjectName;
+	for ($a=$i=0;$a<size($allCtls);$a++)
+		{
+		if ($allCtls[$a]=="asSelectorColumnLayout" || $allCtls[$a]=="asSelectorSeparator" || $allCtls[$a]=="asSelectorBGImage")
+			continue;
+		$ctlName[$i]=`substitute "asSelector" $allCtls[$a] $uiName`;
+		$ctlType[$i]=`objectTypeUI $allCtls[$a]`;
+		$ctlWidth[$i]=`control -q -w $allCtls[$a]`;
+		$ctlHeight[$i]=`control -q -h $allCtls[$a]`;
+		$numTok=`tokenize $allCtls[$a] ":" $buffer`;
+		$ctlLeft[$i]=$buffer[$numTok-2];
+		$ctlTop[$i]=$buffer[$numTok-1];
+		if ($ctlType[$i]=="iconTextButton")
+			{
+			$ctlImage[$i]=`eval ($ctlType[$i]+" -q -i \""+$allCtls[$a]+"\"")`;
+			tokenize $ctlImage[$i] "/" $buffer;
+			$shortImageFileName=$buffer[size($buffer)-1];
+			tokenize $shortImageFileName "_" $buffer;
+			$oldProjectName=$buffer[0];
+			for ($b=1;$b<size($buffer)-3;$b++)
+				$oldProjectName+="_"+$buffer[$b];
+			$ctlImage[$i]=`substitute ($oldProjectName+"_") $shortImageFileName ($projectName+"_")`;
+			$ctlCmd[$i]=`eval ($ctlType[$i]+" -q -c \""+$allCtls[$a]+"\"")`;
+			$ctlCmd[$i]=`substitute "\"Default\"" $ctlCmd[$i] ("\""+$projectName+"\"")`;
+			$ctlCmd[$i]="\""+`encodeString $ctlCmd[$i]`+"\"";
+			$ctlAnn[$i]=`eval ($ctlType[$i]+" -q -ann \""+$allCtls[$a]+"\"")`;
+			$ctlIol[$i]=`eval ($ctlType[$i]+" -q -iol \""+$allCtls[$a]+"\"")`;
+			$tempString=`eval ($ctlType[$i]+" -q -pma \""+$allCtls[$a]+"\"")`;
+			$menuItems=`popupMenu -q -ia $tempString[0]`;
+			$ctlKeyCmd[$i]=`menuItem -q -c $menuItems[0]`;
+			$ctlKeyCmd[$i]=`substitute "\"Default\"" $ctlKeyCmd[$i] ("\""+$projectName+"\"")`;
+			$ctlKeyCmd[$i]="\""+`encodeString $ctlKeyCmd[$i]`+"\"";
+			$ctlLinearKeyCmd[$i]=`menuItem -q -c $menuItems[1]`;
+			$ctlLinearKeyCmd[$i]=`substitute "\"Default\"" $ctlLinearKeyCmd[$i] ("\""+$projectName+"\"")`;
+			$ctlLinearKeyCmd[$i]="\""+`encodeString $ctlLinearKeyCmd[$i]`+"\"";
+			if (size($menuItems)>6)
+				{
+				$subMenuItems=`menu -q -ia $menuItems[7]`;
+				$ctlAlignFK2IKCmd[$i]=`menuItem -q -c $subMenuItems[0]`;
+				$ctlAlignFK2IKCmd[$i]=`substitute "\"Default\"" $ctlAlignFK2IKCmd[$i] ("\""+$projectName+"\"")`;
+				$ctlAlignFK2IKCmd[$i]="\""+`encodeString $ctlAlignFK2IKCmd[$i]`+"\"";
+				$ctlAlignIK2FKCmd[$i]=`menuItem -q -c $subMenuItems[1]`;
+				$ctlAlignIK2FKCmd[$i]=`substitute "\"Default\"" $ctlAlignIK2FKCmd[$i] ("\""+$projectName+"\"")`;
+				$ctlAlignIK2FKCmd[$i]="\""+`encodeString $ctlAlignIK2FKCmd[$i]`+"\"";
+				$subMenuItems=`menu -q -ia $menuItems[8]`;
+				$ctlSwitchFK2IKCmd[$i]=`menuItem -q -c $subMenuItems[0]`;
+				$ctlSwitchFK2IKCmd[$i]=`substitute "\"Default\"" $ctlSwitchFK2IKCmd[$i] ("\""+$projectName+"\"")`;
+				$ctlSwitchFK2IKCmd[$i]="\""+`encodeString $ctlSwitchFK2IKCmd[$i]`+"\"";
+				$ctlSwitchIK2FKCmd[$i]=`menuItem -q -c $subMenuItems[1]`;
+				$ctlSwitchIK2FKCmd[$i]=`substitute "\"Default\"" $ctlSwitchIK2FKCmd[$i] ("\""+$projectName+"\"")`;
+				$ctlSwitchIK2FKCmd[$i]="\""+`encodeString $ctlSwitchIK2FKCmd[$i]`+"\"";
+				}
+			}
+		$i++;
+		}
+
+	$fDet+="columnLayout -adj 1;\n";
+	$fDet+="rowLayout -nc 2 -adj 1 -cat 1 right 0;\n";
+	$fDet+="optionMenu -cc asSelChange "+$uiName+"OptionMenu;\n";
+	$fDet+="checkBox -v `optionVar -q asShowSelection` -onc \"optionVar -iv asShowSelection 1\" -ofc \"optionVar -iv asShowSelection 0\" -l showSelection "+$uiName+"CheckBox;\n";
+	$fDet+="setParent..;\n";
+	$fDet+="formLayout "+$uiName+"FormLayout;\n";
+	$fDet+="\n";
+
+	$fDet+="//Controls Begin//\n";
+	$fDet+="iconTextButton -en 0 -w "+$pictureWidth+" -h "+$pictureHeight+" -i ($asIconLocation+\""+$projectName+"_background"+$bgExt+"\") -di ($asIconLocation+\""+$projectName+"_background"+$bgExt+"\") \""+$uiName+"BGPicture\";\n";
+	for ($i=0;$i<size($ctlType);$i++)
+		{
+		$fDet+=$ctlType[$i]+" -w "+$ctlWidth[$i]+" -h "+$ctlHeight[$i];
+		if ($ctlImage[$i]!="")
+			$fDet+=" -i ($asIconLocation+\""+$ctlImage[$i]+"\")";
+		if ($ctlImage[$i]!="")
+			$fDet+=" -iol \""+$ctlIol[$i]+"\"";
+		if ($ctlCmd[$i]!="")
+			$fDet+=" -c "+$ctlCmd[$i];
+		if ($ctlAnn[$i]!="")
+			$fDet+=" -ann \""+$ctlAnn[$i]+"\"";
+		$fDet+=" \""+$ctlName[$i]+"\";\n";
+		$fDet+="popupMenu;\n";
+		$fDet+="\tmenuItem -l Key -c "+$ctlKeyCmd[$i]+";\n";
+		$fDet+="\tmenuItem -l LinearKey -c "+$ctlLinearKeyCmd[$i]+";\n";
+		if ($ctlAlignFK2IKCmd[$i]!="")
+			{
+			$fDet+="\tmenuItem -d 1;\n";
+			$fDet+="\tmenuItem -l Align -sm 1;\n";
+			$fDet+="\t\tmenuItem -l FK2IK -c "+$ctlAlignFK2IKCmd[$i]+";\n";
+			$fDet+="\t\tmenuItem -l IK2FK -c "+$ctlAlignIK2FKCmd[$i]+";\n";
+			$fDet+="\t\tsetParent -menu ..;\n";
+			$fDet+="\tmenuItem -l Switch -sm 1;\n";
+			$fDet+="\t\tmenuItem -l FK2IK -c "+$ctlSwitchFK2IKCmd[$i]+";\n";
+			$fDet+="\t\tmenuItem -l IK2FK -c "+$ctlSwitchIK2FKCmd[$i]+";\n";
+			}
+		}
+	$fDet+="//Controls End//\n";
+	$fDet+="\n";
+	$fDet+="formLayout -e\n";
+	for ($i=0;$i<size($ctlType);$i++)
+		{
+		$fDet+="\t-af \""+$ctlName[$i]+"\" left "+$ctlLeft[$i]+"\n";
+		$fDet+="\t-af \""+$ctlName[$i]+"\" top "+$ctlTop[$i]+"\n";
+		}
+	$fDet+="\t"+$uiName+"FormLayout;\n";
+	
+	$fDet+="\n\n\n\n";
+	
+	$fDet+="asPopulateNameSpaceMenu \"asSelector"+$projectName+"\";\n";
+	$fDet+="asShowSelJob;\n";
+	$fDet+="asSelChange;\n";
+	$fDet+="showWindow;\n";
+
+/*
+//crash prevent experiment
+	for ($i=0;$i<size($ctlType);$i++)
+		{
+		$fDet+=$ctlType[$i]+" -e  -i ($asIconLocation+\""+$ctlImage[$i]+"\") \""+$ctlName[$i]+"\";\n";
+		}
+*/
+
+	$fDet+="}\n";
+	}
+
+int $fileId2=`fopen $asSelectorSelection "r"`;
+string $nextLine = `fgetline $fileId2`;
+while (size($nextLine)>0)
+	{
+	$nextLine=`fgetline $fileId2`;
+	$fDet+=$nextLine;
+	}
+fclose $fileId2;
+
+int $fileId=`fopen $projectFile "w"`;
+fprint $fileId $fDet;
+fclose $fileId;
+}
+
+//--*******************************************************************--//

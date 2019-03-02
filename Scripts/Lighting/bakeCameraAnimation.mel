@@ -1,0 +1,37 @@
+global proc bakeCameraAnimation()
+{	
+	fileBrowser( "writeBakeInfo", "Text", "", 4 ); 
+}
+
+global proc int writeBakeInfo(string $filePath, string $ext)
+{
+	int $stFrame = `playbackOptions -q -ast`;
+	int $endFrame = `playbackOptions -q -aet`;
+	string $cam[] = `ls -sl`;
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".translateX");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".translateY");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".translateZ");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".rotateX");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".rotateY");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".rotateZ");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".scaleX");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".scaleY");
+	bakeResults -t ($stFrame+":"+$endFrame) ($cam[0]+".scaleZ");
+
+	string $cam[] = `ls -sl`;
+	string $shakeCams[] = `listRelatives -c $cam[0]`;
+	for($each in $shakeCams)
+	{
+		int $val = endsWith($each, "Shape");
+		if($val =="1")
+		{
+			print "ok";
+		}
+		else
+		{
+			bakeResults -t ($stFrame+":"+$endFrame) -sparseAnimCurveBake 0 {$each+".translateX", $each+".translateY", $each+".translateZ"};
+		}
+	}
+	file -op "v=0" -typ "mayaAscii" -pr -es ($filePath+"/"+"CAM_"+$cam[0]);
+	return 1;
+}

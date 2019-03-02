@@ -1,0 +1,33 @@
+global proc selectedpropEpisodic10()
+{
+	string $buffer10[];
+	string $propname1[] =`textScrollList -q -si propslist4`;
+	for($m=0; $m<size($propname1); $m++)
+	{
+		string $epispdes[] = {"EPISODE_10"};
+		string $assets[] = {"CHARS","SETS","PROPS"};
+		for($epi in $epispdes)
+		for($asset in $assets)
+		{
+			string $charsDirectory="Q:/THE99/PRODUCTION/REFERENCES/"+$epi+"/"+$asset+"/";
+			string $allFiles[] = `getFileList -folder $charsDirectory -filespec "*.ma"`;
+			for($name in $allFiles)
+			{
+				$numTokens = `tokenize $name "." $buffer10`;
+				if($propname1[$m] == $buffer10[0])
+				{
+					string $forNS = `basenameEx($propname1[$m])`;
+					string $fileDir = $charsDirectory;
+					string $fileName = $fileDir+$propname1[$m]+".ma";	
+					file -rdi 1 -ns $forNS $fileName;
+					file -r  -ns $forNS $fileName;
+				}
+			} 	
+		}
+	}
+	string $val = `match "Shot" $propname1[0]`;
+	if(`size($val)` >= 1)
+	{
+		file -import -type "audio" -ra true -namespace $propname1[0] -options "o=0"  -pr -loadReferenceDepth "all" ("Q:/THE99/PRODUCTION/REFERENCES/EPISODE_07/AUDIO_VIDEO/AUDIO/"+$propname1[0]+".wav");
+	}
+}

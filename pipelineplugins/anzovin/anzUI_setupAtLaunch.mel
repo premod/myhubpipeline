@@ -1,0 +1,37 @@
+global proc anzUI_setupAtLaunch()
+{
+	// Create the anzovin panel type:
+	if (`scriptedPanel -exists anzovinMainPanel` == 0) {
+		if (!`scriptedPanelType -exists anzovinPanelType`) {
+			scriptedPanelType 
+				-ccb anzUI_CreateCallback
+ 				-icb anzUI_InitCallback
+				-acb anzUI_AddCallback
+				-rcb anzUI_RemoveCallback
+				-dcb anzUI_DeleteCallback
+				-scb anzUI_SaveStateCallback
+				-unique true
+				anzovinPanelType;
+		} else {
+			scriptedPanelType -e
+				-ccb anzUI_CreateCallback
+ 				-icb anzUI_InitCallback
+				-acb anzUI_AddCallback
+				-rcb anzUI_RemoveCallback
+				-dcb anzUI_DeleteCallback
+				-scb anzUI_SaveStateCallback
+				anzovinPanelType;
+		}
+		
+		//scriptedPanel -e -rp modelPanel4 fmMainPanel;
+		
+		//setNamedPanelLayout "Persp/Outliner";
+		//scriptedPanel -e -rp outlinerPanel1 fmMainPanel;
+		
+		// To do: remove this bit of code:
+		//setNamedPanelLayout "anzovinTestLayout"; updateToolbox();
+	}
+}
+anzUI_setupAtLaunch;
+	
+	//scriptJob -parent fmMainPanel -replacePrevious -e "SelectionChanged" "selectionChangeCallback";

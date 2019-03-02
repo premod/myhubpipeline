@@ -1,0 +1,125 @@
+global proc comments()
+{
+	string $c = "";
+	
+	string $date = eval("system(\"date /t\")");
+	string $time = eval("system(\"time /t\")");
+	string $dateNTime = $date + $time;
+	
+	if(`objExists sn_comments`==0)
+	{
+		scriptNode -st 2 -bs "comments" -n "sn_comments";
+		addAttr -ln comments -dt "string"  sn_comments;
+		addAttr -ln stat -dt "string"  sn_comments;
+	}
+	else
+	{
+		$c = `getAttr sn_comments.comments`;
+	}
+	if (`window -ex commentswin` == true) deleteUI commentswin;
+	$win = `window -title "Comments" -wh 400 200 -mxb false commentswin`;		
+			formLayout mainForm;
+			frameLayout	-borderStyle "in" -labelVisible false mainFrame;
+			columnLayout -adj true -columnOffset "left" 1 -columnAlign "left";	
+			text -l "";
+			text -fn "smallBoldLabelFont" -l "Enter Comments Here ..";
+			scrollField -kpc chksave -fn "smallBoldLabelFont" -h 1500 -wordWrap true -text ($dateNTime+$c) cmt;
+									
+			setParent ..;
+	   		setParent ..;
+ 			$maink=`button -l "Save" - h 30 -c "dosave;exitcomments();"`;
+			$mainp=`button -l "Delete" -h 30-c "dodelete;"`;
+			$mainc=`button -l "Close" -h 30-c "exitcomments;"`;
+			setParent ..;
+			formLayout -edit
+			-attachForm mainFrame "left" 5
+			-attachForm mainFrame "right" 5
+			-attachForm mainFrame "top" 5
+			-attachForm mainFrame "bottom" 35
+			
+			-attachNone    $maink     "top"
+			-attachForm    $maink     "left"    1
+			-attachControl $maink     "right"    1 $mainp
+			-attachForm    $maink     "bottom"    1
+			
+			-attachNone 	$mainp    "top"
+			-attachPosition $mainp    "left"	1	33
+			-attachControl  $mainp    "right"    1	$mainc
+			-attachForm     $mainp    "bottom"    1
+			
+			-attachNone  	$mainc    "top"
+			-attachPosition $mainc    "left"    1	66
+			-attachForm     $mainc    "right"    1	
+			-attachForm     $mainc    "bottom"    1
+		mainForm;								
+			window -e -wh 400 260 commentswin;
+	showWindow commentswin;
+}
+
+global proc dosave()
+{
+	string $c = `scrollField -query -text cmt`;
+	setAttr -type "string" sn_comments.comments $c;
+	setAttr -type "string" sn_comments.stat "Saved";
+}
+
+global proc dodelete()
+{
+	string $resultm = `confirmDialog 
+ 	-title "Are you sure ?"
+ 	-message "Are you sure to delete this Comments from this file ?"
+ 	-button "OK" -button "Cancel"
+	-defaultButton "OK" -cancelButton "Cancel"
+ 	-dismissString "Cancel"`;
+ 	if ($resultm == "OK")
+	{
+		delete sn_comments;
+		deleteUI commentswin;
+	}
+}
+
+global proc exitcomments()
+{
+	string $getstat=`getAttr sn_comments.stat`;
+	if ($getstat=="Saved")
+	{
+		deleteUI commentswin;
+	}
+	if ($getstat=="ns")
+	{
+		string $resultm = `confirmDialog 
+ 		-title "Save ?"
+ 		-message "Comment is not saved .. Do you want to save ?"
+ 		-button "Save" -button "Close"
+		-defaultButton "OK" -cancelButton "Cancel"
+ 		-dismissString "Cancel"`;
+ 			if ($resultm == "Save")
+			{
+			
+				string $c = `scrollField -query -text cmt`;
+				setAttr -type "string" sn_comments.comments $c;
+				setAttr -type "string" sn_comments.stat "Saved";
+				deleteUI commentswin;
+			}
+			else
+			{
+				deleteUI commentswin;
+			}
+	}
+	if ($getstat=="")
+	{
+		deleteUI commentswin;
+	}
+}
+
+global proc chksave()
+{
+	setAttr -type "string" sn_comments.stat "";
+	setAttr -type "string" sn_comments.stat "ns";
+}
+comments;
+
+
+
+
+

@@ -1,0 +1,39 @@
+
+
+// Returns the namespace of $name.  Simple enough.  Result includes ':'
+global proc string anzg_getNamespace(string $name)
+{
+	string $buffer[], $result;
+	int $count;
+	
+	$count = `tokenize $name ":" $buffer`;
+	if ($count > 1)
+		$result = $buffer[0] + ":";
+	else
+		$result = "";
+	
+	return $result;
+}
+
+global proc string anzg_getObjectSansPath(string $object)
+{
+	string $strings[];
+	int $count;
+	
+	$count = `tokenize $object "|" $strings`;
+	return($strings[$count-1]);
+}
+
+global proc string anzg_getObjectSansNamespace(string $object)
+{
+	string $strings[];
+	int $count;
+	
+	$count = `tokenize $object ":" $strings`;
+	return($strings[$count-1]);
+}
+
+global proc string anzg_getObjectName(string $object)
+{
+	return anzg_getObjectSansNamespace(anzg_getObjectSansPath($object));
+}

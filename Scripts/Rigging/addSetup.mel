@@ -1,0 +1,38 @@
+global proc addSetup()
+{
+	headsUpDisplay 
+               -section          6
+               -block            0
+               -ao               true
+               -blockSize        "small"
+		   -dfs		   "large" 
+               -label            "User Name :"
+               -labelFontSize    "small"
+               -c                "DOPrint;"
+		   -atr
+               HUDname;
+
+
+	/*headsUpDisplay 
+               -section          8
+               -block            0
+               -ao               true
+               -blockSize        "small"
+		   -label            "Date :"
+               -labelFontSize    "small"
+               -c                "DOdate"
+		   -atr
+               HUDdate;*/
+}
+
+
+global proc string DOPrint()
+{
+	string $name =` getenv "USERNAME"`;
+ 	return $name;
+}
+global proc string DOdate()
+{
+	string $date = eval("system(\"date /t\")");
+ 	return $date;
+}

@@ -1,0 +1,13 @@
+global proc assetCleanerRig()
+{
+	if((`window -exists assetCleaner`) == true ) {deleteUI assetCleaner;}
+	window -wh 210 77 -t "Asset Cleaner Rig" -s 0 assetCleaner;
+	rowColumnLayout -numberOfColumns 2
+       	-columnWidth 1 100
+       	-columnWidth 2 100;
+	text -l "";
+	text -l "";
+      button -bgc 0.443 0.573 0.765 -l "File Cleaner" -c 	"riggingCleaner";
+	button -bgc 0.443 0.573 0.765 -l "File Optimiser" -c 	"riggingCleaner"; 
+      	showWindow;
+}

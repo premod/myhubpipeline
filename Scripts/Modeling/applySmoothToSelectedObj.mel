@@ -1,0 +1,13 @@
+global proc applySmoothToSelectedObj()
+{
+	string $selList[] = `ls -sl`;
+	for($each in $selList)
+	{
+		string $smt[] = `polySmooth -dv 1 $each`;
+		print $smt;
+		setAttr ($smt[0]+".smoothUVs") 0;
+		setAttr ($smt[0]+".keepBorder") 0;
+		setAttr ($smt[0]+".keepSelectionBorder") 0;
+		setAttr ($smt[0]+".keepHardEdge") 0;
+	}
+}

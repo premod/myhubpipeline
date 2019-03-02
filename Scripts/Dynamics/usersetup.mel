@@ -1,0 +1,37 @@
+global proc usersetup()
+{
+    	global string $gMainWindow;
+	setParent $gMainWindow;
+	menu -label "Studio56 Dynamics" -parent $gMainWindow -tearOff on;
+	menuItem -label "Auto Save" -c "NPautoSaveOptions";
+	menuItem -divider true;
+	menuItem -label "Artist(s) SignOff" -c "openURLforArtistSignOff";
+	menuItem -label "Lead(s) SignOff" -c "openURLforLeadSignOff";
+	menuItem -label "HighRes Texture Assigner" -c "hrTextureAssigner";
+	menuItem -label "List Materials" -c "JustListMaterials()";
+	menuItem -label "Clean Reference Editor" -c "dConnectAttrubures";
+	menuItem -divider true;
+	menuItem -label "Report DuplicateNodes" -c "reportDuplicateNodes";
+	menuItem -label "Find Poly Surfaces" -c "findPolySurfaces";
+	menuItem -label "FileTexture Manager" -c "FileTextureManager()";
+	menuItem -divider true;
+	menuItem -label "Make scene Template" -c "freezeReferenceNormal";
+}
+usersetup;
+
+welcomeWindow();
+addSetup();
+
+optionVar -sv workingUnitTimeDefault pal;
+	currentUnit -t pal;
+
+playbackOptions -ps 1;
+
+optionVar -iv "isIncrementalSaveEnabled" 1;
+optionVar -iv incrementalSaveMaxBackups 10;
+
+//$gUseSaveScenePanelConfig = false;file -uc false;
+//savePrefsChanges;
+
+
+

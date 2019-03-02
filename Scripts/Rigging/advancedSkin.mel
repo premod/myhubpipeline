@@ -1,0 +1,37 @@
+
+global proc advancedSkin (string $case)
+
+{
+	
+switch ($case)
+	{
+		
+		case "copySkin":
+// DESCRIPTION: This script is use for copy the skining from one mesh to another mesh.
+//Direction: first select the original skin mesh then select the another mesh and run this script..
+				string $sel[2] = `ls -sl`;
+				string $cluster = `findRelatedSkinCluster $sel[0]`;
+				string $Jnt[] = `listConnections -s 1 -d 0 ($cluster + ".matrix")`;
+				select -r $sel[1];
+				select -add $Jnt;
+				SmoothBindSkin -tsb -ta;
+				string $newCluster = `findRelatedSkinCluster $sel[1]`;
+				copySkinWeights -ss $cluster -ds $newCluster -nm;
+				select -cl;
+				break;
+//DESCRIPTION:	This script is used to maintain average skin influence of selected vertex.
+
+//Direction: Select any number of vertex and run the script. It will maintain the average skin influence of nearest vertex.
+
+// pd_smoothNear()
+
+		case "vertexSmooth":
+				
+				string $vt[] = `ls -sl`;
+				GrowPolygonSelectionRegion;
+				string $growVtx[] = `ls -sl`;
+				select -r $growVtx;
+				doSmoothSkinWeightsArgList 3 { "0.001", "5", "0", "0"   };
+				break;
+	}
+}

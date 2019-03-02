@@ -1,0 +1,53 @@
+global proc freezeReferenceNormal()
+{
+	if ((`window -ex freezeWin`)== true) deleteUI freezeWin;
+	window -t "Reference <--> Normal" -wh 242 121 -s 0 freezeWin;
+	columnLayout -adj true;
+	button -l "Freeze Template" -c "freezeReference";
+	button -l "UnFreeze Template" -c "freezeNormal";
+	button -l "Freeze Selection Template" -c "freezeSelectionReference";
+	button -l "UnFreeze Selection Template" -c "freezeSelectionNormal";
+	showWindow;
+}
+
+global proc freezeReference()
+{
+	string $all[] = `ls -typ "mesh"`;
+	for($each in $all)
+	{
+		setAttr ($each+".overrideEnabled") 1;
+		setAttr ($each+".overrideDisplayType") 2;
+	}
+}
+
+
+global proc freezeNormal()
+{
+	string $all[] = `ls -typ "mesh"`;
+	for($each in $all)
+	{
+		setAttr ($each+".overrideEnabled") 1;
+		setAttr ($each+".overrideDisplayType") 0;
+	}
+}
+
+global proc freezeSelectionReference()
+{
+	string $all[] = `ls -sl`;
+	for($each in $all)
+	{
+		setAttr ($each+".overrideEnabled") 1;
+		setAttr ($each+".overrideDisplayType") 2;
+	}
+}
+
+global proc freezeSelectionNormal()
+{
+	string $selList[] = `ls -sl`;
+	for($i in $selList)
+	{
+		setAttr ($i+".overrideEnabled") 0;
+	}
+}
+
+

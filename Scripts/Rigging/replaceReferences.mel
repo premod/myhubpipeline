@@ -1,0 +1,21 @@
+global proc replaceReferences()
+{
+	string $selList[] = `ls -rf`;
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($selList); $i++)
+	{
+		string $buffer[];
+		$numTokens = `tokenize $currPath[$i] "/" $buffer`;
+		string $path = $currPath[$i];
+		string $fileName = basename( $path, "" );
+		if(($buffer[5] == "CHARACTERS") || ($buffer[5] == "SETS") || ($buffer[5] == "PROPS"))
+		{
+			//pv_performAction ("\\\\mayaserver\\T99\\04_PRODUCTION\\REFERENCES\\"+$buffer[4]+"\\"+$buffer[5]+"\\Renderable"+$fileName) "Best Guess";
+			file -loadReference ($selList[$i]) -type "mayaAscii" -options "v=0;p=17" ("\\\\mayaserver\\T99\\04_PRODUCTION\\REFERENCES\\"+$buffer[4]+"\\"+$buffer[5]+"\\Renderable\\"+$fileName);
+		}
+		else
+		{
+			error "No such File(s)";
+		}
+	}
+}			

@@ -1,0 +1,9 @@
+global proc resolveLockNodes()
+{
+	string $nodes[] = `ls`;
+	for($each in $nodes)
+	{
+		lockNode -l 0 $each;
+		print $each;
+	}
+}

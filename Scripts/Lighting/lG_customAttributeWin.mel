@@ -1,0 +1,182 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+/*
+ * FUNCTION NAME	lG_customAttributeWin
+ * DESCRIPTION		Gets custom attribute settings from user via UI
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_customAttributeWin(string $applyCmd, string $applyText)
+{
+	// create UI layout - vars for global sizing
+	int $uiLabelWidth = 120;
+	int $uiInputWidth = 130;
+	int $uiWidth = $uiLabelWidth + $uiInputWidth;
+	
+	// delete UI function on close/open
+	if ( `window -exists lG_globalCustomAttrWin` == true )
+		deleteUI lG_globalCustomAttrWin;
+	window 
+		-title "[lG] Custom Attribute" 
+		-maximizeButton false 
+		-minimizeButton true
+		-sizeable true
+		-resizeToFitChildren false
+		-menuBar true
+		-menuBarVisible true 
+		-wh 286 159
+		lG_globalCustomAttrWin;
+		
+	// begin actual form content
+	string $rForm = `formLayout -numberOfDivisions 100`;
+		string $rScroll = `scrollLayout -hst 16 -vst 16 -childResizable true -minChildWidth $uiWidth`;
+			columnLayout -adjustableColumn true -rowSpacing 6;
+				// main editable area (collapsable)
+				frameLayout
+					-label " Attribute Settings"
+					-labelAlign "center"
+					-cll false
+					-mh 3
+					-bs "etchedIn"
+					-bv true
+					-lw 110
+					rFrame;
+					// begin input area
+					columnLayout -adjustableColumn true;
+						// attribute
+						rowLayout
+							-numberOfColumns 2
+							-cat 1 "left" 5
+							-columnWidth 1 40
+							-columnWidth 2 $uiInputWidth;
+							text -l "Name";
+							textField 
+								-w 200
+								lG_gblCustomAttrText;
+							setParent ..;
+						// value
+						rowLayout
+							-numberOfColumns 2
+							-cat 1 "left" 5
+							-columnWidth 1 40
+							-columnWidth 2 $uiInputWidth;
+							text -l "Value";
+							textField 
+								-w 200
+								lG_gblCustomAttrValue;
+							setParent ..;
+						// refresh?
+						rowLayout
+							-numberOfColumns 2
+							-cat 1 "left" 5
+							-columnWidth 1 40
+							-columnWidth 2 $uiInputWidth;
+							text -l "";
+							checkBox
+								-h 20
+								-label "Update Light Girl"
+								-value false
+								lG_gblCustomAttrRefresh;
+							setParent ..;
+						setParent ..;
+					setParent ..;
+				setParent ..;
+			setParent ..;
+		
+		// buttonz...
+		string $rButton = `button
+				-label $applyText
+				-command $applyCmd`;
+		string $rClose = `button
+				-label "Close"
+				-command "deleteUI lG_globalCustomAttrWin"`;
+
+	// set form layouts
+	formLayout -edit
+		-attachForm $rScroll "top" 2
+		-attachForm $rScroll "left" 2
+		-attachControl $rScroll "bottom" 2 $rButton
+		-attachForm $rScroll "right" 2
+
+		-attachNone $rButton "top"
+		-attachForm $rButton "left" 2
+		-attachForm $rButton "bottom" 2
+		-attachPosition $rButton "right" 2 50
+
+		-attachNone $rClose "top"
+		-attachPosition $rClose "left" 2 50
+		-attachForm $rClose "bottom" 2
+		-attachForm $rClose "right" 2
+
+		$rForm;
+
+	showWindow lG_globalCustomAttrWin;
+}
+
+/*
+ * FUNCTION NAME	lG_setGlobalCustomAttributeCmd
+ * DESCRIPTION		Applies custom attribute settings
+ * CALLED BY		lG_customAttributeWin
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_setGlobalCustomAttributeCmd()
+{
+	// lights
+	global string $g_lG_allLights[];
+	// attribute name
+	string $lG_gblCustomAttrName = `textField -q -tx lG_gblCustomAttrText`;
+	// attribute value
+	string $lG_gblCustomAttrValue = `textField -q -tx lG_gblCustomAttrValue`;
+	
+	for($i=0;$i<size($g_lG_allLights);$i++) {		  
+		if(attributeExists($lG_gblCustomAttrName, $g_lG_allLights[$i])) {
+			// attribute type
+			string $lG_gblCustomAttrType = `getAttr -type ($g_lG_allLights[$i] + "." + $lG_gblCustomAttrName)`;
+			
+			if($lG_gblCustomAttrType == "string") {
+				setAttr -type "string" ($g_lG_allLights[$i] + "." + $lG_gblCustomAttrName) ($lG_gblCustomAttrValue);
+			} else if(($lG_gblCustomAttrType == "short") || ($lG_gblCustomAttrType == "enum") || ($lG_gblCustomAttrType == "bool")) {
+				setAttr ($g_lG_allLights[$i] + "." + $lG_gblCustomAttrName) ((int) ($lG_gblCustomAttrValue));
+			} else if(($lG_gblCustomAttrType == "float") || ($lG_gblCustomAttrType == "double") || ($lG_gblCustomAttrType == "doubleAngle")) {
+				setAttr ($g_lG_allLights[$i] + "." + $lG_gblCustomAttrName) ((float) ($lG_gblCustomAttrValue));
+			} else if($lG_gblCustomAttrType == "float3") {
+				string $lG_gblCustomAttrValueArray[];
+				tokenize ($lG_gblCustomAttrValue, ",", $lG_gblCustomAttrValueArray);
+				setAttr ($g_lG_allLights[$i] + "." + $lG_gblCustomAttrName) ((float) ($lG_gblCustomAttrValueArray[0])) ((float) ($lG_gblCustomAttrValueArray[1])) ((float) ($lG_gblCustomAttrValueArray[2]));
+			} else {
+				warning("Unknown attribute type...");
+			}
+		} else {
+			warning("Attribute not found '" + $g_lG_allLights[$i] + "." + $lG_gblCustomAttrName + "'");
+		}
+	}
+	
+	if(`checkBox -q -v lG_gblCustomAttrRefresh`) {
+		waitCursor -state on;
+		lightGirlCmd();
+		waitCursor -state off;
+	}
+}

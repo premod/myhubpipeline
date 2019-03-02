@@ -1,0 +1,9 @@
+global proc deleteLocked()
+{	
+	string $selList[] = `ls -sl`;
+	for($each in $selList)
+	{
+		lockNode -lock off $each;
+		delete $each;
+	}
+}

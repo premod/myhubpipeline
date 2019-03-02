@@ -1,0 +1,804 @@
+
+//Developed by Premod P Sankar..//
+//Author: Premod P Sankar 
+//website:premod.blogspot.com
+//E-mail: premodmultimedia@gmail.com 
+//CopyRight premod @ studio56.
+
+global proc easyDynamicRigSetup()
+
+{ 
+
+if (`window -ex easyDynwindow` == true) 
+deleteUI easyDynwindow;
+
+string $window =`window -w 150 -h 300 -title "Easy Dynamic Rig Setup"  -s 1 easyDynwindow`;
+
+string $tab = `tabLayout -imw 100 `;
+string $tab1 = `columnLayout`;
+Spine;
+setParent $tab;
+string $tab2 = `columnLayout`;
+Tail;
+setParent $tab;
+string $tab3 = `columnLayout`;
+ear_L;
+setParent $tab;
+string $tab4 = `columnLayout`;
+ear_R;
+setParent $tab;
+string $tab5 = `columnLayout`;
+facial;
+setParent $tab;
+tabLayout  -e  -tl $tab1 "Spine" -tl $tab2 "Tail"  -tl $tab3 "Ear_L"  -tl $tab4 "Ear_R" -tl $tab5 "Facial" $tab;
+
+showWindow easyDynwindow;
+
+}
+
+
+
+
+global proc Tail()
+
+{
+
+    columnLayout -adjustableColumn true;
+    button  -h 50 -w 200 -label "Add Tail Dynamics Setting To Rig"   -command "ADD_tail"  -bgc 0.5 0.5 0.0 addmatch;
+    button  -h 50 -w 200 -label "Freeze tailJoint_Skin"  -command "freeze_tail"-bgc 1 1 1  ;
+    button  -h 50 -w 200 -label "Bind Surf" -command "bindsurf_tail"-bgc .1 .1 .5  ;
+    button  -h 50 -w 200 -label "Apply Dynamics"   -command "dynamics_tail"-bgc .3 .3 .5  ;
+    
+       string $ex = ("tailJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Tail Settings are done" addmatch;
+    }
+}
+
+
+
+//add initial setting to Tail
+
+
+global proc ADD_tail ()
+
+{
+     string $ex = ("tailJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Tail Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        rename ("joint"+ $a )("tailJoint_IK"+ $a);
+    } 
+    select -r curve1;
+    move -r -os -wd -.1 0 0 ;
+    duplicate -rr;
+    move -r -os -wd .2 0 0 ;
+    select -r curve1 curve2 ;
+    loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true "curve1" "curve2";
+    select -r curve2 ;
+    doDelete;
+    select -r curve1 ;
+    rename "curve1" "tailspinecurve";
+    move -r -os -wd .1 0 0 ;
+    select -r loftedSurface1 ;
+    rename "loftedSurface1" "tailsurf";
+    createHair $counterjoint 1 18 0 0 0 0 5 0 1 1 1;
+    delete pfxHair1;
+    searchReplaceNames "hairSystem1" "tailhairsystem" "all"; 
+    delete "tailhairsystem";
+  for ($i=1;$i<=$counterjoint;$i++)
+    {
+        joint -p 0 0 0 -n "tailJoint_Skin1" ;
+    } 
+    select -r "tailJoint_Skin*";
+    parent -w; 
+    select -r "tailJoint_IK*";
+    duplicate -rr;
+    searchReplaceNames "tailJoint_IK*" "tailJoint_FK" "selected";
+    //select -r "joint*";
+   // searchReplaceNames "joint" "tailJoint_Skin" "hierarchy"; 
+   
+    select -r tailspinecurve;
+    makeCurvesDynamicHairs 1 0 1;
+    searchReplaceNames "hairSystem1" "tailhairsystem_DYN" "all";
+    rename "follicle1""tailHair_follicle";
+    setAttr "tailHair_follicleShape.pointLock" 1;
+    select -cl;
+    string $selection[]= `ls -transforms "tailJoint_IK*"`;  
+    int $counter=  (size($selection)); 
+    CreateLocator;
+    rename "locator1""tail_loc";
+    $loc_pos=`xform  -q -t -ws ("tailJoint_IK"+$counter)`;
+    move -ws $loc_pos[0] $loc_pos[1] $loc_pos[2] "tail_loc";
+    select -r ("tailJoint_FK"+$counter) tail_loc;
+    doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+    
+    
+  for ($i=0;$i<=($counter/2);$i++)
+    {
+        
+        group -n Tail_IK_offset -em;
+        group -n Tail_FK_offset -em;
+        curve -d 1 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n "Tail_IK" ;
+        xform -cp;
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+        joint -p 0 0 0 -n "tail_IK"  ;
+        curve -d 1 -p 0.520619 0 1.99259e-005 -p 0.368133 0.368133 1.99259e-005 -p 0 0.520619 1.99259e-005 -p -0.368133 0.368133 1.99259e-005 -p -0.520619 0 1.99259e-005 -p -0.368133 -0.368133 1.99259e-005 -p 0 -0.520619 1.99259e-005 -p 0.368133 -0.368133 1.99259e-005 -p 0.520619 0 1.99259e-005 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "Tail_FK" ;
+        
+    } 
+    select -cl;
+    select -r "tail_IK*";
+    parent -w;
+    
+    
+};
+
+
+global proc connect_tail()
+
+{
+    parent;
+}
+
+
+global proc freeze_tail()
+
+{
+    string $selection_joint[]= `ls -transforms "tailJoint_Skin*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        setAttr ("tailJoint_Skin"+ $a +".rotateX")0;
+        setAttr ("tailJoint_Skin"+ $a +".rotateY")0;
+        setAttr ("tailJoint_Skin"+ $a +".rotateZ")0;
+        setAttr ("tailJoint_Skin"+ $a +".translateX")0;
+        setAttr ("tailJoint_Skin"+ $a +".translateY")0;
+        setAttr ("tailJoint_Skin"+ $a +".translateZ")0;
+    } 
+};
+
+global proc bindsurf_tail()
+{
+    select -r "tail_IK*""tailsurf";
+    performSkinCluster true;
+    
+};
+
+
+global proc dynamics_tail()
+{
+   
+   select -r Tail_FK;
+   addAttr -ln "DynamicsSettings"  -at long  Tail_FK;
+   setAttr -e-channelBox true Tail_FK.DynamicsSettings;
+   addAttr -ln "Simulations"  -at long  -min 0 -max 1 -dv 0 Tail_FK;
+   setAttr -e-keyable true Tail_FK.Simulations;
+   addAttr -ln "Stiffness"  -at double  -min -1 -max 1 -dv 0 Tail_FK;
+   setAttr -e-keyable true Tail_FK.Stiffness 0.3;
+   addAttr -ln "Iterations"  -at double  Tail_FK;
+   setAttr -e-keyable true Tail_FK.Iterations 30;
+   addAttr -ln "Attraction"  -at double  Tail_FK;
+   setAttr -e-keyable true Tail_FK.Attraction .3;
+   addAttr -ln "Damping"  -at double  Tail_FK;
+   setAttr -e-keyable true Tail_FK.Damping 0.2;
+   addAttr -ln "StartFrame"  -at long  Tail_FK;
+   setAttr -e-keyable true Tail_FK.StartFrame 1;
+   connectAttr -f Tail_FK.Stiffness tailhairsystem_DYNShape.stiffness;
+   connectAttr -f Tail_FK.Iterations tailhairsystem_DYNShape.iterations;
+   connectAttr -f Tail_FK.Attraction tailhairsystem_DYNShape.startCurveAttract;
+   connectAttr -f Tail_FK.Damping tailhairsystem_DYNShape.damp;
+   connectAttr -f Tail_FK.StartFrame tailhairsystem_DYNShape.startFrame;
+   setDrivenKeyframe -currentDriver Tail_FK.Simulations tailhairsystem_DYNShape.simulationMethod;
+   setAttr "Tail_FK.Simulations" 0;
+   setAttr "tailhairsystem_DYNShape.simulationMethod" 1;
+   setDrivenKeyframe -currentDriver Tail_FK.Simulations tailhairsystem_DYNShape.simulationMethod;  
+   setAttr "Tail_FK.Simulations" 1;
+   setAttr "tailhairsystem_DYNShape.simulationMethod" 3;
+   setDrivenKeyframe -currentDriver Tail_FK.Simulations tailhairsystem_DYNShape.simulationMethod;  
+   group -n TailDynamics_Grp -em;
+   setAttr "tailhairsystemFollicles.visibility" 0;
+   select -r tailhairsystem_DYN ;
+   channelBoxCommand -break;
+   CBdeleteConnection "tailhairsystem_DYNShape.cti";
+expression -s "\nif(frame!= tailhairsystem_DYNShape.startFrame)\ntailhairsystem_DYNShape.currentTime = tailhairsystem_DYNShape.currentTime + 1 + tail_loc.translateX - tail_loc.translateX + tail_loc.translateY - tail_loc.translateY + tail_loc.translateZ - tail_loc.translateZ + .I[4] - .I[4] + .I[5] - .I[5] + .I[6] - .I[6]+ .I[7] - .I[7]+ .I[8] - .I[8]+ .I[9] - .I[9]+ .I[10] - .I[10];\nelse\n\ttailhairsystem_DYNShape.currentTime = tailhairsystem_DYNShape.startFrame;"  -o loopSplit1 -n "Tail_Dynamics" -ae 1 -uc all ;
+
+};
+
+
+
+
+// add initial setting for spine
+
+
+
+
+global proc Spine()
+{
+    columnLayout -adjustableColumn true;
+    floatFieldGrp -l "CurveInfo Value" curveval;
+    button -h 50 -w 200 -label "Add Squash Setting To Rig" -command "Add_spine"  -bgc 0.5 0.5 0.0 addmatch;
+    button -h 50 -w 200 -label "connect to spine" -command "connect_spine"-bgc 0.5 0.5 1 ;
+    intFieldGrp -l "ControlJoints count" cntrljnt;
+    button -h 50 -w 200 -label "ControlCurve" -command "controlcurve_spine"-bgc 0.5 0.5 .5 ;
+    button -h 50 -w 200 -label "Breath Control to Chest" -command "Breath_spine"-bgc 0.1 0.5 .1 ;
+    
+     string $ex = ("Spine_SknJnt*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Squash Settings are done" addmatch;
+    }
+    
+ 
+}
+
+ 
+
+global proc Add_spine()
+
+{  
+    string $ex = ("Spine_SknJnt*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Squash Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++){
+        
+    
+        rename ("joint"+ $a )("Spine_SknJnt"+ $a);
+   
+    } 
+    rename "Main" "Placer";
+    select -r curve1;
+    
+    rename "curve1" "spineIKCurve";
+    addAttr -ln "Stretch_Switch"  -at double  -min 0 -max 1 -dv 1 Body;
+    addAttr -ln "Squash_Val"  -at double  -min 0 -max 1 -dv 0.5 Body;
+    addAttr -ln "Back_Stretch"  -at double  -min 1 -max 15 -dv 0 Body;
+    addAttr -ln "RigScale"  -at double  -min 1 -max 15 -dv 1 Placer;
+    connectAttr -f Placer.RigScale Placer.scaleX;
+    connectAttr -f Placer.RigScale Placer.scaleY;
+    connectAttr -f Placer.RigScale Placer.scaleZ;
+    string $selection_spinejoint[]= `ls -transforms "Spine_SknJnt*"`;
+    int $counter=  (size($selection_spinejoint));
+    for($a=1;$a<$counter;$a++){
+        createNode frameCache;
+        int$i;
+        string $MULDIV= `createNode multiplyDivide` ;
+        setAttr ($MULDIV+".operation") 3;
+        connectAttr Body.Back_Stretch ("frameCache*"+".stream");
+        connectAttr ("frameCache*"+".varying") ("multiplyDivide*"+".input2X");
+
+    }
+   
+    
+    select -r "frameCache*"; 
+    searchReplaceNames "frameCache" "SpineSquash_FC" "selected";
+    select -r "multiplyDivide*"; 
+    searchReplaceNames "multiplyDivide" "SpineMulDiv_POWER" "selected";
+    createNode reverse;
+    rename  "reverse1" "SpineSquashVal_REV";
+    connectAttr Body.Squash_Val SpineSquashVal_REV.inputX;
+    createNode pairBlend;
+    rename  "pairBlend1" "SpineSquashVal_PB";
+    for($i=1;$i<4;$i++)
+    {
+        string $MULDIV= `createNode multiplyDivide` ;
+        setAttr($MULDIV+".operation")2;
+    }
+    rename "multiplyDivide1""SpineSquashVal_DIV";
+    rename "multiplyDivide2""SpineSquashStretch_DIV";
+    rename "multiplyDivide3""SpineSquashScale_DIV";
+    createNode pairBlend;
+    rename  "pairBlend1" "SpineSquashSwitch_PB";
+    connectAttr SpineSquashVal_REV.outputX SpineSquashVal_PB.weight;
+    connectAttr SpineSquashVal_PB.outTranslateY SpineSquashVal_DIV.input2Y;
+    connectAttr Spine_SknJnt1.scaleX SpineSquashVal_PB.inTranslateY1;
+    connectAttr Body.Stretch_Switch SpineSquashSwitch_PB.weight;
+    connectAttr SpineSquashSwitch_PB.outTranslateX SpineSquashStretch_DIV.input1X;
+    connectAttr SpineSquashStretch_DIV.outputX SpineSquashScale_DIV.input1X;
+    connectAttr curveInfo1.arcLength SpineSquashSwitch_PB.inTranslateX2;
+    connectAttr Placer.RigScale SpineSquashScale_DIV.input2X;
+    setAttr "SpineSquashVal_DIV.input1Y" 1;
+    $ns=`floatFieldGrp   -q -v1 curveval` ;
+    setAttr "SpineSquashStretch_DIV.input2X" $ns;
+    
+    
+    
+
+    
+};
+
+global proc connect_spine()
+
+{
+    
+    
+    string $selection_spinejoint[]= `ls -transforms "Spine_SknJnt*"`;  
+    int $counter=  (size($selection_spinejoint)); 
+    for($a=1;$a<$counter;$a++){
+        
+        connectAttr SpineSquashScale_DIV.outputX ("Spine_SknJnt"+ $a +".scaleX");
+        connectAttr SpineSquashVal_DIV.outputY  ("SpineMulDiv_POWER"+ $a + ".input1X");
+        connectAttr ("SpineMulDiv_POWER" + $a + ".outputX")("Spine_SknJnt"+ $a +".scaleZ");
+        connectAttr ("SpineMulDiv_POWER" + $a + ".outputX")("Spine_SknJnt"+ $a +".scaleY");
+    } 
+  
+  
+    
+};
+global proc controlcurve_spine()
+{
+    
+    $cntljn=`intFieldGrp -q -v1 cntrljnt`;
+    print $cntljn;
+    for($i=1;$i<=$cntljn;$i++)
+    {
+    group -em -n "Bend_Spine_offset";
+    curve -d 1 -p 3.162278 -1.63595e-009 3.162278 -p 0 -1.63595e-009 4.472136 -p -3.162277 -1.63595e-009 3.162277 -p -4.472136 -1.63595e-009 0 -p -3.162277 -1.63595e-009 -3.162277 -p 0 -1.63595e-009 -4.472136 -p 3.162277 -1.63595e-009 -3.162277 -p 4.472136 -1.63595e-009 0 -p 3.162278 -1.63595e-009 3.162278 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "Bend_Spine";
+    joint -p 0 0 0 -n "SpineJoint_Skin";
+    }
+    select -r "SpineJoint_Skin*";
+    parent -w;
+};
+global proc Breath_spine()
+{
+   select -r "Chest";
+   addAttr -ln "Breath_Setting"  -at long  |Chest;
+   setAttr -e-channelBox true -k on |Chest.Breath_Setting;
+   addAttr -ln "Breath"  -at long  -min 0 -max 1 -dv 0 |Chest;
+   setAttr -e-keyable true -k on |Chest.Breath;
+   addAttr -ln "Breath_Frequency"  -at double  -min -10 -max 10 -dv 0 |Chest;
+   setAttr -e-keyable true -k on |Chest.Breath_Frequency 0;
+   addAttr -ln "Breath_Speed"  -at double  |Chest;
+   setAttr -e-keyable true -k on |Chest.Breath_Speed 0;
+   addAttr -ln "Breath_Connected"  -at double  |Chest;
+   setAttr -e-keyable true -k on |Chest.Breath_Connected 0;
+   addAttr -ln "StartFrame"  -at long  |Chest;
+   setAttr -e-keyable true  -k on |Chest.StartFrame 1;
+}
+
+
+
+
+
+// add initial setting for Ear_L
+
+
+
+
+
+
+
+global proc ear_L()
+{
+
+    columnLayout -adjustableColumn true;
+    button -h 50 -w 200 -label "Add ear_L Dynamics Setting To Rig" -command "ADD_ear_L"  -bgc 0.5 0.5 0.0 addmatch;
+    button -h 50 -w 200 -label "Freeze ear_LJoint_Skin" -command "freeze_ear_L"-bgc 1 1 1  ;
+    button -h 50 -w 200 -label "Bind Surf" -command "bindsurf_ear_L"-bgc .1 .1 .5  ;
+    button -h 50 -w 200 -label "Apply Dynamics" -command "dynamics_ear_L"-bgc .3 .3 .5  ;
+    
+         string $ex = ("ear_LJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_L Settings are done" addmatch;
+    }
+
+
+}
+
+//add initial setting
+
+
+global proc ADD_ear_L ()
+
+{
+     string $ex = ("ear_LJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_L Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+  for($a=1;$a<=$counterjoint;$a++)
+    {
+        rename ("joint"+ $a )("ear_LJoint_IK"+ $a);
+    } 
+    select -r curve1;
+    move -r -os -wd -.1 0 0 ;
+    duplicate -rr;
+    move -r -os -wd .2 0 0 ;
+    select -r curve1 curve2 ;
+    loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true "curve1" "curve2";
+    select -r curve2 ;
+    doDelete;
+    select -r curve1 ;
+    rename "curve1" "ear_Lspinecurve";
+    move -r -os -wd .1 0 0 ;
+    select -r loftedSurface1 ;
+    rename "loftedSurface1" "ear_Lsurf";
+    createHair $counterjoint 1 18 0 0 0 0 5 0 1 1 1;
+    delete pfxHair1;
+    searchReplaceNames "hairSystem1" "ear_Lhairsystem" "all"; 
+    delete "ear_Lhairsystem";
+  for ($i=1;$i<=$counterjoint;$i++)
+    {
+        joint -p 0 0 0 -n "ear_LJoint_Skin1" ;
+    } 
+    select -r "ear_LJoint_Skin*";
+    parent -w; 
+    select -r "ear_LJoint_IK*";
+    duplicate -rr;
+    searchReplaceNames "ear_LJoint_IK*" "ear_LJoint_FK" "selected";
+    //select -r "joint*";
+   // searchReplaceNames "joint" "ear_LJoint_Skin" "hierarchy"; 
+   
+    select -r ear_Lspinecurve;
+    makeCurvesDynamicHairs 1 0 1;
+    searchReplaceNames "hairSystem1" "ear_Lhairsystem_DYN" "all";
+    rename "follicle1""ear_LHair_follicle";
+    setAttr "ear_LHair_follicleShape.pointLock" 1;
+    select -cl;
+    string $selection[]= `ls -transforms "ear_LJoint_IK*"`;  
+    int $counter=  (size($selection)); 
+    CreateLocator;
+    rename "locator1""ear_L_loc";
+    $loc_pos=`xform  -q -t -ws ("ear_LJoint_IK"+$counter)`;
+    move -ws $loc_pos[0] $loc_pos[1] $loc_pos[2] "ear_L_loc";
+    select -r ("ear_LJoint_FK"+$counter) ear_L_loc;
+    doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+    
+    
+  for ($i=0;$i<=($counter/2);$i++)
+    {
+        
+        group -n ear_L_IK_offset -em;
+        group -n ear_L_FK_offset -em;
+        curve -d 1 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n "ear_L_IK" ;
+      
+        xform -cp;
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+       
+        joint -p 0 0 0 -n "ear_L_IK"  ;
+        curve -d 1 -p 0.520619 0 1.99259e-005 -p 0.368133 0.368133 1.99259e-005 -p 0 0.520619 1.99259e-005 -p -0.368133 0.368133 1.99259e-005 -p -0.520619 0 1.99259e-005 -p -0.368133 -0.368133 1.99259e-005 -p 0 -0.520619 1.99259e-005 -p 0.368133 -0.368133 1.99259e-005 -p 0.520619 0 1.99259e-005 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "ear_L_FK" ;
+     
+    } 
+    select -cl;
+    select -r "ear_L_IK*";
+    parent -w;
+    
+    
+};
+
+
+global proc connect_ear_L()
+
+{
+    parent;
+}
+
+
+global proc freeze_ear_L()
+
+{
+    string $selection_joint[]= `ls -transforms "ear_LJoint_Skin*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        setAttr ("ear_LJoint_Skin"+ $a +".rotateX")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".rotateY")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".rotateZ")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".translateX")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".translateY")0;
+        setAttr ("ear_LJoint_Skin"+ $a +".translateZ")0;
+    } 
+};
+
+global proc bindsurf_ear_L()
+{
+    select -r "ear_L_IK*""ear_Lsurf";
+    performSkinCluster true;
+    
+};
+
+
+global proc dynamics_ear_L()
+{
+   CBdeleteConnection "ear_Lhairsystem_DYNShape.cti";
+   select -r ear_L_FK;
+   addAttr -ln "DynamicsSettings"  -at long  ear_L_FK;
+   setAttr -e-channelBox true ear_L_FK.DynamicsSettings;
+   addAttr -ln "Simulations"  -at long  -min 0 -max 1 -dv 0 ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Simulations;
+   addAttr -ln "Stiffness"  -at double  -min -1 -max 1 -dv 0 ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Stiffness 0.3;
+   addAttr -ln "Iterations"  -at double  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Iterations 30;
+   addAttr -ln "Attraction"  -at double  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Attraction .3;
+   addAttr -ln "Damping"  -at double  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.Damping 0.2;
+   addAttr -ln "StartFrame"  -at long  ear_L_FK;
+   setAttr -e-keyable true ear_L_FK.StartFrame 1;
+   connectAttr -f ear_L_FK.Stiffness ear_Lhairsystem_DYNShape.stiffness;
+   connectAttr -f ear_L_FK.Iterations ear_Lhairsystem_DYNShape.iterations;
+   connectAttr -f ear_L_FK.Attraction ear_Lhairsystem_DYNShape.startCurveAttract;
+   connectAttr -f ear_L_FK.Damping ear_Lhairsystem_DYNShape.damp;
+   connectAttr -f ear_L_FK.StartFrame ear_Lhairsystem_DYNShape.startFrame;
+   setDrivenKeyframe -currentDriver ear_L_FK.Simulations ear_Lhairsystem_DYNShape.simulationMethod;
+   setAttr "ear_L_FK.Simulations" 0;
+   setAttr "ear_Lhairsystem_DYNShape.simulationMethod" 1;
+   setDrivenKeyframe -currentDriver ear_L_FK.Simulations ear_Lhairsystem_DYNShape.simulationMethod;  
+   setAttr "ear_L_FK.Simulations" 1;
+   setAttr "ear_Lhairsystem_DYNShape.simulationMethod" 3;
+   setDrivenKeyframe -currentDriver ear_L_FK.Simulations ear_Lhairsystem_DYNShape.simulationMethod;  
+   group -n ear_LDynamics_Grp -em;
+   setAttr "ear_LhairsystemFollicles.visibility" 0;
+};
+
+
+
+
+
+
+//add initial setting to ear_R
+
+
+
+
+
+
+
+global proc ear_R()
+
+{
+
+    columnLayout -adjustableColumn true;
+    button -h 50 -w 200 -label "Add ear_R Dynamics Setting To Rig" -command "ADD_ear_R"  -bgc 0.5 0.5 0.0 addmatch;
+    button -h 50 -w 200 -label "Freeze ear_RJoint_Skin" -command "freeze_ear_R"-bgc 1 1 1  ;
+    button -h 50 -w 200 -label "Bind Surf" -command "bindsurf_ear_R"-bgc .1 .1 .5  ;
+    button -h 50 -w 200 -label "Apply Dynamics" -command "dynamics_ear_R"-bgc .3 .3 .5  ;
+    
+         string $ex = ("ear_RJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_R Settings are done" addmatch;
+    }
+
+}
+
+//add initial setting
+
+
+global proc ADD_ear_R ()
+
+{
+    
+        string $ex = ("ear_RJoint_IK*");
+    if (`objExists  $ex`)
+    {
+        button -edit -en 0 -l "Ear_R Settings are done" addmatch;
+    }
+    string $selection_joint[]= `ls -transforms "joint*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+  for($a=1;$a<=$counterjoint;$a++)
+    {
+        rename ("joint"+ $a )("ear_RJoint_IK"+ $a);
+    } 
+    select -r curve1;
+    move -r -os -wd -.1 0 0 ;
+    duplicate -rr;
+    move -r -os -wd .2 0 0 ;
+    select -r curve1 curve2 ;
+    loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true "curve1" "curve2";
+    select -r curve2 ;
+    doDelete;
+    select -r curve1 ;
+    rename "curve1" "ear_Rspinecurve";
+    move -r -os -wd .1 0 0 ;
+    select -r loftedSurface1 ;
+    rename "loftedSurface1" "ear_Rsurf";
+    createHair $counterjoint 1 18 0 0 0 0 5 0 1 1 1;
+    delete pfxHair1;
+    searchReplaceNames "hairSystem1" "ear_Rhairsystem" "all"; 
+    delete "ear_Rhairsystem";
+  for ($i=1;$i<=$counterjoint;$i++)
+    {
+        joint -p 0 0 0 -n "ear_RJoint_Skin1" ;
+    } 
+    select -r "ear_RJoint_Skin*";
+    parent -w; 
+    select -r "ear_RJoint_IK*";
+    duplicate -rr;
+    searchReplaceNames "ear_RJoint_IK*" "ear_RJoint_FK" "selected";
+    //select -r "joint*";
+   // searchReplaceNames "joint" "ear_RJoint_Skin" "hierarchy"; 
+   
+    select -r ear_Rspinecurve;
+    makeCurvesDynamicHairs 1 0 1;
+    searchReplaceNames "hairSystem1" "ear_Rhairsystem_DYN" "all";
+    rename "follicle1""ear_RHair_follicle";
+    setAttr "ear_RHair_follicleShape.pointLock" 1;
+    select -cl;
+    string $selection[]= `ls -transforms "ear_RJoint_IK*"`;  
+    int $counter=  (size($selection)); 
+    CreateLocator;
+    rename "locator1""ear_R_loc";
+    $loc_pos=`xform  -q -t -ws ("ear_RJoint_IK"+$counter)`;
+    move -ws $loc_pos[0] $loc_pos[1] $loc_pos[2] "ear_R_loc";
+    select -r ("ear_RJoint_FK"+$counter) ear_R_loc;
+    doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+    
+    
+  for ($i=0;$i<=($counter/2);$i++)
+    {
+        
+        group -n ear_R_IK_offset -em;
+        group -n ear_R_FK_offset -em;
+        curve -d 1 -p -0.5 0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 -0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 -0.5 0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 -k 15 -k 16 -n "ear_R_IK" ;
+      
+        xform -cp;
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+       
+        joint -p 0 0 0 -n "ear_R_IK"  ;
+        curve -d 1 -p 0.520619 0 1.99259e-005 -p 0.368133 0.368133 1.99259e-005 -p 0 0.520619 1.99259e-005 -p -0.368133 0.368133 1.99259e-005 -p -0.520619 0 1.99259e-005 -p -0.368133 -0.368133 1.99259e-005 -p 0 -0.520619 1.99259e-005 -p 0.368133 -0.368133 1.99259e-005 -p 0.520619 0 1.99259e-005 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -n "ear_R_FK" ;
+     
+    } 
+    select -cl;
+    select -r "ear_R_IK*";
+    parent -w;
+    
+    
+};
+
+
+global proc connect_ear_R()
+
+{
+    parent;
+}
+
+
+global proc freeze_ear_R()
+
+{
+    string $selection_joint[]= `ls -transforms "ear_RJoint_Skin*"`;  
+    int $counterjoint=  (size($selection_joint)); 
+    for($a=1;$a<=$counterjoint;$a++)
+    {
+        setAttr ("ear_RJoint_Skin"+ $a +".rotateX")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".rotateY")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".rotateZ")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".translateX")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".translateY")0;
+        setAttr ("ear_RJoint_Skin"+ $a +".translateZ")0;
+    } 
+};
+
+global proc bindsurf_ear_R()
+{
+    select -r "ear_R_IK*""ear_Rsurf";
+    performSkinCluster true;
+    
+};
+
+
+global proc dynamics_ear_R()
+{
+   CBdeleteConnection "ear_Rhairsystem_DYNShape.cti";
+   select -r ear_R_FK;
+   addAttr -ln "DynamicsSettings"  -at long  ear_R_FK;
+   setAttr -e-channelBox true ear_R_FK.DynamicsSettings;
+   addAttr -ln "Simulations"  -at long  -min 0 -max 1 -dv 0 ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Simulations;
+   addAttr -ln "Stiffness"  -at double  -min -1 -max 1 -dv 0 ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Stiffness 0.3;
+   addAttr -ln "Iterations"  -at double  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Iterations 30;
+   addAttr -ln "Attraction"  -at double  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Attraction .3;
+   addAttr -ln "Damping"  -at double  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.Damping 0.2;
+   addAttr -ln "StartFrame"  -at long  ear_R_FK;
+   setAttr -e-keyable true ear_R_FK.StartFrame 1;
+   connectAttr -f ear_R_FK.Stiffness ear_Rhairsystem_DYNShape.stiffness;
+   connectAttr -f ear_R_FK.Iterations ear_Rhairsystem_DYNShape.iterations;
+   connectAttr -f ear_R_FK.Attraction ear_Rhairsystem_DYNShape.startCurveAttract;
+   connectAttr -f ear_R_FK.Damping ear_Rhairsystem_DYNShape.damp;
+   connectAttr -f ear_R_FK.StartFrame ear_Rhairsystem_DYNShape.startFrame;
+   setDrivenKeyframe -currentDriver ear_R_FK.Simulations ear_Rhairsystem_DYNShape.simulationMethod;
+   setAttr "ear_R_FK.Simulations" 0;
+   setAttr "ear_Rhairsystem_DYNShape.simulationMethod" 1;
+   setDrivenKeyframe -currentDriver ear_R_FK.Simulations ear_Rhairsystem_DYNShape.simulationMethod;  
+   setAttr "ear_R_FK.Simulations" 1;
+   setAttr "ear_Rhairsystem_DYNShape.simulationMethod" 3;
+   setDrivenKeyframe -currentDriver ear_R_FK.Simulations ear_Rhairsystem_DYNShape.simulationMethod;  
+   group -n ear_RDynamics_Grp -em;
+   setAttr "ear_RhairsystemFollicles.visibility" 0;
+};
+
+
+
+//add facial setup
+
+
+
+
+
+
+
+
+global proc facial()
+
+{
+    
+columnLayout -adjustableColumn true; 
+
+    textFieldGrp -l "Name the Node: " t1;
+rowColumnLayout -nc 2;
+
+    button - h 30 -w 200 -label "RightSide" -command "ADD_R" -bgc .5 0 0;
+    button - h 30 -w 200 -label "LeftSide" -command "ADD_L" -bgc  0 0 .5;
+
+}
+
+global proc ADD_R()
+{
+    string $name = `textFieldGrp -q -tx t1`;
+    select `ls -sl`;
+    rename $name;
+    setAttr -lock true -keyable false -channelBox false ($name + ".tz");
+    setAttr -lock true -keyable false -channelBox false ($name + ".rx");
+    setAttr -lock true -keyable false -channelBox false ($name + ".ry");
+    setAttr -lock true -keyable false -channelBox false ($name + ".rz");
+    setAttr -lock true -keyable false -channelBox false ($name + ".sx");
+    setAttr -lock true -keyable false -channelBox false ($name + ".sy");
+    setAttr -lock true -keyable false -channelBox false ($name + ".sz");
+    setAttr -lock true -keyable false -channelBox false ($name + ".v");
+    shadingNode -asUtility addDoubleLinear -n ( $name + "Right_ADL");
+    shadingNode -asUtility clamp -n ( $name + "RightCLMP_X");
+    shadingNode -asUtility clamp -n ( $name + "RightCLMP_Y");
+    shadingNode -asUtility multiplyDivide -n ($name + "Right_DIV");
+    setAttr ($name + "RightCLMP_X.maxR") 1;
+    setAttr ($name + "RightCLMP_Y.maxR") 1;
+    setAttr ($name + "Right_ADL.input2") 1;
+    connectAttr -f ($name + "Right_ADL.output") ( $name + "RightCLMP_X.inputR");
+    connectAttr -f ($name + "RightCLMP_X.outputR") ($name + "Right_DIV.input1X");
+    connectAttr -f ($name + "RightCLMP_Y.outputR") ($name + "Right_DIV.input2X");
+    connectAttr -f ($name + ".translateX") ($name + "Right_ADL.input1");
+    connectAttr -f ($name + ".translateY") ($name + "RightCLMP_Y.inputR");
+    connectAttr -f ($name + "Right_DIV.outputX") ("Facial." + $name + "_R");
+    
+}
+
+global proc ADD_L()
+{
+    string $name = `textFieldGrp -q -tx t1 `;
+    shadingNode -asUtility addDoubleLinear -n ( $name + "Left_ADL");
+    shadingNode -asUtility clamp -n ( $name + "LeftCLMP_X");
+    shadingNode -asUtility clamp -n ( $name + "LeftCLMP_Y");
+    shadingNode -asUtility multiplyDivide -n ($name + "Left_DIV");
+    shadingNode -asUtility multiplyDivide -n ($name + "Left_X_DIV");
+    setAttr ($name + "Left_X_DIV.input2X") -1;
+    setAttr ($name + "Left_ADL.input2") 1;
+    setAttr ($name + "LeftCLMP_X.maxR") 1;
+    setAttr ($name + "LeftCLMP_Y.maxR") 1;
+    connectAttr -f ($name + "Left_ADL.output") ( $name + "LeftCLMP_X.inputR");
+    connectAttr -f ($name + "LeftCLMP_X.outputR") ($name + "Left_DIV.input1X");
+    connectAttr -f ($name + "LeftCLMP_Y.outputR") ($name + "Left_DIV.input2X");
+    connectAttr -f ($name + "Left_X_DIV.outputX") ($name + "Left_ADL.input1");
+    connectAttr -f ($name + ".translateX") ($name + "Left_X_DIV.input1X");
+    connectAttr -f ($name + ".translateY") ($name + "LeftCLMP_Y.inputR");
+    connectAttr -f ($name + "Left_DIV.outputX") ("Facial."+ $name + "_L");
+   
+}
+
+easyDynamicRigSetup();

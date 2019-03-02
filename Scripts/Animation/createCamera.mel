@@ -1,0 +1,33 @@
+global proc createCamera()
+{
+	windowPref -ra;
+	if(`window -exists customCamWin`) deleteUI -window customCamWin;
+	window -wh 390 105 -s 0 -title "Cam Creator " customCamWin;
+	columnLayout;
+	text -l "";
+	string $currFileName = `file -q -sceneName`;
+	textFieldGrp -label "Camera Name" shotCam;
+	textFieldGrp -e -text (basenameEx($currFileName)) shotCam;
+      rowColumnLayout -nc 3; 
+	text -l "";
+      text -l "";
+	text -l "";
+	text -l "";
+	button -w 450 -bgc 0.6 0.6 0.6 -label "&Create" -c "createCustomCam;";
+	button -w 450 -bgc 0.6 0.6 0.6 -label "E&xit" -c "deleteUI customCamWin";
+	showWindow customCamWin;
+}
+
+global proc createCustomCam()
+{
+	string $getCamName = `textFieldGrp -q -tx shotCam`;
+	string $cameraName[] = `camera -n $getCamName`;
+	rename $cameraName[0] $getCamName; 
+	setAttr ($getCamName +".nearClipPlane") 1;
+ 	setAttr ($getCamName +".farClipPlane") 100000000;
+}
+
+
+
+
+

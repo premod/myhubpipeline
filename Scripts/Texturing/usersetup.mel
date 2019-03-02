@@ -1,0 +1,58 @@
+
+global proc usersetup()
+{
+    	global string $gMainWindow;
+	setParent $gMainWindow;
+	menu -label "Studio56 Texturing" -parent $gMainWindow -tearOff on;
+	menuItem -label "Auto Save" -c "NPautoSaveOptions";
+	menuItem -label "Optimize and Save" -c "fileOptimisation";
+	menuItem -divider true;
+	menuItem -label "File TextureManager" -c "FileTextureManager";
+	//menuItem -label "Check Textures" -c "op_checkTextures";
+	menuItem -label "Auto RefreshTextures" -c "autoRefreshTextures";
+	menuItem -label "Double Side Texture" -c "dst";
+	menuItem -label "RGB Lights" -c "breakTexConnWindow";
+	menuItem -label "Material Attribute Transfer" -c "KBI_Materials_Attributes_Transfert";
+	menuItem -divider true;
+	menuItem -label "Comments" -c "comments";
+}
+
+usersetup;
+
+headsUpDisplay 
+               -section          9
+               -block            4
+               -ao               true
+               -blockSize        "small"
+		   -label            "Date :"
+               -labelFontSize    "small"
+               -c                "DOdate"
+		   -atr
+               HUDdate;
+
+global proc string DOdate()
+{
+	string $date = eval("system(\"date /t\")");
+ 	return $date;
+}
+
+welcomeWindow();
+
+//optionVar -sv "workingUnitTime" "pal" 
+//-sv workingUnitTimeDefault pal;
+optionVar -sv workingUnitTimeDefault pal;
+	currentUnit -t pal;
+
+playbackOptions -ps 1;
+
+optionVar -iv "isIncrementalSaveEnabled" 1;
+optionVar -iv incrementalSaveMaxBackups 10;
+
+
+
+
+
+
+
+
+

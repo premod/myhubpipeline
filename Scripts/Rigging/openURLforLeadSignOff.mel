@@ -1,0 +1,4 @@
+global proc openURLforLeadSignOff()
+{
+	system("load" + ("http://sanserver/checklist/teamleadsignoff.aspx"));
+}

@@ -1,0 +1,67 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+global proc lG_aboutWin()
+{
+	// version and date
+	global string $g_lG_versionDate[];
+	$g_lG_versionDate[0] = "v.4.6.3";
+	$g_lG_versionDate[1] = "April 13, 2007";
+	
+	// delete UI on close/open
+	if ( `window -exists lG_aboutWin` == true )
+		deleteUI lG_aboutWin;
+		// create UI
+		window 
+			-title "About lightGirl" 
+			-maximizeButton false
+			-minimizeButton false
+			-sizeable false
+			-resizeToFitChildren false
+			-menuBar true
+			-menuBarVisible true 
+			-wh 181 154
+			lG_aboutWin;
+		// begin output area
+		string $lAboutForm = `formLayout -numberOfDivisions 100`;
+		string $lAboutCL = `columnLayout -adjustableColumn true -rowSpacing 6`;
+				
+				// begin display of about text
+				string $ver = "lightGirl " + $g_lG_versionDate[0];
+				text -l $ver -align "center";
+				text -l $g_lG_versionDate[1] -align "center";
+				text -l "Ben Wronsky" -align "center";
+				text -l "bwronsky@gmail.com" -align "center";
+				text -l "www.benwronsky.com" -align "center";
+			setParent ..;	
+		setParent ..;
+
+		// set form layouts
+		formLayout -edit
+			-attachForm $lAboutCL "top" 2
+			-attachForm $lAboutCL "left" 2
+			-attachForm $lAboutCL "bottom" 2
+			-attachForm $lAboutCL "right" 2
+
+			$lAboutForm;
+						
+		showWindow lG_aboutWin;
+}

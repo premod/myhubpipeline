@@ -1,0 +1,99 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: extractBlendShapes
+''    Author: asod 
+''    Last Updated: Oct 06, 2006
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/modeling/misc/829.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+//-------------------------------------------------------------------------------------------------------------------------------------//
+//-------------------------------------------------------------------------------------------------------------------------------------//
+//	SCRIPT:	extractBlendShape
+//	AUTHOR:	Asi Sudai Character TD, Animator
+//			asi@asimation.com www.reel.asimation.com
+//
+//
+//	DATE:		5/10/2006 17:02
+//
+//	DESCRIPTION:	Extract all the shape from the BlendShape Node, so they can be re model.
+//
+//
+//	Known Bugs: object with more then one blendShape node, isn't supported.
+//-------------------------------------------------------------------------------------------------------------------------------------//
+//	Run Proc: extractBlendShape();
+//-------------------------------------------------------------------------------------------------------------------------------------//
+
+
+// Debuging printing proc
+proc extractBlendShape.debug(string $msg)
+{
+	if (1==1)
+		print ("\n***Debug: " + $msg +"\n");	
+}// End
+
+// Get object bounding size
+proc extractBlendShape.getBounding(string $node)
+{
+	float $bounding[]=`xform -q -bb $node`;
+	float $xSize=(`abs $bounding[0]` +`abs $bounding[3]`);
+	print $xSize;
+}// End 
+
+// check the object have blendShapes
+proc string extractBlendShape.getBlendShape(string $node)
+{
+	
+	string $shapes[] = `listRelatives -s $node`;
+	for ($shape in $shapes){
+		string $tempArray[]=`listConnections -s 1  -d 0 -type "blendShape" ($shape + ".inMesh")`;
+		if ($tempArray[0] != "") return $tempArray[0];
+	}
+	return "none";
+}// End
+	
+
+// Main proc
+global proc extractBlendShape()
+{
+	string $tempArray[] = `ls -sl -hd 1`;
+	string $obj = $tempArray[0];	
+	// Check if object have blendShape node.
+	string $blendShape = `extractBlendShape.getBlendShape $obj`;
+	if ($blendShape == "none") { print ("\n"+ $obj + " don't have blendShape"); return; }
+	// Get all BlendShapes shapes
+	extractBlendShape.debug $blendShape;
+	string $blendList[] = `listAttr -m ($blendShape + ".weight")`;
+// Start extracting
+	// Get object size, to better spread the blendShapes
+	float $bounding[]=`xform -q -bb $obj`;
+	float $boundingSizeX=(`abs $bounding[0]` +`abs $bounding[3]`);
+	float $boundingSizeY=(`abs $bounding[1]` +`abs $bounding[4]`);
+	extractBlendShape.debug ("Bounding size = " + $boundingSizeX);
+	// Start extracting each shape
+	int $t=1;
+	for ($i=0; $i<`size($blendList)`; $i++)
+	{
+		int $row = `floor($i/5)`;
+		if ($t>5) $t=1;		
+		extractBlendShape.debug ("doing blendShape - " + $blendList[$i]);
+		setAttr ($blendShape + "." + $blendList[$i] ) 1;
+		string $newShape[]=`duplicate -rr -name $blendList[$i] $obj`;		
+		xform -r -t (($boundingSizeX*($t+1.2))*1.1) (($boundingSizeY*$row)*-1) 0 $newShape[0];	
+		setAttr ($blendShape + "." + $blendList[$i] ) 0;		
+		$t++;		
+	}
+	
+}// End 
+
+
+extractBlendShape();
+
+	
+
+

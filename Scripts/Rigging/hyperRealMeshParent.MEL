@@ -1,0 +1,475 @@
+
+/*
+
+Title: hyperRealMeshParent.mel
+
+Author: Erick Miller
+
+Requires: 
+	Two (2) plugins:
+		decomposeMatrix (ships w/ Maya)
+		nearestPointOnMesh (ships w/ Maya' dev kit, it may need to
+				get compiled for your version of Maya)...
+
+Install/User Directions:
+
+	Copy this script into one of the folders in your MAYA_SCRIPT_PATH
+	ie, on Windows: C:/Documents and Settings/$USER/My Documents/maya/scripts/
+	then, launch Maya, & optionally source it using the source command. 
+
+	Will need to be sure you have the plugins listed above installed
+	as well, or an error diagnostic will print if the plugins fail to load.
+	
+	For interactive use, simply select the mesh you are constraining 
+	onto first, and all the transforms you want to get constrained 
+	second, and run this (ie):
+
+		source "hyperRealMeshParent.mel";
+		hyperRealMeshParent() ;
+
+Description:
+
+	This is an advanced script that will allow you to attach any transform onto the nearest
+	face of poly mesh, even if they're transforms that are currently deforming the mesh that you 
+	are it attaching onto!  It is basically a hyper amped up idea based initially on the 
+	ideas from the rivet script (but on steriods), and has many advanced features that 
+	make it extremely useful for character setup, including:
+	
+		1. The ability to automatically determine the nearest face, and the 2 most
+		  parrallel edges in the mesh to apply the constrained location on the mesh.
+
+		2. The ability to maintain the offsets of whatever you are constraining, 
+		  so that it functions in a very similar manner to the process of parenting.
+
+		3. Uses a fully constructed transformation matrice to perform the rotations, 
+		  so that the use of an aim constraint is removed, thus fixing all 
+		  flipping/spinning issues that were in the present in the rivet script.
+
+		4. The ability to average mesh pts & rotations so that the surrounding face's angles
+		  are partially used to determing the constrained object's transformation (to give 
+		  a smoother rotation that doesnt flip when your constrained face has a steep angle).
+
+		5. The hyper cool & most useful feature of all is that it automatically detects if 
+		  the transform you are constraining is connected to a deformer of the mesh you are 
+		  constraining onto, and if so, it connects things in a way that allows the 
+		  actual transform that is deforming the mesh to be constrained onto the actual 
+		  mesh that it is deforming so that and move along with the surface deformations
+		  at the same time as it deforms it... 
+		  ...currently supports cluster, softMods and skinClusters... 
+		
+--
+Funtion Call: 
+	hyperRealMeshParent() ;
+
+Arguments: (none)
+
+Usage:  
+	Based on selection (select your poly mesh first, 
+	 and then all the nodes you want to attach to that mesh last).
+
+Return Type: 	
+	string[] (the list of upper most group nodes that your targets got parented onto)
+
+--
+Funtion Call: 
+	hyperRealMeshParentCmd( string $mesh, string $target, int $falloff );
+	
+Arguments: 
+	$mesh is the geometry you are constraining to.
+	$target is the single transform you are constraining.
+	$falloff is how many rows of surrounding vertices positions will be 
+		averaged to determing the postion on the constrained mesh.
+		
+Usage:  
+	Based on selection (select your poly mesh first, and then all 
+		the nodes you want to attach to that mesh last).
+
+Return Type: 	
+	string[] (the list of upper most group nodes that your targets got parented onto)
+
+
+*/
+
+
+
+/////
+//
+// string 	hyperRealMeshParentCmd( string, string, int ) ;
+//
+// This function is the meat of the script & contains all the 
+// logic used to perform the manipulation of geometric transforms:
+// 
+global proc string hyperRealMeshParentCmd( string $mesh, string $target, int $falloff )
+{
+	string $sel[] = `ls -o -sl -fl`;
+	string $plugins[] = { "decomposeMatrix", "nearestPointOnMesh" };
+	for($plgin in $plugins){
+		if(! `pluginInfo -q -l $plgin`)
+		{
+			print "\n//\n";
+			int $error = catch(`loadPlugin -quiet $plgin`);
+			if(! `pluginInfo -q -l $plgin` || $error ){
+				select $sel ;
+				print "//\n";
+				print ("// Help: Make sure the plugin is compiled for your version of Maya, \n"+
+					"// Maya "+`about -v`+", and then copy it into one of these folders:\n");
+				string $fldrs[];
+				tokenize ((string)`getenv MAYA_PLUG_IN_PATH`) (`about -win` ? ";" : ":") $fldrs;
+				print "//\n";
+				for($fld in $fldrs) print ("// "+$fld+"\n");
+				print "//\n";
+				error ("Copy the plugin: \""+$plgin+(`about -win` ? ".mll" : ".so" )+"\"  into one of the folders in your MAYA_PLUG_IN_PATH (see above).");
+			}
+		}
+	}
+	
+	////
+	// this code will compensate for locked or driven attrs on the 
+	// target that is to get constrained so that it keeps it's offsets 
+	// from the mesh when the constraining/parenting happens:
+	//
+	int $doExtraGroup=false;
+	string $attrs[] = {"t","tx","ty","tz","r","rx","ry","rz","s","sx","sy","sz","v"};
+	for($attr in $attrs){
+		if(!`getAttr -settable ($target+"."+$attr)` && $attr != "v" ){
+			warning "Translate, Rotate & Scale are not all settable, so your target gets extra group, hyperRealMeshGroup# to maintain position, try un-locking or disconnecting attrs to avoid this.";
+		 	$doExtraGroup = true ;
+		}
+		if( $doExtraGroup ) break ;
+	}
+	string $orig_target = $target ;
+	if( $doExtraGroup ){
+		$target = `group -name "hyperRealMeshGroup#" $target`;
+	}
+
+	////
+	// snap geo to nearest point on mesh, then get the nearest face index 
+	// using a geometry constraint to do the snapping, and the nearestPointOnMesh
+	// plugin to get the nearest face index...
+	//	
+	string $cpom = eval( "nearestPointOnMesh "+$mesh );	
+	string $constrainPt[];
+	$constrainPt[0] = `createNode transform -name "hyperRealMeshConstrainPt#"`;
+	setAttr -lock true ($constrainPt[0]+".inheritsTransform") false;
+	delete `pointConstraint $target $constrainPt[0]`;
+	delete `orientConstraint $target $constrainPt[0]`;
+	delete `geometryConstraint $mesh $constrainPt[0]`;
+	connectAttr ($constrainPt[0]+".t") ($cpom+".inPosition");
+	int $fId = `getAttr ($cpom+".nearestFaceIndex")`;
+	string $poly_face = ($mesh+".f["+$fId+"]");
+	delete $cpom ;
+	string $face_edges[] = ls( "-l", "-fl", `polyListComponentConversion -ff -te $poly_face`);
+	vector $edgeVectors[]; clear($edgeVectors);
+	
+	///
+	// determine the 2 most parallel edges on the poly face 
+	// for the loft node's curve from mesh edge inputs:
+	//
+	for($edge in $face_edges){
+		string $verts[] = ls( "-l", "-fl", `polyListComponentConversion -fe -tv $edge`);
+		float $vtPt1[] = `pointPosition -w $verts[0]`;
+		float $vtPt2[] = `pointPosition -w $verts[1]`;
+		float $vec[] = { 	($vtPt1[0]-$vtPt2[0]), 
+					($vtPt1[1]-$vtPt2[1]),
+					($vtPt1[2]-$vtPt2[2]) };
+		normalize( $vec );
+		$edgeVectors[`size $edgeVectors`] = << $vec[0], $vec[1], $vec[2] >>;
+	}
+	
+	float $dotProduct = 0, $lastDotProd = -1.#INF; // <- maya syntax for negative infinity...
+	string $bestEdge;
+	int $i;
+	for($i=1; $i<size($edgeVectors); $i++){
+		$dotProduct = abs( `dot $edgeVectors[0] $edgeVectors[$i]` );
+		if($dotProduct > $lastDotProd){
+			$bestEdge = $face_edges[$i];
+			$lastDotProd = $dotProduct;
+		}
+	}
+
+	float $e1 = substitute( "\\]$", ((string)`match "[0-9]+\\]$" $face_edges[0]`), "");
+	float $e2 = substitute( "\\]$", ((string)`match "[0-9]+\\]$" $bestEdge`), "");
+	
+	string $objName[] = `ls -o $poly_face`;
+
+	/////
+	// build the nodes we will use to derive surface rotation
+	// we'll use vertex average of surrounding vertices to  
+	// stabilize the mesh we derive the surface derivatives from...
+	// which gives surrounding vertices some nice fall-off influence
+	//
+	string $curve1 = `createNode curveFromMeshEdge -n "edgeToCurveNodeA#"`;
+		setAttr ".isHistoricallyInteresting" 1;
+		setAttr ".edgeIndex[0]"  $e1;
+
+	string $curve2 = `createNode curveFromMeshEdge -n "edgeToCurveNodeB#"`;
+		setAttr ".isHistoricallyInteresting" 1;
+		setAttr ".edgeIndex[0]"  $e2;
+
+	string $loft = `createNode loft -n "generateSurface#"`;
+		setAttr -s 2 ".ic";
+		setAttr ".uniform" 1;
+		setAttr ".close" 0;
+		setAttr ".degree" 3;
+		setAttr ".autoReverse" 1;
+		setAttr ".sectionSpans" 3;
+		setAttr ".caching" true;
+	
+	string $ptOnSurface = `createNode pointOnSurfaceInfo -n "pointOnSurface#"`;
+		setAttr ".turnOnPercentage" 1;
+		setAttr ".parameterU" 0.5;
+		setAttr ".parameterV" 0.5;
+		setAttr ".caching" true;
+
+	//////
+	// make poly average vertex node to average the vertices surrounding the face, 
+	// so that  rotations of mesh constraint won't cause flipping on extreme single 
+	// face vertex creases (such as the wrinkle in a brow furrow, for example):
+	//
+	string $face_verts[] = ls( "-l", "-fl", 
+		`polyListComponentConversion -ff -tv $poly_face`);
+	select $face_verts ;
+	
+	// must be non negative:
+	if( $falloff <=0 ) $falloff = 1;
+	int $i;
+	for($i=0;$i<$falloff; $i++)
+	{
+		// weird args, eh!? Ask Alias, not me:
+		polySelectConstraint -pp 1 -t 0x0001 ;	//expand verts
+	}			
+	
+	$face_verts = `ls -l -fl -sl` ;
+	string $pAvgNode[] = `polyAverageVertex -i ($falloff*2) $face_verts`;
+	string $pAvg = `rename $pAvgNode[0] "averageDerivatives#"`;
+	string $geomOrigDgIn[] = `listConnections  -s 1 -d 0 -p 1 ($pAvg+".inputPolymesh")`;
+	string $geomOrigDgOut[] = `listConnections  -s 0 -d 1 -p 1 ($pAvg+".output")`;	
+
+	/////
+	// determine if transform requested to constraint onto mesh
+	// is connected to a deformer that is in the history of the mesh 
+	// we are constraining onto. if this is the case, then we need
+	// to do some additional dg vo-doo so that the resultant graph
+	// is no longer cyclic, and in result, this is the first step 
+	// that allows us to "parent" deformers (like clusters or joints)
+	// directly onto the geometry that they are deforming...
+	//
+	string $historicTransforms[] = ls("-type", "transform", `listHistory -il 2 -gl 1 $geomOrigDgIn[0]`);
+	int $isCyclic = false;
+	for($node in $historicTransforms){
+		if( $node == $orig_target ){  
+			$isCyclic = true ;  
+			break;
+		}
+	}
+	string $cyclicDeformer;
+	if( $isCyclic )
+	{
+		string $futureDeformers[] = ls( "-type", "geometryFilter", 
+				`listHistory -future 1 -il 2 -pdo 1 -lv 1 $orig_target`);
+		
+		string $historicDeformers[] = ls("-type", "geometryFilter", 
+					`listHistory -il 2 -gl 1 -pdo 1 $geomOrigDgIn[0]`);
+		
+		for($past in $historicDeformers){
+			for($future in $futureDeformers){
+				if($future == $past){
+					$cyclicDeformer = $future ;
+					break;
+				}
+			}
+		}
+		if(`objExists $cyclicDeformer`)
+		{
+			int $defSize = `getAttr -size ($cyclicDeformer+".input")`;
+			int $dindex = 0;
+			for($i=0; $i<$defSize; $i++){
+				string $conn[] = `listConnections -s 0 -d 1 ($cyclicDeformer+".outputGeometry["+$i+"]")`;
+				string $meshUpStream[] = 
+					ls( "-type", "mesh", 
+					`listHistory -future true $conn[0]`);				
+				for($upmsh in $meshUpStream){
+					string $meshDaddy[] = ls("-type","transform",`listRelatives -p $upmsh`);
+					if($meshDaddy[0] == $mesh || $upmsh == $mesh){
+						$dindex = $i;
+						break;
+					}
+				}
+			}
+			string $incoming[] = 
+				`listConnections -scn 1 
+					-p 1 -s 1 -d 0 ($cyclicDeformer+".input["+$dindex+"].inputGeometry")`;
+			string $groupParts[] = `ls -o -type groupParts $incoming`;
+			if(`size $groupParts`)
+			{
+				$incoming = `listConnections -scn 1 
+					-p 1 -s 1 -d 0 ($groupParts[0]+".inputGeometry")`;
+			}
+			//
+			// note: if you don't disconnect, turn off node state, 
+			// and reconnect, and attach these attrs in this order, 
+			// then, ka-blam, maya poops out and insta-crashes:
+			//
+			disconnectAttr ($pAvg+".output") $geomOrigDgOut[0] ;
+			disconnectAttr $geomOrigDgIn[0] ($pAvg+".inputPolymesh") ;
+			setAttr ($pAvg+".nodeState") 1 ;
+			connectAttr $incoming[0] ($pAvg+".inputPolymesh");
+			string $incomingNode[] = `ls -o $incoming[0]`;
+			setAttr ($incomingNode[0]+".caching") 1 ; // <- big speed improvement! (uses a bit more ram though)
+		}	
+	}
+	else{
+		disconnectAttr ($pAvg+".output") $geomOrigDgOut[0] ;
+		disconnectAttr $geomOrigDgIn[0] ($pAvg+".inputPolymesh") ;
+		setAttr ($pAvg+".nodeState") 1 ;
+		connectAttr ($objName[0]+".w") ($pAvg+".inputPolymesh") ; 
+	}
+	
+	connectAttr $geomOrigDgIn[0]  $geomOrigDgOut[0] ;	
+	setAttr ($pAvg+".nodeState") 0 ;
+	setAttr ($pAvg+".alpha") 0.25;
+	setAttr ($pAvg+".beta") 0.50;
+	setAttr ($pAvg+".caching") true;
+		
+	/////	
+	// connect up the rest of the attrs that ouput the
+	// nurbs surface from the polygon face:
+	//
+	connectAttr -f ($loft+".outputSurface") ($ptOnSurface+".inputSurface");
+	connectAttr -f ($curve1+ ".outputCurve") ($loft+ ".inputCurve[0]");
+	connectAttr -f ($curve2+ ".outputCurve") ($loft + ".inputCurve[1]");
+	connectAttr -f ($pAvg+".output") ($curve1+ ".inputMesh");
+	connectAttr -f ($pAvg+".output") ($curve2+ ".inputMesh");
+
+	///
+	// hook in some higher level attr controls if needed for user:
+	//
+	addAttr -ln "uValue" -at double  -min 0 -max 1 -dv .5 $constrainPt[0];
+	setAttr -e -keyable true ($constrainPt[0]+".uValue");
+	connectAttr -f ($constrainPt[0]+".uValue") ($ptOnSurface+".parameterU");		
+	addAttr -ln "vValue" -at double  -min 0 -max 1 -dv .5 $constrainPt[0];
+	setAttr -e -keyable true ($constrainPt[0]+".vValue");
+	connectAttr -f ($constrainPt[0]+".vValue") ($ptOnSurface+".parameterV");
+
+	/////	
+	// compute proper complete transformation using a surface 
+	// derivative constructed world space transform matrix
+	// so that rotations and translations are completely stable :
+	//
+	string $matrix = `createNode fourByFourMatrix -n "fourByFourMatrix#"`;
+	string $dcmat = `createNode decomposeMatrix -n "decomposeMatrix#"`;
+	connectAttr ($ptOnSurface+".nnx") ($matrix+".i00");
+	connectAttr ($ptOnSurface+".nny") ($matrix+".i01");
+	connectAttr ($ptOnSurface+".nnz") ($matrix+".i02");
+	connectAttr ($ptOnSurface+".nux") ($matrix+".i10");
+	connectAttr ($ptOnSurface+".nuy") ($matrix+".i11");
+	connectAttr ($ptOnSurface+".nuz") ($matrix+".i12");
+	connectAttr ($ptOnSurface+".nvx") ($matrix+".i20");
+	connectAttr ($ptOnSurface+".nvx") ($matrix+".i21");
+	connectAttr ($ptOnSurface+".nvx") ($matrix+".i22");
+	connectAttr ($ptOnSurface+".px")  ($matrix+".i30");
+	connectAttr ($ptOnSurface+".py")  ($matrix+".i31");
+	connectAttr ($ptOnSurface+".pz")  ($matrix+".i32");
+	connectAttr ($matrix+".o") ($dcmat+".imat");
+	connectAttr ($dcmat+".ot") ($constrainPt[0]+".t");
+	connectAttr ($dcmat+".or") ($constrainPt[0]+".r");
+	
+	$attrs = {"t","tx","ty","tz","r","rx","ry","rz"};
+	for($attr in $attrs) setAttr -k 0 -l 1 ($constrainPt[0]+"."+$attr);
+	for($attr in $attrs) setAttr -k 1 -l 0 ($target+"."+$attr);
+	
+	string $group;
+ 	if(`nodeType $orig_target` == "transform"){	
+		string $bindIMatrix[] = `duplicate -rr -rc $orig_target`;
+		delete `listRelatives -ad $bindIMatrix`;
+		color -ud 8 $bindIMatrix[0] ;
+		setAttr ($bindIMatrix[0]+".displayHandle") 0;		
+		$group = `rename $bindIMatrix[0] "hyperRealMeshOffset#"`;		
+	}else{
+ 		$group = `createNode transform -name "hyperRealMeshOffset#"`;
+ 		delete `pointConstraint $orig_target $group`;
+  		delete `orientConstraint $orig_target $group`;
+   		delete `scaleConstraint $orig_target $group`;				
+	}
+	$attrs = {"t","tx","ty","tz","r","rx","ry","rz","sx","sy","sz","s","v"};	
+	for($attr in $attrs) setAttr -k 1 -l 0 ($group+"."+$attr);	
+	parent $group $constrainPt[0];
+	parent $target $group ;	
+
+	/////  
+	// here's the key part that allows us to parent 
+	// the deformers to the geometry:
+	//
+	if($isCyclic == true && `objExists $cyclicDeformer` 
+		&& size(`ls -type geometryFilter $cyclicDeformer`) )
+	{
+		print "// Connecting Mesh Pt's Inverse Matrix into Deformer's Bind Pre Matrix Attribute (thats how the magic happens):\n" ;
+		if(`nodeType $cyclicDeformer` == "cluster" )
+		{
+			evalEcho("connectAttr "+$group+".worldInverseMatrix[0] "+$cyclicDeformer+".bindPreMatrix ;");
+			setAttr ($cyclicDeformer+".relative") 0;
+		}
+		else if( `nodeType $cyclicDeformer` == "softMod" )
+		{
+			evalEcho("connectAttr "+$group+".worldInverseMatrix[0] "+$cyclicDeformer+".bindPreMatrix ;");
+			connectAttr ($constrainPt[0]+".t") ($cyclicDeformer+".falloffCenter");
+			addAttr -ln "radius" -at double -min 0 -dv 5 $orig_target;
+			setAttr -e -keyable true ($orig_target+".radius");
+			setAttr ($orig_target+".radius") `getAttr ($cyclicDeformer+".falloffRadius")`;
+			connectAttr -f ($orig_target+".radius") ($cyclicDeformer+".falloffRadius");
+			setAttr ($cyclicDeformer+".relative") 0;
+		}
+		else if( `nodeType $cyclicDeformer` == "skinCluster" )
+		{
+			string $scMatrix[] = `listConnections -s 0 -d 1 -p 1 ($orig_target+".worldMatrix")`;
+			if(`size $scMatrix`)
+			{
+				int $matrix_index = substitute( "\\]$", ((string)`match "[0-9]+\\]$" $scMatrix[0]`), "");
+				evalEcho("connectAttr "+$group+".worldInverseMatrix[0] "+$cyclicDeformer+".bindPreMatrix["+$matrix_index+"] ;");
+			}
+		}
+	}
+
+	select $sel ;
+	return( $constrainPt[0] );
+
+}
+
+
+////
+//
+// string[] 	hyperRealMeshParent();
+//
+// This is the wrapper function useful for interactive 
+// execution based on active selection by user
+// (select mesh first, and transforms second):
+//
+global proc string[] hyperRealMeshParent()
+{
+
+	string $sel[] = `ls -o -sl -fl`;
+	
+	string $mesh = $sel[0];
+	string $target = $sel[1];
+	
+	string $return[];
+	
+	if( !`objExists $mesh` || !`objExists $target` || size($sel) <= 1 
+	   || ( !size(`listRelatives -c -s -type mesh $mesh`) && !size(`ls -type mesh $mesh`) )
+	   || !size(`ls -type transform $target`) 	)
+	{
+		error "Select the poly mesh to attach to first, and at least one (or more) transforms that will get constrained last." ;
+	}
+	select -d $mesh;
+	for($trans in `ls -sl -fl -o -type transform`)
+	{
+		if( catch( $return[`size $return`] = evalEcho("hyperRealMeshParentCmd "+$mesh+" "+$trans+" 3 ;")) ){
+			break;
+		}
+	}
+	select $sel ;
+
+	return( $return );
+}
+
+//eof

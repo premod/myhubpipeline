@@ -1,0 +1,56 @@
+
+//DESCRIPTION:	This script is used to tranfer UV and shaders. Its not create any history on geometry, so you can also use it after rig and skining is done.
+
+//Direction:	select first source geometry then target geometry and just click transfer UV or transfer shader button....
+
+
+
+
+global proc transferUV_Shader(string $case)
+{
+	
+//string $case;
+switch ($case)
+	{	 
+		case "copyUV":
+			// copy uv
+			string $obj[2] = `ls -sl`;
+			select -r $obj[1];
+			polyTransfer;
+			connectAttr -f ($obj[0]+ ".outMesh") polyTransfer1.otherPoly;
+			doBakeNonDefHistory( 1, {"prePost" });
+			select -cl;
+			break;
+
+		case "copyShader":
+
+			string $obj[2] = `ls -sl`;
+			// copy shader
+			string $shape[1] = `listRelatives -s $obj[0]`;
+			string $shader[1] = `listConnections -type shadingEngine $shape[0]`;
+			sets -e -forceElement $shader[0] $obj[1];
+			select -cl;
+			break;
+			
+		case "both":
+			
+			// copy uv
+			string $obj[2] = `ls -sl`;
+			select -r $obj[1];
+			polyTransfer;
+			connectAttr -f ($obj[0]+ ".outMesh") polyTransfer1.otherPoly;
+			doBakeNonDefHistory( 1, {"prePost" });
+			// copy shader
+			string $shape[1] = `listRelatives -s $obj[0]`;
+			string $shader[1] = `listConnections -type shadingEngine $shape[0]`;
+			sets -e -forceElement $shader[0] $obj[1];
+			select -cl;
+			break;
+
+	}
+}
+
+
+//command is :-      "      -c "transferUV_Shader (\"copyUV\")
+//		 "      -c "transferUV_Shader (\"copyShader\") "	
+//		"      -c "transferUV_Shader (\"both\") "

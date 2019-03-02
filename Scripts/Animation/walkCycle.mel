@@ -1,0 +1,373 @@
+// SCRIPTS WRITTEN BY FJ PRABHU
+
+global proc walkCycle () {
+global string $WalkChar;
+$WalkChar = whichChar();
+currentTime 1;
+startPose ();
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") -0.15;
+setAttr ($WalkChar+":FKCurveChest_M.rx") -4;
+setAttr ($WalkChar+":HipSwingerRoot_M.rx") 5;
+// Leg
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") 1;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 17;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") -1.2;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+	//hand
+setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -1.998;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.545;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -33.201;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -11.271;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -73.37;
+setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.098;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") -0.171;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70;
+heightSethand_R;heightSethand_L;
+setKeyF;
+
+currentTime 6;
+	//leg
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateY") 0.466;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") -0.05;
+setAttr ($WalkChar+":IKCurveLeg_L.roll") -0.8;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 14;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 17;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") 0;
+	//hand
+setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -2.072;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.058;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -20.429;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -7.036;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -71.744;
+setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.057;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") 0.241;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") -4.387;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 1.54;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70.201;
+heightSethand_R;heightSethand_L;
+setKeyF;
+
+currentTime 11;
+setAttr ($WalkChar+":IKCurveLeg_L.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") 1.3;
+setAttr ($WalkChar+":IKCurveLeg_L.roll") -4;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") -0.9;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") -12;
+heightSethand_R;heightSethand_L;
+setKeyF;
+
+currentTime 13;
+setAttr ($WalkChar+":FKCurveChest_M.rx") 4;
+setAttr ($WalkChar+":HipSwingerRoot_M.rx") -5;
+//leg
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") -0.15;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") -1.2;
+setAttr ($WalkChar+":IKCurveLeg_L.roll") 0;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 17;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") 1;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+//hand
+setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -1.996;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") -0.408; 
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -8.542;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -3.094;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -70.231;
+setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -1.982;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") 0.621;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") -20.131;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 7.14;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 71.269;
+heightSethand_R;heightSethand_L;
+setKeyF;
+
+//---2---
+currentTime 18;
+//leg
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") 0;
+
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") 0.466;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") -0.05;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") -0.8;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 14;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") 17;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+//hand
+setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.057;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") 0.241;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") -20.278;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 7.095;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 71.406;
+setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -2.072;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.058;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") 1.817;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") 0.664;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -70.489;
+heightSethand_R;heightSethand_L;
+setKeyF;
+
+currentTime 23;
+setAttr ($WalkChar+":IKCurveLeg_R.translateY") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") 1.3;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") -4;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") -0.9;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_L.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") -12;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+heightSethand_R;heightSethand_L;
+setKeyF;
+
+currentTime 25;
+setAttr ($WalkChar+":FKCurveChest_M.rx") -4;
+setAttr ($WalkChar+":HipSwingerRoot_M.rx") 5;
+//leg
+//setAttr ($WalkChar+":RootCurveRoot_M.translateY") -0.15;
+setAttr ($WalkChar+":IKCurveLeg_L.translateZ") -1.2;
+setAttr ($WalkChar+":IKCurveLeg_R.roll") 0;
+setAttr ($WalkChar+":IKCurveLegBall_L.rotateX") 17;
+setAttr ($WalkChar+":IKCurveLegBall_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveLeg_R.translateZ") 1;
+setAttr ($WalkChar+":IKCurveLeg_R.rotateX") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_R.rotateZ") 0;
+setAttr ($WalkChar+":FKCurveMiddleToe1_L.rotateZ") 0;
+//hand
+setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -1.998;
+setAttr ($WalkChar+":IKCurveArm_L.translateZ") 0.545;
+setAttr ($WalkChar+":IKCurveArm_L.rotateX") -33.201;
+setAttr ($WalkChar+":IKCurveArm_L.rotateY") -11.271;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -73.37;
+setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.098;
+setAttr ($WalkChar+":IKCurveArm_R.translateZ") -0.171;
+setAttr ($WalkChar+":IKCurveArm_R.rotateX") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateY") 0;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70;
+heightSethand_R;heightSethand_L;
+setKeyF;
+DynamicPos;
+}
+global proc DynamicPos(){
+currentTime 1; 
+dist_Sethand;
+heightSetR;heightSethand_R;heightSethand_L;
+currentTime 2; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 3; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 4; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 5; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 6; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 7; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 8; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 9; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 10; heightSetR;heightSethand_R;heightSethand_L;
+currentTime 11; heightSetR;heightSethand_R;heightSethand_L;
+//
+currentTime 13; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 14; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 15; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 16; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 17; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 18; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 19; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 20; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 21; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 22; heightSetL;heightSethand_R;heightSethand_L;
+currentTime 23; heightSetL;heightSethand_R;heightSethand_L;
+//
+currentTime 25; heightSetR;heightSethand_R;heightSethand_L;
+}
+
+global proc setKeyF() {
+global string $WalkChar;
+setKeyframe {$WalkChar+":RootCurveRoot_M.translateY", $WalkChar+":FKCurveMiddleToe1_R", $WalkChar+":FKCurveMiddleToe1_L", $WalkChar+":IKCurveLegBall_R", $WalkChar+":IKCurveLeg_L", $WalkChar+":IKCurveLeg_R", $WalkChar+":IKCurveLegBall_L"};
+}
+
+global proc startPose (){
+global string $WalkChar;
+print $WalkChar;
+setKeyframe ($WalkChar+":FKCurveChest_M.rx");
+setKeyframe($WalkChar+":HipSwingerRoot_M.rx");
+setKeyframe ($WalkChar+":RootCurveRoot_M");
+setKeyframe ($WalkChar+":FKCurveAnkle_L.rx");
+setKeyframe ($WalkChar+":FKCurveAnkle_R.rx");
+setKeyframe ($WalkChar+":IKCurveArm_R");
+setKeyframe ($WalkChar+":IKCurveArm_L");
+setKeyframe ($WalkChar+":IKCurveLegBall_L");
+setKeyframe ($WalkChar+":IKCurveLegBall_R");
+setKeyframe ($WalkChar+":IKCurveLeg_L");
+setKeyframe ($WalkChar+":IKCurveLeg_R");
+setKeyframe ($WalkChar+":FKCurveMiddleToe1_L");
+setKeyframe ($WalkChar+":FKCurveMiddleToe1_R");
+setKeyframe ($WalkChar+":FKCurveWrist_L.IndexFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.MiddleFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.RingFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.PinkyFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_L.ThumbFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.IndexFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.MiddleFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.RingFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.PinkyFingerCurl");
+setKeyframe ($WalkChar+":FKCurveWrist_R.ThumbFingerCurl");
+//
+//setAttr ($WalkChar+":RootCurveRoot_M.translateZ") 0.2;
+setAttr ($WalkChar+":FKCurveAnkle_R.rx") 16;
+setAttr ($WalkChar+":FKCurveAnkle_L.rx") 16;
+setAttr ($WalkChar+":IKCurveArm_L.follow") 10;
+setAttr ($WalkChar+":IKCurveArm_R.follow") 10;
+setAttr ($WalkChar+":FKIKControlCurveArm_R.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveArm_L.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveArm_R.FKIKBlend") 10;
+setAttr ($WalkChar+":FKIKControlCurveArm_L.FKIKBlend") 10;
+setAttr ($WalkChar+":FKIKControlCurveLeg_R.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveLeg_L.IKVis") 1;
+setAttr ($WalkChar+":FKIKControlCurveLeg_R.FKIKBlend") 10;
+setAttr ($WalkChar+":FKIKControlCurveLeg_L.FKIKBlend") 10;
+setAttr ($WalkChar+":RootCurveRoot_M.rotateX") 5;
+setAttr ($WalkChar+":IKCurveArm_L.translateX") -1.5;
+setAttr ($WalkChar+":IKCurveArm_L.translateY") -2.1;
+setAttr ($WalkChar+":IKCurveArm_L.rotateZ") -70;
+setAttr ($WalkChar+":IKCurveArm_R.translateX") 1.5;
+setAttr ($WalkChar+":IKCurveArm_R.translateY") -2.1;
+setAttr ($WalkChar+":IKCurveArm_R.rotateZ") 70;
+setAttr ($WalkChar+":FKCurveWrist_L.IndexFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.MiddleFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.RingFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.PinkyFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_L.ThumbFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.IndexFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.MiddleFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.RingFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.PinkyFingerCurl") 2.2;
+setAttr ($WalkChar+":FKCurveWrist_R.ThumbFingerCurl") 2.2;
+}
+
+global proc heightSetR(){
+global string $WalkChar;
+//
+if ((`getAttr($WalkChar+":IKKnee_R.rz")`<4.5) && (`getAttr($WalkChar+":IKKnee_R.rz")`>3.5)) {
+	print ("Ok="+`getAttr($WalkChar+":IKKnee_R.rz")`);
+
+} else if (`getAttr($WalkChar+":IKKnee_R.rz")`<4.5) {
+	print ("straight="+`getAttr($WalkChar+":IKKnee_R.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_R.rz")`< 4.5){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY - 0.001);
+	} 
+} else {
+	print ("bend="+`getAttr($WalkChar+":IKKnee_R.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_R.rz")`> 3.5){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY + 0.001);
+	} 
+}
+}
+
+global proc heightSetL(){
+global string $WalkChar;
+//
+if ((`getAttr($WalkChar+":IKKnee_L.rz")`<4.5) && (`getAttr($WalkChar+":IKKnee_L.rz")`>3.5)) {
+	print ("Ok="+`getAttr($WalkChar+":IKKnee_L.rz")`);
+
+} else if (`getAttr($WalkChar+":IKKnee_L.rz")`<4.5) {
+	print ("straight="+`getAttr($WalkChar+":IKKnee_L.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_L.rz")`< 4.5){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY - 0.001);
+	} 
+} else {
+	print ("bend="+`getAttr($WalkChar+":IKKnee_L.rz")`);
+	while (`getAttr($WalkChar+":IKKnee_L.rz")`> 3.5){
+		float $Pelvis_TY = `getAttr($WalkChar+":RootCurveRoot_M.ty")`;
+		setAttr ($WalkChar+":RootCurveRoot_M.translateY") ($Pelvis_TY + 0.001);
+	} 
+}
+}
+
+global proc heightSethand_L(){
+global string $WalkChar;
+
+if ((`getAttr($WalkChar+":IKElbow_L.ry")`>18) && (`getAttr($WalkChar+":IKElbow_L.ry")`<20)) {
+	print ("Ok="+`getAttr($WalkChar+":IKElbow_L.ry")`);
+
+} else if (`getAttr($WalkChar+":IKElbow_L.ry")`>18) {
+	print ("bend="+`getAttr($WalkChar+":IKElbow_L.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_L.ry")`> 18){
+		float $hand_L_TY = `getAttr($WalkChar+":IKCurveArm_L.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_L.translateY") ($hand_L_TY - 0.001);
+	} 
+} else {
+	print ("straight="+`getAttr($WalkChar+":IKElbow_L.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_L.ry")`< 20){
+		float $hand_L_TY = `getAttr($WalkChar+":IKCurveArm_L.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_L.translateY") ($hand_L_TY + 0.001);
+	} 
+}
+}
+
+global proc heightSethand_R(){
+global string $WalkChar;
+
+if ((`getAttr($WalkChar+":IKElbow_R.ry")`>18) && (`getAttr($WalkChar+":IKElbow_R.ry")`<20)) {
+	print ("Ok="+`getAttr($WalkChar+":IKElbow_R.ry")`);
+
+} else if (`getAttr($WalkChar+":IKElbow_R.ry")`>18) {
+	print ("bend="+`getAttr($WalkChar+":IKElbow_R.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_R.ry")`> 18){
+		float $hand_R_TY = `getAttr($WalkChar+":IKCurveArm_R.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_R.translateY") ($hand_R_TY - 0.001);
+	} 
+} else {
+	print ("straight="+`getAttr($WalkChar+":IKElbow_R.ry")`);
+	while (`getAttr($WalkChar+":IKElbow_R.ry")`< 20){
+		float $hand_R_TY = `getAttr($WalkChar+":IKCurveArm_R.translateY")`;
+		setAttr ($WalkChar+":IKCurveArm_R.translateY") ($hand_R_TY + 0.001);
+	} 
+}
+}
+
+global proc dist_Sethand(){
+global string $WalkChar;
+spaceLocator -name rHandLocate;
+parentConstraint -sr x -sr y -sr z ($WalkChar+":Shoulder_R") rHandLocate ;
+$loctx = `getAttr "rHandLocate.tx"`;
+$locty = `getAttr "rHandLocate.ty"`;
+$loctz = `getAttr "rHandLocate.tz"`;
+delete rHandLocate_parentConstraint1 ;
+parentConstraint -sr x -sr y -sr z ($WalkChar+":IKCurveArm_R") rHandLocate ;
+delete rHandLocate_parentConstraint1 ;
+parentConstraint -sr x -sr y -sr z rHandLocate ($WalkChar+":IKCurveArm_R") ;
+setAttr ("rHandLocate.tx")($loctx-0.3);
+$RhandPos = `getAttr ($WalkChar+":IKCurveArm_R.tx")`;
+delete ($WalkChar+":IKCurveArm_R_parentConstraint1");
+setAttr ($WalkChar+":IKCurveArm_R.tx")$RhandPos;
+setAttr ($WalkChar+":IKCurveArm_L.tx")(-$RhandPos);
+delete rHandLocate;
+}

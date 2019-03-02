@@ -1,0 +1,65 @@
+global proc changeLightAtt()
+{
+	if (`window -exists changeLightWin`)
+	{
+		deleteUI -window changeLightWin;
+	}
+	window -t "Light Box" -w 310 changeLightWin;
+	columnLayout -adj true;
+	button -bgc 0.6 0.7 0.5 -l "Show Intensity and Color" -c intensityWindowLoad;
+	button -bgc 0.6 0.7 0.5 -l "Show Shadows" -c shadowWindowLoad;
+	text -l "";
+	showWindow;
+}
+
+global proc intensityWindowLoad()
+{
+	if (`columnLayout -exists intLayout`)
+	{
+		deleteUI -columnLayout intLayout;
+	}
+
+	window -e changeLightWin;
+	columnLayout -adj true intLayout;
+	separator -style "single";
+	text -bgc 0.6 0.7 0.4 -l "Intensity and Color";
+	separator -style "single";
+	string $selLights[] = `ls -lights`;
+	for($eachLight in $selLights)
+	{
+		attrControlGrp -hmb 1 -l $eachLight -attribute ($eachLight+".intensity") ("intField"+$eachLight);
+	}
+	for($eachLight in $selLights)
+	{
+		attrColorSliderGrp -l ($eachLight+"_Color") -attribute ($eachLight+".color");
+	}
+	button -l "Close All" -c "closeAllAtt";
+	showWindow;
+}
+
+global proc shadowWindowLoad()
+{
+	if (`columnLayout -exists shadowLayout`)
+	{
+		deleteUI -columnLayout shadowLayout;
+	}
+	window -e changeLightWin ;
+	columnLayout -adj true shadowLayout;
+	separator -style "single";
+	text -bgc 0.6 0.7 0.4 -l "Shadow Color";
+	separator -style "single";
+	string $selLights[]=`ls -lights`;
+	for ($each in $selLights)
+	{
+		attrColorSliderGrp -l ($each+"_Shd_Color")  -attribute ($each+".shadowColor");
+	}
+	button -l "Close All" -c "closeAllAtt";
+	showWindow;
+}
+global proc closeAllAtt()
+{
+	deleteUI -window changeLightWin;
+	changeLightAtt();
+}
+
+

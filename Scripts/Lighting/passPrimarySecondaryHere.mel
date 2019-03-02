@@ -1,0 +1,121 @@
+global proc setTextureFileReference()
+{
+	string $prefix[] = `file -q -r`;
+	string $pName = basenameEx($prefix[0]);
+	string $currPath[] = `file -q -l`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		string $set[];
+		$numTokens = `tokenize $currPath[$i] "/" $set`;
+		if(($set[5] == "SETS") || ($set[6] == "SETS"))
+		{
+			
+			string $refFile = basenameEx($currPath[$i]);
+			int $setRig = endsWith($refFile, "_RIG");
+			if($setRig == "1")
+			{
+				string $ref[];
+				$numTokens = `tokenize $refFile "_" $ref`;
+				string $file = ($ref[0]+"_TEX"+".ma");
+				print $ref[0];
+				file -loadReference ($pName+":"+$refFile+"RN") -type "mayaAscii" -options "v=0" ("Q:/THE99/PRODUCTION/REFERENCES/"+$set[4]+"/SETS/RENDERABLE/"+$ref[0]+"_TEX"+".ma");
+			}
+		}
+	}
+}
+
+
+global proc setTextureFileReference()
+{
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		string $set[];
+		$numTokens = `tokenize $currPath[$i] "/" $set`;
+		if(($set[5] == "SETS") || ($set[6] == "SETS"))
+		{
+			
+			string $refFile = basenameEx($currPath[$i]);
+			int $setRig = endsWith($refFile, "_RIG");
+			if($setRig == "1")
+			{
+				string $ref[];
+				$numTokens = `tokenize $refFile "_" $ref`;
+				string $file = ($ref[0]+"_TEX"+".ma");
+				file -loadReference ($refFile+"RN") -type "mayaAscii" -options "v=0" ("Q:/THE99/PRODUCTION/REFERENCES/"+$set[4]+"/SETS/RENDERABLE/"+$ref[0]+"_TEX"+".ma");
+			}
+		}
+	}
+}
+
+
+global proc passPrimarySecondaryHere()
+{
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		string $refFile = basenameEx($currPath[$i]);
+		string $buffer[];
+		$numTokens = `tokenize $refFile "_" $buffer`;
+		int $val = startsWith($buffer[1], "PRI");
+		if($val == "1")
+		{
+			passRefFile($refFile);
+		} 
+	}
+}
+
+global proc passRefFile(string $file)
+{
+	string $currPath[] = `file -q -l`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		string $set[];
+		$numTokens = `tokenize $currPath[$i] "/" $set`;
+
+		string $name = basenameEx($currPath[$i]);
+		string $buffer1[];
+		$numTokens = `tokenize $name "_" $buffer1`;
+		int $val = startsWith($buffer1[1], "RIG");
+		string $buffer[];
+		$numTokens = `tokenize $name "_" $buffer`;
+		int $pri = startsWith($buffer[1], "PRI");
+		if($pri == "1")
+		{
+			file -unloadReference ($name+"RN") ("Q:/THE99/PRODUCTION/REFERENCES/EPISODE_08/"+$set[4]+"/"+$buffer1[0]+"/"+$name+".ma");
+		}
+		int $sec = startsWith($buffer[1], "SEC");
+		if($sec == "1")
+		{
+			file -unloadReference ($name+"RN") ("Q:/THE99/PRODUCTION/REFERENCES/EPISODE_08/"+$set[4]+"/"+$buffer1[0]+"/"+$name+".ma");
+		}
+	}
+	removePrimarySecondary();
+}
+
+global proc removePrimarySecondary()
+{
+	string $currPath[] = `file -q -l`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		string $set[];
+		$numTokens = `tokenize $currPath[$i] "/" $set`;
+		if(($set[5] == "SETS") || ($set[6] == "SETS"))
+		{
+			string $refFile = basenameEx($currPath[$i]);
+			string $buffer[];
+			$numTokens = `tokenize $refFile "_" $buffer`;
+			int $pri = startsWith($buffer[1], "PRI");
+			if($pri == "1")
+			{
+				catch(`file -rr ($refFile+".ma")`);
+			}
+			int $sec = startsWith($buffer[1], "SEC");
+			if($sec == "1")
+			{
+				catch(`file -rr ($refFile+".ma")`);
+			}
+		}
+	}
+}
+passPrimarySecondaryHere();

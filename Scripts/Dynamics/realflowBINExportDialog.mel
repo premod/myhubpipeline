@@ -1,0 +1,213 @@
+/*
+*	Called when the user clicks "Export" in the export BIN sequence dialog.
+*/
+global proc int realflowPerformBINExport()
+{
+	$persist = `checkBoxGrp -q -value1 rfBINPersistentOpts`;
+	if($persist)
+		optionVar -remove "rfNoPersistentExportOptions";
+	else
+		optionVar -iv "rfNoPersistentExportOptions" 1;
+		
+	string $path = `getAttr realflowBINExportOptions.path`;
+	if($path == "")
+	{
+		confirmDialog -title "No path"
+			-message "Please specify the path where the sequence(s) will be written."
+			-button "OK" -defaultButton "OK" -cancelButton "OK";
+		return 0;
+	}
+	
+	int $numItems = `textScrollList -q -numberOfItems rfBINParticleList`;
+	if($numItems < 1)
+	{
+		confirmDialog -title "No particles"
+			-message "You need to pick some particle nodes to export.\nSelect the particles or emitters in the viewport and press \"Add selected\"."
+			-button "OK" -defaultButton "OK" -cancelButton "OK";
+		return 0;
+	}
+	
+	// Save the list of particle nodes.
+	string $nodes[] = `textScrollList -q -allItems rfBINParticleList`;
+	for($i = 0; $i < $numItems; ++$i)
+		setAttr -type "string" ("realflowBINExportOptions.nodes[" + $i + "]") $nodes[$i];
+	setAttr -type "string" ("realflowBINExportOptions.nodes[" + $numItems + "]") "";
+
+	realflow -exportBIN -useSettingsNode;
+	return 1;
+}
+
+/*
+*	Maintains the sate of the "start frame" and "end frame" controls based on the "use playback range" setting.
+*/
+global proc realflowCheckBINPlaybackRange()
+{
+	int $useRange = `getAttr "realflowBINExportOptions.usePlaybackRange"`;
+	control -e -enable (!$useRange) rfBINStartFrame;
+	control -e -enable (!$useRange) rfBINEndFrame;
+}
+
+/*
+*	Looks for particle shapes in the current selection and adds them to the list of exported shapes.
+*/
+global proc realflowBINLoadSelectedParticles()
+{
+	string $selected[] = `ls -selection`;
+	string $currentItems[] = `textScrollList -q -allItems rfBINParticleList`;
+	int $numCurrent = size($currentItems);
+	
+	for($i = 0; $i < size($selected); ++$i)
+	{
+		$name = $selected[$i];
+		string $type = `nodeType $name`;
+		
+		if($type == "transform")
+		{
+			// It's a transform, look at what's below.
+			string $children[] = `listRelatives -shapes $name`;
+			if(size($children) > 0)
+				$name = $children[0];
+		}
+		
+		if(`objExists ($name + ".output[0]")`)
+		{
+			// It may be an emitter, see what it's connected to it.
+			string $dest[] = `connectionInfo -destinationFromSource ($name + ".output[0]")`;
+			if(size($dest) > 0)
+			{
+				string $buffer[];
+				tokenize $dest[0] "." $buffer;
+				$name = $buffer[0];
+			}
+		}
+		
+		if(`nodeType $name` != "particle")
+			continue;
+			
+		// Get the particle's transform node.
+		string $parents[] = `listRelatives -parent -type "transform" $name`;
+		if(size($parents) > 0)
+			$name = $parents[0];
+		
+		// Make sure we don't add it twice.
+		for($j = 0; $j < $numCurrent; ++$j)
+		{
+			if($currentItems[$j] == $name)
+				break;
+		}
+		
+		if($j < $numCurrent)
+			continue;
+			
+		$currentItems[$numCurrent] = $name;
+		++$numCurrent;
+		textScrollList -e -append $name rfBINParticleList;
+	}
+}
+
+/*
+*	Called when the user wants to remove a particle from the export list.
+*/
+global proc realflowBINRemoveSelectedParticles()
+{
+	for(;;)
+	{
+		int $selIdx[] = `textScrollList -q -selectIndexedItem rfBINParticleList`;
+		if( (size($selIdx) == 0) || ($selIdx[0] < 1) )
+			break;
+		textScrollList -e -removeIndexedItem $selIdx[0] rfBINParticleList;
+	}
+}
+
+/*
+*	Brings up a settings dialog for exporting a sequence of BIN files.
+*/
+global proc realflowBINExportDialog()
+{
+	int $firstOpen = realflowMakeExportOptionsNode("realflowBINExportOptions");
+
+	$wnd = `window -visible false -title "Export RealFlow BIN sequence" -iconName "Export BIN"`;
+	setUITemplate -pushTemplate attributeEditorTemplate;
+
+	$form = `formLayout`;
+		$frame = `frameLayout -l "Emitter Export Options" -collapsable false`;
+			columnLayout -adjustableColumn true;
+				realflowMakeDirControl("Path", "realflowBINExportOptions.path", "rfBINPath");
+				attrControlGrp -label "Prefix" -attribute "realflowBINExportOptions.prefix";
+				attrControlGrp -label "Name Format" -attribute "realflowBINExportOptions.nameFormat";
+				attrControlGrp -label "Padding" -attribute "realflowBINExportOptions.padding";
+				attrControlGrp -label "Particle Type" -attribute "realflowBINExportOptions.particleType";
+				attrControlGrp -label "Use Playback Range" -attribute "realflowBINExportOptions.usePlaybackRange" -changeCommand "realflowCheckBINPlaybackRange";
+				attrControlGrp -label "Start Frame" -attribute "realflowBINExportOptions.startFrame" rfBINStartFrame;
+				attrControlGrp -label "End Frame" -attribute "realflowBINExportOptions.endFrame" rfBINEndFrame;
+				attrControlGrp -label "Frame Offset" -attribute "realflowBINExportOptions.frameOffset";
+				
+				rowLayout -numberOfColumns 2;
+					text -l "Particle Nodes";
+					textScrollList -height 75 -deleteKeyCommand "realflowBINRemoveSelectedParticles" -allowMultiSelection true -allowAutomaticSelection true rfBINParticleList;
+				setParent ..;
+
+				rowLayout -numberOfColumns 2;
+					text -l "";
+					rowColumnLayout -numberOfColumns 2;
+						button -l "Add selected" -command "realflowBINLoadSelectedParticles";
+						button -l "Remove" -command "realflowBINRemoveSelectedParticles";
+					setParent ..;
+				setParent ..;
+
+				$persist = !`optionVar -q "rfNoPersistentExportOptions"`;
+				checkBoxGrp -numberOfCheckBoxes 1 -label1 "Persistent Options" -value1 $persist rfBINPersistentOpts;
+			setParent ..;
+		setParent ..;
+		$exportBtn = `button -label "Export" -command ("if(realflowPerformBINExport()) deleteUI " + $wnd)`;
+		$cancelBtn = `button -label "Cancel" -command ("deleteUI " + $wnd)`;
+	setParent ..;
+
+	formLayout -e
+		-numberOfDivisions 100
+
+		-attachForm		$exportBtn	"left" 5
+		-attachPosition	$exportBtn	"right" 5 50
+		-attachForm		$exportBtn	"bottom" 5
+
+		-attachForm		$cancelBtn	"right" 5
+		-attachPosition	$cancelBtn	"left" 5 50
+		-attachForm		$cancelBtn	"bottom" 5
+
+		-attachForm		$frame		"top" 0
+		-attachForm		$frame		"left" 0
+		-attachForm		$frame		"right" 0
+		-attachControl	$frame		"bottom" 5 $exportBtn
+	$form;
+
+	setUITemplate -popTemplate;
+	realflowCheckBINPlaybackRange();
+	
+	if(!$firstOpen)
+	{
+		int $numNodes = `getAttr -size realflowBINExportOptions.nodes`;
+		int $numAppended = 0;
+		for($i = 0; $i < $numNodes; ++$i)
+		{
+			string $attr = "realflowBINExportOptions.nodes[" + $i + "]";
+			string $name = `getAttr $attr`;
+			if($name == "")
+				break;
+			textScrollList -e -append $name rfBINParticleList;
+			++$numAppended;
+		}
+		
+		if($numAppended == 0)
+			$firstOpen = 1;		
+	}
+	
+	if($firstOpen)
+		realflowBINLoadSelectedParticles();
+	
+	window -e -sizeable false $wnd;
+	int $height = 410;
+	if(`about -mac`)
+		$height += 50;
+	window -e -width 465 -height $height $wnd;
+	showWindow $wnd;
+}

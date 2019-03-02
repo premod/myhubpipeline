@@ -1,0 +1,21 @@
+// SCRIPTS WRITTEN BY FJ PRABHU
+
+global proc ani_tools () {
+if (`window -exists "Ani_Tools"`) deleteUI Ani_Tools;
+window -title "IBN_Ani_Tools" Ani_Tools;
+columnLayout;
+rowColumnLayout -numberOfColumns 2
+  -columnWidth 1 100 
+  -columnWidth 2 100; 
+button -w 100 -l "multiRefer_ep05" -c "multiRef(\"05\")";
+button -w 100 -l "multiRefer_ep07" -c "multiRef(\"07\")";
+button -w 100 -l "multiRefer_ep08" -c "multiRef(\"08\")";
+button -w 100 -l "Blink" -c "blink";
+button -w 100 -l "Auto Walk" -c "AutoWalk";
+button -w 100 -l "Stand Ani" -c "movingHold";
+showWindow Ani_Tools;
+window -e -w 210 -h 300  Ani_Tools;
+source AutoWalk.mel;
+};
+
+

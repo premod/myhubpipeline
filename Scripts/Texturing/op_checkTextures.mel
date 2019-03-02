@@ -1,0 +1,1233 @@
+	global string $g_PathGroups[];
+	global string $g_checkBoxes[];
+	global string $g_checkboxRow[];
+
+	global string $g_roDisplay;
+	global string $g_txDisplay;
+	global string $g_scrollLayout;
+	global int $gl_debug;
+	$gl_debug=0;
+
+///////////////////////////////////////////////////////////_GUI
+global proc op_checkTextures()
+{
+	global int $debug;
+	global string $g_roDisplay;
+	global string $g_txDisplay;
+	global string $g_scrollLayout;
+		 
+	if (`window -query -exists wi_op_checkTextures`)
+ 	deleteUI  wi_op_checkTextures;
+
+ // Strings declarations
+ string $title = "TextureChecker";
+ string $sh = "op_txAboutDialog()";//"showHelp -absolute \"http://openpipeline.sourceforge.net/\" ";
+
+ //UI-Window
+  window -menuBar true 
+   -title $title
+   -s 1  wi_op_checkTextures;
+
+// Help menue
+	 menu -label "Help" -helpMenu true;
+ 	 menuItem -label "About" -c $sh;
+
+// Layout
+	string $form = `formLayout`;
+	string $child1 = `columnLayout -adjustableColumn true`;	
+	
+	frameLayout -label "Check all or selected texture files:"  -li 7 -borderStyle "out" -marginHeight 4 -marginWidth 10 -labelAlign "bottom";
+	 	rowLayout  -numberOfColumns 2 -columnWidth2 160 300  -columnAlign1 "left" ;	  	 
+			columnLayout  -rowSpacing 5 -columnWidth 220;     
+				string $collection2 = `radioCollection rc_allSelected`;
+			  $rb6 = `radioButton -cl $collection2 -sl  -label "All textures"  rb_all`;
+				button -bgc .5 .7 .7 -h 24 -w 200 -align "left" -enable 1  -l " Check files"  -c "op_getFiles()" bu_getFiles; 
+   		setParent ..;		
+   				columnLayout -w 35 -rowSpacing 5 -cat "left"  38;  
+					 $rb9 = `radioButton -cl $collection2 -label  "Selected" rb_Selected`;	
+	  		setParent ..;		
+	  		setParent ..;		
+   	setParent ..;			
+
+///   	 	 
+		frameLayout -label ""  -h 200 -li 7 -borderStyle "out"  -marginWidth 10 -marginHeight 5 -labelAlign "bottom";	 
+        $g_scrollLayout = `scrollLayout -horizontalScrollBarThickness 16  -verticalScrollBarThickness 16  -h 250 -w 460`;          
+           $g_txDisplay=`rowColumnLayout -h 300 -cw 1 760  -cat 1 left 10 -rat 1 top 10 -numberOfColumns 1`;
+           		text -l "Press \"Check files\" button to start." tx_displayInfo;
+            $g_roDisplay =`rowColumnLayout -h 300 -cw 1 600 -numberOfColumns 1`;
+			 			setParent ..;
+			 	setParent ..;
+
+			 	setParent ..;
+		setParent ..;//frame
+////////
+	frameLayout -label ""  -li 7 -borderStyle "out"  -marginWidth 10 -labelAlign "bottom";	 
+	 	//columnLayout ;
+	 	
+			columnLayout  -rowSpacing 5 ;  
+					text -label "New texture path:";
+					string $label;
+					int $state=1;
+					if (`optionVar -exists op_currProjectPath` && `optionVar -q op_currProjectPath`!=0 )
+						$label=("Use OP standard textures folder: "+`optionVar -q op_currProjectPath`+"textures");
+					else
+					{
+						$state=0;
+						$label=("Use OP standard textures folder: was not found in your machine");
+					}			
+					checkBox -value $state -enable $state -l $label -align left -w 600 -cc "op_toogleTextfield()" ch_Standard;
+					
+					rowLayout  -numberOfColumns 2 -columnWidth2 300 40 -columnAlign1 "left" ;	  
+						textField -en 0 -tx "" -w 300 tx_newPath;  
+						button -en 0 -bgc .8 .8 .8  -w 40  -align "left" -l " Set..." -c "op_setInputDir(\"tx_newPath\")" bu_browse; 	
+					setParent ..;	
+					checkBox  -label "Create sub folder in texture path:" -cc "op_toogleTextfield()"  ch_newFolder;
+					textField -tx "my_sourceImages" -en 0 -w 200 tx_newFolder;  		
+ 
+	 	rowLayout  -numberOfColumns 2 -columnWidth2  225 225  -columnAlign1 "center" ;	  		
+			columnLayout  -rowSpacing 5 ;  
+					button -bgc .8 .8 .8  -w 200  -align "left" -enable 1  -l " Copy files to folder only"  -c "op_processFiles(1)" bu_Copy;  
+					button -bgc .8 .8 .8  -w 200  -align "left" -enable 1 -l " Move files to folder only" -c "op_processFiles(0)" bu_Move ; 	
+					button -bgc .8 .8 .8  -w 200 -align "left" -enable 1 -l " Set paths to folder" -c "op_processFiles(2)" bu_Set; 						
+				setParent ..;	
+				columnLayout  -rowSpacing 5 ;  
+								button -bgc .8 .8 .8  -w 200  -align "left" -enable 1  -l " Copy and set files to folder"  -c "op_processFiles(3)" bu_CopySet; 	
+								button -bgc .8 .8 .8  -w 200  -align "left" -enable 1  -l " Move and set files to folder"  -c "op_processFiles(4)" bu_MoveSet; 
+				setParent ..;									 				
+
+					setParent ..;	
+		setParent ..;//frame
+	///		  
+	  		setParent ..;	
+	  	frameLayout -l"" -bv 0 -marginWidth 1 -marginHeight 4;
+	  		rowLayout -numberOfColumns 2 -columnWidth2 250 250  ;	  
+			 	columnLayout  -rowSpacing 5 ; 
+ 							button -h 30 -label "Clear" -w 250 -c "op_clearGUI";
+				setParent ..;	
+			 	columnLayout  -rowSpacing 5 ; 
+					button -h 30 -label "Close" -w 250  -c "op_deleteTGUI";
+				setParent ..;	
+		setParent ..;	
+		setParent ..;	
+			 	
+	 	setParent ..; //column
+	setParent ..; //form	 
+	 	window -e	-wh 520 640 wi_op_checkTextures;
+	showWindow  wi_op_checkTextures;					
+}
+
+
+global proc op_txAboutDialog()
+{
+	if (`window -q -exists infoWindow`)
+	{
+		deleteUI infoWindow;	
+	}
+	
+	string $infoWindow = `window 
+			-title "About TextureChecker"
+			-widthHeight 300 250
+			infoWindow`;
+		string $text="Features:\nCopy, move and set paths for textures in a scene.";                                                                     
+		$text+="Handles files, .psd files, mental ray textures and ibl textures.\n\n";
+		$text+="Usage:\nHit the \"check files\" button.";
+		$text+="In the result section select the checkboxes of the texture groups ";
+		$text+="you want to edit. \n\nChoose your destination folder/new texure path below which can be "; 
+		$text+="the op standard textures folder (below the project folder) or ";
+		$text+="any folder if you uncheck \"Use OP-standard texture folder\" and ";
+		$text+="type a path into the text field. You can also use the \"Set...\" button to ";
+		$text+="browse your directories.\n\nYou can create add a subdirectory in the path by ";
+		$text+="checking the \"Create sub folder\" checkbox and add a name to the textfield.\n";
+		$text+="Hit any of the \"copy\", \"move\" or \"set path\" buttons to perform the";
+		$text+="desired activity. Detailed results are displayed in the script editor.\n\n";
+		$text+="Hit the \"check files\" button again before continuing to ensure you ";
+		$text+="have updated results in the texture groups.\n";
+	columnLayout -adjustableColumn true;
+		scrollField -wordWrap true -width 300 -height 200
+			-text $text
+			-editable false;
+				
+ 	    button -label "Close" -command ("deleteUI -window " + $infoWindow);
+ 	setParent ..;
+ 	window -e -widthHeight 300 250 $infoWindow;
+ 	showWindow $infoWindow;		
+}
+
+
+///GUI helper
+global proc op_toogleTextfield()
+{	
+	global int $gl_debug;
+	if ($gl_debug) 
+	{  
+			// print ("\n +++++function: op_toogleTextfield()"); 
+	}
+	
+		if (`checkBox -q -v ch_Standard`)
+		{
+			textField -e  -en 0  tx_newPath; 
+			button -e -en 0 bu_browse; 
+		}
+		else if (`checkBox -q -v ch_Standard`==0)
+		{
+			textField -e -en 1  tx_newPath;  			
+			button -e -en 1 bu_browse;	
+		}				
+		
+		if (`checkBox -q -v ch_newFolder`)
+		{
+			textField -e -en 1  tx_newFolder;  
+		}
+		else 	if (`checkBox -q -v ch_newFolder`==0)
+			textField -e -en 0 tx_newFolder;  
+		
+		if (`optionVar -exists op_currProjectPath` && `optionVar -q op_currProjectPath`!=0 )
+			 checkBox -e -enable 1 ch_Standard;
+				else 
+				 checkBox -e -enable 0 ch_Standard;
+}
+
+////////////////////////////////////////////////////////////////////////////
+///reset GUI
+global proc op_clearGUI()
+{	
+	global int $gl_debug;
+	if ($gl_debug) 
+	{  
+			 print ("\n +++++function: op_clearGUI()"); 
+	}
+	
+		global string $g_roDisplay;
+		textField -e -tx "my_sourceImages" -en 0 tx_newFolder;  		
+		text -e -l "Press \"Check files\" button to start." tx_displayInfo; 
+		textField -e -tx "" tx_newPath;  
+		checkBox -e -v 0 ch_newFolder;
+								
+		string $children[]=`rowColumnLayout -q -childArray $g_roDisplay`;
+		for ($l= 0; $l< size($children); $l++)
+		{	
+			deleteUI $children[$l]; 
+		}
+				if (`optionVar -exists op_currProjectPath` && `optionVar -q op_currProjectPath`!=0 )
+						 checkBox -e -enable 1 ch_Standard;
+				else 
+				 checkBox -e -enable 0 ch_Standard;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// delete GUI
+global proc op_deleteTGUI()
+{	
+	global int $gl_debug;
+	if ($gl_debug) 
+	{  
+			 print ("\n +++++function: op_deleteTGUI()"); 
+	}
+	deleteUI wi_op_checkTextures; 
+	select -cl;
+}
+
+
+////////////////////////////////////////////////////////////////////////////
+//// group textures by paths
+global proc string[] op_groupByPath(string $fileNodes[]) 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+				print ("\n op_groupByPath():"); 
+		}
+		
+	 	global string $g_PathGroups[];		
+		clear $g_PathGroups;
+	  string $filePath, $pathOnly, $buffer[];
+		$g_PathGroups[0]="*";
+		$g_PathGroups[1]="*";
+		
+	// group 0 none, 1 empty paths
+	for ($i=0;$i<size($fileNodes);$i++)
+	{
+		if (`nodeType $fileNodes[$i]`=="mentalrayIblShape")
+		{
+			$filePath = toNativePath(substituteAll("\\\\",`getAttr ($fileNodes[$i] + ".texture")`,"/"));
+	  } 
+	  else if (`nodeType $fileNodes[$i]`=="mib_texture_lookup")
+	  {
+	  	string $texNode= `connectionInfo -sourceFromDestination ($fileNodes[$i] +".tex")`; 	
+	    tokenize $texNode "." $buffer;
+			if (`nodeType $buffer[0]`!="mentalrayTexture")
+			{
+				$filePath =toNativePath(substituteAll("\\\\",`getAttr ($buffer[0] + ".fileTextureName")`,"/"));
+	 		}
+	 	} 
+	  else
+	  {
+	  	$filePath =toNativePath(substituteAll("\\\\",`getAttr ($fileNodes[$i] + ".fileTextureName")`,"/"));
+	  }
+
+	  $pathOnly = dirname ($filePath);
+	  if (`size($filePath)`==0)
+		{
+			  string $tmp1;
+				if (`size($g_PathGroups[0])`> 1)
+			  	 $tmp1 = $g_PathGroups[0] + "*" + $fileNodes[$i];
+			  else
+			  	 $tmp1 = "*" + $fileNodes[$i];			  
+				$g_PathGroups[0]=$tmp1;   	
+		} 
+		else if (`size($pathOnly)`==0)
+		{
+				string $tmp2; 
+				if (`size($g_PathGroups[1])` >1 )
+					$tmp2= $g_PathGroups[1] + "*" + $fileNodes[$i];
+			  else
+			  	 $tmp2 = "*" + $fileNodes[$i];	
+				$g_PathGroups[1]=$tmp2;
+		} 	
+		else
+		{
+				// Windows is not case sensitive to path
+		      string $cmp1 = $pathOnly;
+		   	  if (`about -nt`) 
+		    	{
+		         $cmp1 = tolower($pathOnly);
+		     	}		
+
+		     	int $found =0;
+					string $pBuffer[];
+					for ($j=2;$j<size($g_PathGroups);$j++)
+					{
+               tokenize $g_PathGroups[$j] "*" $pBuffer;
+						   string $cmp2 = $pBuffer[0];
+							 if (`about -nt`) 
+							 {
+							     $cmp2 = tolower($pBuffer[0]);
+							 }	
+		          
+		           // Compare current path to all "groups" have been found.
+		           if (tolower($cmp1) == tolower($cmp2))
+		           {
+		             // Append current node to current group
+		               string $tmp = $g_PathGroups[$j] + "*" + $fileNodes[$i];
+		               $g_PathGroups[$j] = $tmp;
+		               $found =1;
+	
+		               break;
+		            }
+		        }
+		        // Create a new "group" and append current file texure node.
+		       if ($found ==0)
+		       {
+		       	   int $size=`size($g_PathGroups)`;
+		       	   if ($size < 2)
+		       	   	$size=3;
+		       	//	 print ("`size($g_PathGroups)`" +`size($g_PathGroups)` +"\n");
+		           $g_PathGroups[`size($g_PathGroups)`] = $pathOnly + "*" + $fileNodes[$i];
+		       }	     
+			} 
+		} 
+			
+	return $g_PathGroups;
+}
+
+
+////////////////////////////////////////////////////////////////////////////
+//////put files path to process in array, display result in layout 
+global proc op_getFiles() 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+				print ("\n op_getFiles():"); 
+		}
+		global string $g_roDisplay;
+		global string $g_scrollLayout;
+    global string $g_txDisplay;
+   	global string $g_checkBoxes[];
+   	global string $g_PathGroups[]; 
+		global string $g_checkboxRow[];
+
+		clear $g_checkboxRow;					
+		clear $g_checkBoxes;
+		clear $g_PathGroups;		
+				
+		string $allFileNodes[];	
+		string $collection = `radioCollection -q -sl rc_allSelected`;	
+	 string $fileNodes[];
+	 
+	 	string $label;
+	if (`optionVar -exists op_currProjectPath` && `optionVar -q op_currProjectPath`!=0 )
+		$label=("Use OP standard textures folder: "+`optionVar -q op_currProjectPath`+"textures");
+	else
+	{
+		$label=("Use OP standard textures folder: was not found in your machine");
+		checkBox -e -align left -w 430 -value 0 ch_Standard;	
+	}
+	checkBox -e -l $label -align left -w 430  ch_Standard;
+	
+	//all
+	if($collection=="rb_all")
+	{	
+			$allFileNodes = `ls -typ file -typ psdFileTex -typ mentalrayTexture`;
+			string $IBLs[];
+			if (`pluginInfo -q -loaded Mayatomr`== 1)
+			{
+				$IBLs = `ls -typ mentalrayIblShape`; 			
+				$allFileNodes= stringArrayCatenate($allFileNodes, $IBLs);
+			}
+	}
+	else
+	{
+			$fileNodes = `ls -sl`;
+			for ($i=0;$i<size($fileNodes);$i++)
+	  	{
+	  		if(`nodeType $fileNodes[$i]`=="file" || `nodeType $fileNodes[$i]`=="mentalrayIblShape" || `nodeType $fileNodes[$i]`=="mib_texture_lookup" || `nodeType $fileNodes[$i]`=="mentalrayTexture" ||`nodeType $fileNodes[$i]`=="psdFileTex")
+	  		{	
+					$allFileNodes[`size($allFileNodes)`]=$fileNodes[$i];	
+				}
+			}
+	}
+	
+		  			
+	select -cl;	
+	deleteUI $g_roDisplay;
+
+		
+ 	if(`size($allFileNodes)`==0)
+	{	
+			if($collection!="rb_all")
+	  	 		text -e -l "Result: No textures selected." tx_displayInfo;
+	  	else 
+	  	 		text -e -l "Result: No textures in scene." tx_displayInfo;			
+	
+       $g_roDisplay= `rowColumnLayout -rat 1 top 2 -numberOfColumns 1 -h 300 -cw 1 600  -parent $g_txDisplay`;
+	}
+	else
+	{	  			        
+       $g_roDisplay= `rowColumnLayout -rat 1 top 2 -numberOfColumns 1 -h 35 
+        -parent $g_txDisplay
+        -columnWidth 1 600 `;
+		 		//scrollLayout -e -w 360 -h 200 $g_scrollLayout;			
+				string $filePathGroups[]=op_groupByPath($allFileNodes); 
+	  		text -e -w 360 -l ("Result: "+ `size($allFileNodes)`+ " textures checked in " +(`size($filePathGroups)`)+ 
+	  		" locations. \nContinue by selecting texture groups you want to edit:\n") tx_displayInfo;	
+	
+				int $sizeBuffer;
+				int $sizeBuffer1;
+				string $buffer[];			 					
+				 if (`size($filePathGroups[0])`>1)
+				 {
+          	tokenize $filePathGroups[0] "*" $buffer;
+          	$sizeBuffer=`size($buffer)`;   
+		 		 }
+		 		 else
+		 		 $sizeBuffer=0;
+		 		 
+				 	$g_checkBoxes[0]= `checkBox  -h 19 -w 300 -l ($sizeBuffer + " textures have empty paths.") -onc "op_selectGroupInScene($g_checkBoxes[0])" `;      
+					if($sizeBuffer==0)
+						checkBox  -e -enable 0 $g_checkBoxes[0];      
+				
+				 if (`size($filePathGroups[1])`>1)
+				 {
+				 	 tokenize $filePathGroups[1] "*" $buffer;
+				 	 $sizeBuffer1=`size($buffer)`;  
+				 }
+				 else
+				 	 $sizeBuffer1=0;
+				 	 
+				 	 $g_checkBoxes[1]= `checkBox  -h 19 -l ($sizeBuffer1 + " textures have no paths.") -onc "op_selectGroupInScene($g_checkBoxes[1])"`;   
+					 if($sizeBuffer1==0)
+						checkBox  -e -enable 0 $g_checkBoxes[1];   
+					 separator -h 10 -w 300;
+				 
+				 //progress bar 
+				 	catch(`waitCursor -state on`);            
+					progressWindow  -isInterruptable true;
+				 	int $prgs_max=(`size($filePathGroups)` -1);
+				 	catch(`progressWindow -e -min 0 -max $prgs_max`); 
+
+
+				  string $buffer1[], $found[], $notFound[];	
+					// display all texture groups
+				  for ($i=2;$i<size($filePathGroups);$i++)
+				  {		  
+				  			catch(`progressWindow -e -step 1`); 			  		 	
+               	tokenize $filePathGroups[$i] "*" $buffer1;
+               	int $sizeBuffer=`size($buffer1)`;
+            
+            	$g_checkboxRow[$i]=`rowColumnLayout  -numberOfColumns 1  -h 19 -columnWidth 1 760 -p $g_roDisplay "ro_check#"`;
+								$g_checkBoxes[$i]= `checkBox -h 19 -w 460  -l (($sizeBuffer -1) + " textures in: " + $buffer1[0]) "ch_texGroup#"`; 
+							setParent ..;
+							
+	            	string $onCommand  = ("op_showDetails(\"" + $g_checkBoxes[$i] + "\")");
+	            	string $offCommand = ("op_hideDetails(\"" + $g_checkBoxes[$i] + "\")");
+	            	checkBox -e -onc $onCommand -ofc $offCommand $g_checkBoxes[$i];
+							//	print 	("$onCommand:"+	$onCommand+"\n");
+				  } 
+				text -l"";
+				text -l"";
+		
+		if (`optionVar -exists op_currProjectPath` && `optionVar -q op_currProjectPath`!=0 )
+			checkBox -e -enable 1 ch_Standard;
+		else 
+			checkBox -e -enable 0 ch_Standard;		
+		
+			catch(`progressWindow -e -step 1`);   
+	  	progressWindow -endProgress; 		
+			catch(`waitCursor -state off`);  
+			select -cl;  
+		 }    
+}
+
+///////////////////////////////////////////////////////////
+//helper to display an error message
+ global proc op_displayError(string $message)
+ {
+	global int $gl_debug;	
+	if ($gl_debug) 
+	{   
+			//	print ("\n op_displayError(string $message):"); 
+	}
+ 		confirmDialog -title "openPipeline Error" -m $message  -b "OK" -db "OK";     
+ }  
+
+///////////////////////////////////////////////////////////
+//helper fuction to get fileNode names from PathgroupString
+global proc string[] op_fileNodesFromFileGroup(string $groupName) 
+{
+	global int $gl_debug;	
+	if ($gl_debug) 
+	{   
+			//	print ("\n op_fileNodesFromFileGroup(string $groupName) :"); 
+	}
+
+	string $filename[];
+	string $buffer1[];
+	
+	int $numTokensB = `tokenize $groupName "*" $buffer1`;
+	int $start=1;
+	if (startsWith($groupName, "*"))
+		$start=0;
+	
+	for ($k=$start;$k<$numTokensB;$k++)
+	{	
+		$filename[size($filename)]=$buffer1[$k];
+	}
+	return $filename;
+}
+
+///////////////////////////////////////////////////////////
+//helper fuction to get pathGroup from checkbox label
+global proc int op_pathGroupFromLabel(string $checkboxName) 
+{
+	global int $gl_debug;	
+	if ($gl_debug) 
+	{   
+			print ("\n op_pathGroupFromLabel(string $checkboxName) "); 
+	}
+	global string $g_PathGroups[]; 
+	string $buffer[];		
+	int $found=-1;
+	string $text=strip(`checkBox -q -l $checkboxName`);
+
+	if (endsWith($text, "paths.")==0)
+	{
+		int $numTokens = `tokenize $text ":" $buffer`;
+		string $oldPath;
+		if ($numTokens>2)
+				$oldPath=strip($buffer[1])+":"+strip($buffer[2]);
+		else if (endsWith($text, " path.")==0)
+				$oldPath=strip($buffer[1]);
+		else
+				$oldPath="*";
+											
+		string $buffer1[];	
+		for ($j=2;$j<size($g_PathGroups);$j++)
+		{	
+			int $numTokens = `tokenize $g_PathGroups[$j] "*" $buffer1`;
+			if(tolower($buffer1[0]) == tolower($oldPath))
+			{
+					$found=$j;
+					break;
+			}
+		}	
+		//print $found;
+	}
+	
+	if (endsWith($text, "no paths.")==1)
+		$found=1;
+	else if (endsWith($text, "empty paths.")==1)
+		$found=0;
+	return $found;
+}
+
+///////////////////////////////////////////////////////////
+// select textures of a subgroup in the scene
+global proc op_selectSubGroupInScene(string $checkboxName) 
+{
+	global int $gl_debug;	
+	if ($gl_debug) 
+	{   
+				print ("\n op_selectSubGroupInScene(string $checkboxName):"+ "\n"); 
+	}	
+		global string $g_PathGroups[];
+		string $buffer[];
+		
+		select -cl;
+		int $numTokens = `tokenize $checkboxName "_" $buffer`;
+		string $groupName=$g_PathGroups[int($buffer[1])];		
+		string $fileNodes[]=op_fileNodesFromFileGroup($groupName);
+		string $mBuffer[];
+				
+		if ($buffer[0]=="chFound")
+		{
+				string $found[]=op_fileFromFileNode($fileNodes, 0); 
+				if (size($found)>0)
+				{	
+						for ($l= 0; $l< size($found); $l++)
+						{	
+							if (`nodeType $found[$l]`=="mentalrayTexture")
+						  {
+						  	string $texNode[]= `connectionInfo -destinationFromSource ($found[$l] +".message")`; 	
+				    		tokenize $texNode[0] "." $mBuffer;
+								if (`nodeType $mBuffer[0]`=="mib_texture_lookup")
+										select -add ($mBuffer[0]);	
+						  }			
+							select -add ($found[$l] );
+						}	
+				}  			
+		}
+		else
+		{
+			string $notFound[]=op_fileFromFileNode($fileNodes, 1);
+		//	print("$checkboxName: "+ $buffer[0] + ": "+ size($notFound) + "\n");		
+			if (size($notFound)>0)
+			{	
+					for ($l= 0; $l< size($notFound); $l++)
+					{	
+						if (`nodeType $notFound[$l]`=="mentalrayTexture")
+					  {
+					  	string $texNode[]= `connectionInfo -destinationFromSource ($notFound[$l] +".message")`; 	
+			    		tokenize $texNode[0] "." $mBuffer;
+							if (`nodeType $mBuffer[0]`=="mib_texture_lookup")
+									select -add ($mBuffer[0]);
+					  }			
+						select -add ($notFound[$l] );
+					}
+			}	
+		}
+}
+
+///////////////////////////////////////////////////////////
+// select textures of a group in the scene
+global proc op_selectGroupInScene(string $checkboxName) 
+{
+	global int $gl_debug;	
+	if ($gl_debug) 
+	{   
+				print ("\n op_selectGroupInScene(string $checkboxName):"+ "\n"); 
+	}	
+	global string $g_PathGroups[];
+	
+	select -cl;
+	int $group= op_pathGroupFromLabel($checkboxName);	
+	string $buffer[];
+
+	if ($group >=0)
+	{
+			string $groupName=$g_PathGroups[$group];		
+			string $fileNodes[]=op_fileNodesFromFileGroup($groupName);
+				
+			if (`size($fileNodes)`>0)
+			{	
+				for ($l= 0; $l< size($fileNodes); $l++)
+				{	
+					if (`nodeType $fileNodes[$l]`=="mentalrayTexture")
+				  {
+				  	string $texNode[]= `connectionInfo -destinationFromSource ($fileNodes[$l] +".message")`; 	
+		    		tokenize $texNode[0] "." $buffer;
+						if (`nodeType $buffer[0]`=="mib_texture_lookup")
+								select -add ($buffer[0]);		
+				  }			
+					select -add ($fileNodes[$l] );
+				}	
+			}	
+	}
+}
+
+///////////////////////////////////////////////////////////
+// hide row for found and not found textures when checkbox is deselected
+global proc op_hideDetails(string $checkboxName) 
+{	
+	global int $gl_debug;
+	if ($gl_debug) 
+	{  
+			 print ("op_hideDetails(string $checkboxName)" ); 
+	}
+		
+		global string $g_checkboxRow[];
+	
+		int $group=	op_pathGroupFromLabel($checkboxName);		
+		if ($group >=0)
+		{	
+			string $children[]=`rowColumnLayout -q -childArray $g_checkboxRow[$group] `;			
+			for ($l= 1; $l< size($children); $l++)
+			{	
+				deleteUI $children[$l]; 
+			}
+			rowColumnLayout -e -h 19 $g_checkboxRow[$group];
+		}
+}
+
+///////////////////////////////////////////////////////////
+// display a row for found and not found textures when checkbox is selected
+global proc op_showDetails(string $checkboxName) 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+				print ("\n op_showDetails(string $checkboxName)"+ "\n"); 
+		}
+
+		global string $g_roDisplay;
+		global string $g_checkboxRow[];
+		global string $g_PathGroups[];	
+
+		int $group =op_pathGroupFromLabel($checkboxName);
+
+		if ($group >=0)
+		{
+			string $groupName= $g_PathGroups[$group];
+			string $fileNodes[]=op_fileNodesFromFileGroup($groupName);
+										    				
+		  string $found[]=op_fileFromFileNode($fileNodes, 1); 
+			string $notFound[]=op_fileFromFileNode($fileNodes, 0); 
+			int $foundS=`size($notFound)`;
+			int $NfoundS=`size($found)`;
+				// add checkboxes
+				string $onCommand=("op_selectSubGroupInScene(" + "\"chFound_" + $group +"\")" );
+				string $onCommand1=("op_selectSubGroupInScene(" + "\"chNotFound_" + $group +"\")" );
+			
+				if (`rowColumnLayout -q -exists $g_checkboxRow[$group]`)
+				{
+					rowColumnLayout -e -h 35 $g_checkboxRow[$group];				    	
+					rowLayout -p 	$g_checkboxRow[$group]  -numberOfColumns 3 -columnWidth3 20 100 100;
+							  	columnLayout;
+								     	 setParent ..; 
+							    	columnLayout;				    				
+									     	string $test1= `checkBox -value 1 -l ($foundS  + " not found ") -onc $onCommand ("chFound_"+ $group)`;  
+									    	if ($foundS ==0)
+													checkBox -e -en 0 -value 0 $test1;
+									     setParent ..; 
+							     columnLayout;
+									     	string $test= `checkBox -value 1 -l ( $NfoundS +" found ") -onc $onCommand1 ("chNotFound_" + $group)`;  
+									    	if ($NfoundS ==0)
+													checkBox -e -en 0 -value 0 $test;
+									     setParent ..;    
+									     setParent ..; 
+							 setParent ..; 	
+				}
+				op_selectGroupInScene($checkboxName);
+			}
+}	
+	
+///////////////////////////////////////////////////////////
+// helper, check if file path exists
+global proc int op_fileExistsCheck(string $path) 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+			//	print ("\n op_fileExistsCheck(string $path) "); 
+		}
+
+
+	if (`filetest -f $path`)//-s 
+ 		return  1;
+ 	else
+ 	 		return 0;
+}
+
+///////////////////////////////////////////////////////////
+// helper, check if file path in filenode exists
+global proc string[] op_fileFromFileNode(string $fileNodes[], int $exists) 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+			print ("\n op_fileFromFileNode(string $fileNodes[], int $exists)  "); 
+		}
+		string $notFound[];
+		string $found[];		
+		string $buffer[];	
+		string $filePath;	
+		
+	
+		for ($j=0;$j<size($fileNodes);$j++)
+		{
+						if (`nodeType $fileNodes[$j]`=="mib_texture_lookup")
+					  {
+					  	string $texNode= `connectionInfo -sourceFromDestination ($fileNodes[$j] +".tex")`; 	
+					    tokenize $texNode "." $buffer;
+							if (`nodeType $buffer[0]`!="mentalrayTexture")
+							{
+								$filePath =toNativePath(substituteAll("\\\\",`getAttr ($buffer[0] + ".fileTextureName")`,"/"));
+					 		}
+						}
+						else if (`attributeExists "fileTextureName" $fileNodes[$j]`)		
+				 				$filePath = toNativePath(substituteAll("\\\\",`getAttr ($fileNodes[$j] + ".fileTextureName")`,"/"));
+					  else if (`attributeExists "tx" $fileNodes[$j]`)	
+					  		$filePath = toNativePath(substituteAll("\\\\",`getAttr ($fileNodes[$j] + ".tx")`,"/"));
+					
+					
+				  	if(op_fileExistsCheck($filePath))
+				  			$found[`size($found)`]=$fileNodes[$j];
+				  	else
+				  			$notFound[`size($notFound)`]=$fileNodes[$j];				  			
+		 } 
+
+			if ($exists==1)	
+				return $found;	
+		  else if ($exists==0)
+				return $notFound;
+			else if ($exists==0)
+				return stringArrayCatenate($found, $notFound);		
+}		  
+
+
+///////////////////////////////////////////////////////////
+// helper, return file path without fileName
+global proc string op_filePathFromFileNode(string $fileNode) 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+			//print ("\n op_filePathFromFileNode(string $fileNode)   "); 
+		}
+
+		string $buffer[];	
+		string $filePath;
+		
+		if (`nodeType $fileNode`=="mib_texture_lookup")
+		{
+					  	string $texNode= `connectionInfo -sourceFromDestination ($fileNode +".tex")`; 	
+					    tokenize $texNode "." $buffer;
+							if (`nodeType $buffer[0]`!="mentalrayTexture")
+							{
+								string $inputMrTx=`getAttr ($buffer[0] + ".fileTextureName")`;
+								$filePath =`substituteAll "\\\\" $inputMrTx "/"`;
+					 		}
+		}
+		else if (`attributeExists "fileTextureName" $fileNode`)		
+		{
+							string $input=`getAttr ($fileNode + ".fileTextureName")`;
+			 				$filePath = `substituteAll "\\\\" $input "/"`;
+		}
+		else if (`attributeExists "tx" $fileNode`)	
+		{	
+						string $inputTx=`getAttr ($fileNode + ".tx")`;
+			  		$filePath = `substituteAll "\\\\" $inputTx "/"`;
+		} 
+			 string $path=`dirname $filePath`; 	
+			 $path=toNativePath($path +"/");
+			 return  $path;
+}	
+
+
+///////////////////////////////////////////////////////////
+// helper, return file name without path from file node 
+global proc string op_fileNameFromFileNode(string $fileNode) 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+		//	print ("\n op_filePathFromFileNode(string $fileNodes[])  "); 
+		}
+
+		string $buffer[];	
+		string $filePath;
+			
+		if (`nodeType $fileNode`=="mib_texture_lookup")
+		{
+					  	string $texNode= `connectionInfo -sourceFromDestination ($fileNode +".tex")`; 	
+					    tokenize $texNode "." $buffer;
+							if (`nodeType $buffer[0]`!="mentalrayTexture")
+							{
+								string $inputMr=`getAttr ($buffer[0] + ".fileTextureName")`;
+								$filePath = `substituteAll "\\\\" $inputMr "/" `;
+					 		}
+		}
+						else if (`attributeExists "fileTextureName" $fileNode`)		
+						{
+								string $inputft=`getAttr ($fileNode + ".fileTextureName")`;
+				 				$filePath = `substituteAll "\\\\" $inputft  "/"`;
+				 		}
+					  else if (`attributeExists "tx" $fileNode`)	
+					  {
+					  		string $inputTx=`getAttr ($fileNode + ".tx")`;
+					  		$filePath = `substituteAll "\\\\" $inputTx  "/" `;
+					  }
+		  
+				$fileName=basename($filePath, "");			
+	      //print 	("$fileName: "+$fileName+"\n");
+				return `strip($fileName)`;
+}	
+
+///////////////////////////////////////////////////////////		  
+// helper, check if dir path exists
+global proc int op_dirExists(string $path) 
+{
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+			//	print ("\n op_dirExists(string $path) "); 
+		}
+
+
+	if (`filetest -d $path`)//-s 
+ 		return  1;
+ 	else
+ 	 		return 0;
+}
+
+///////////////////////////////////////////////////////////
+// helper, read 
+global proc op_getTargetDirectory (string $directory , string $type) 
+{ 
+		global int $gl_debug;	
+		if ($gl_debug) 
+		{   
+			//	print ("\n op_getTargetDirectory() \n"); 
+		}
+
+    global string $g_targetDirectory; 
+    $g_targetDirectory=$directory + "/"; 
+}
+
+///////////////////////////////////////////////////////////
+global proc string op_getDestDirectory() 
+{ 
+		global int $gl_debug;
+		if ($gl_debug) 
+		{   
+				print ("\n op_getDestDirectory()\n"); 
+		}
+		
+	    global string $g_targetDirectory; 
+	    string $targetNtDirectory; 
+	    string $targetPathElements[]; 
+	    int $i, $pathElementsCount; 
+	    
+	    fileBrowser "op_getTargetDirectory" "Choose Directory" "directory" 4; 
+	    tokenize($g_targetDirectory,"/",$targetPathElements); 
+	    $pathElementsCount=size($targetPathElements); 
+	
+	    for ($i=0;$i<$pathElementsCount;$i++) 
+			{
+	    		$targetNtDirectory=$targetNtDirectory+$targetPathElements[$i]+"\\"; 
+	  	}
+	    return $targetNtDirectory; 
+} 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////	
+global proc op_setInputDir(string $textFieldName)
+{				
+	global int $gl_debug;
+	if ($gl_debug ) 
+		 {   
+					print ("\n function: op_setInputDir(string $textFieldName)");
+			}
+					
+	string $inputFileName = op_getDestDirectory();
+	textField -e -tx $inputFileName $textFieldName;
+}
+
+///////////////////////////////////////////////////////////
+/////////////text field op_setInputFile
+global proc op_setInputFile(string $textFieldName, string $fileExtension, string $buttonName)
+{
+	global int $gl_debug;
+				if ($gl_debug) 
+				 {   
+					print ("\n function: op_setInputFile(string $textFieldName, string $fileExtension, string $buttonName)");
+				}
+					
+	string $inputFileName = `fileDialog -m 0 -dm $fileExtension`;
+  textFieldGrp -e -tx $inputFileName $textFieldName;
+}
+ 
+///////////////////////////////////////////////////////////
+// helper: create dir in path
+global proc int op_createDir(string $dirName)
+{
+	global int $gl_debug;
+	if ($gl_debug) 
+	{   
+				//	print ("\n function: op_createDir(string $dirName)");
+	}
+				
+	if (size($dirName)>0)
+	{
+		 int $result;
+ 		 if ((`filetest -d $dirName`) != 1)
+				$result=`sysFile -makeDir ($dirName)`;
+
+		 if (`filetest -d $dirName`)
+			return 1;
+		 else
+		 {
+		 		op_displayError("Can not create new target directory.");
+		 		return 0;
+		 	}
+	}
+	else
+	{
+			op_displayError("Empty path for destination directoy.");
+			return 0;
+	}
+}
+
+///////////////////////////////////////////////////////////													 
+ // helper: create path for input dir
+global proc string op_destDirectory()
+{	
+	 	global int $gl_debug;
+		if ($gl_debug) 
+		{   
+					print ("\n function: op_destDirectory()");
+		}	
+ 		string $inputPath;
+
+			if (`checkBox -q -value ch_Standard`)
+ 				$inputPath=`optionVar -q op_currProjectPath`+"textures";
+			else		
+			 	$inputPath=`textField -q -tx tx_newPath`;
+		
+			string $tempfilePath = `substituteAll "\\\\" $inputPath "/"`;
+ 			string $dirName=`strip($tempfilePath)`;  		
+ 			string $inputFolder =`textField -q -tx tx_newFolder`; 
+ 			string $folderTemp = `substituteAll "\\\\" $inputFolder "/"`;
+ 			string $folder=`strip($folderTemp)`;
+ 			 			
+ 			int $dir=`checkBox -q -value ch_newFolder`;
+			if (`size($dirName)`==0)
+			{
+				 op_displayError("New texture path not set in GUI.");
+			}
+			else 
+			{
+				if($dir && size($folder) >0)
+				{			 	
+					if (startsWith($folder, "/")==0 && endsWith($dirName, "/")==0)
+					 	$dirName+="/" + $folder;  
+					else if (startsWith($folder, "/") || endsWith($dirName, "/"))
+					 	$dirName+= $folder; 
+					else 	
+						$dirName+=stripPrefixFromName("/", $folder);					
+				}
+				else
+					print ("op_checkTextures: Empty new folder text field ignored." +"\n");
+		
+			string $createDir;		
+
+			if(endsWith($dirName, "/"))
+			{
+					int $size=`size($dirName)`;
+					$createDir=`substring $dirName 1 ($size-1)`;
+					$createDir=toNativePath($createDir);		
+			}
+			else
+				$createDir=toNativePath($dirName);
+						
+			int $result=op_createDir($createDir);
+			
+			$dirName=toNativePath($createDir +"/"); 								
+			}
+	
+			return $dirName;
+}
+ 		
+ ///////////////////////////////////////////////////////////														 
+ ///copy, move or set paths of files
+ global proc op_processFiles(int $operationType)
+ {
+ 		global int $gl_debug;
+		if ($gl_debug) 
+		{   
+					print ("\n function: op_processFiles())");
+		}
+		global string $g_PathGroups[];
+		global string $g_checkBoxes[];
+		global string $g_checkboxRow[];
+		  
+		string $filesToProcess[];
+		string $fileNodes[];
+		string $fileNodesRes[];
+		string $buffer[];
+		string $buffer3[];
+		//log
+		int $result;
+		string $success[];
+		string $fail[];
+		
+ 		string $desPathName=op_destDirectory();
+		int $exists=op_dirExists($desPathName);
+
+		if ($exists)
+		{									 			
+ 		 	// get files  		  	
+ 		  //progress bar 
+			catch(`waitCursor -state on`);            
+			progressWindow  -isInterruptable true;
+			int $max=`size($g_checkBoxes)`;
+			catch(`progressWindow -e -min 0 -max $max`); 
+	
+			// process all groups
+ 		  for ($i=0;$i<size($g_checkBoxes);$i++)
+			{	 				
+				  catch(`progressWindow -e -step 1`); 
+					if (`checkBox -q -v $g_checkBoxes[$i]`)
+					{
+							int $group=op_pathGroupFromLabel($g_checkBoxes[$i]);										
+							if ($group>=0)	
+							{
+									string $groupName=$g_PathGroups[$group];
+									if ($i>1) // first 2 rows can not have children
+									{
+											string $children[]=`rowColumnLayout -q -childArray $g_checkboxRow[$i]`;
+											$fileNodes= op_fileNodesFromFileGroup($groupName);
+											if (`size($children)`>1)
+											{	
+												if (`checkBox -q -v ("chFound_"+ $i)`==1 && `checkBox -q -v ("chNotFound_" + $i)`==0)
+												{
+													$fileNodesRes = op_fileFromFileNode($fileNodes, 1); 
+													$fileNodesRes = stringArrayRemove($fileNodesRes, $fileNodes);
+												}		
+												else if(`checkBox -q -v ("chNotFound_" + $i)`==1 && `checkBox -q -v ("chFound_"+ $i)`==0)
+												{
+													$fileNodesRes = op_fileFromFileNode($fileNodes, 0);
+													$fileNodesRes = stringArrayRemove($fileNodesRes, $fileNodes);
+												}	
+												else if (`checkBox -q -v ("chNotFound_" + $i)`==1 && `checkBox -q -v ("chFound_"+ $i)`==1)
+												 $fileNodesRes =	$fileNodes;		
+											}	
+											$filesToProcess	=stringArrayCatenate($fileNodesRes, $filesToProcess);	
+									}
+									else
+									{
+										string $tempFileNodes[] =op_fileNodesFromFileGroup($groupName);
+										$filesToProcess	=stringArrayCatenate($tempFileNodes, $filesToProcess);		
+									}
+							}
+					}									
+			}	
+				$filesToProcess	= stringArrayRemoveDuplicates($filesToProcess);	
+			//	print 	("\n" +"$operationType :" + $operationType +" +++****size($filesToProcess): "	+`size($filesToProcess)`+"\n");
+	
+	 //operation types
+	 //0: move
+	 //1: copy
+	 //2: set path
+	 //3: set path and copy
+	 //4: set path and move
+				// move/copy
+				if ($operationType !=2 )
+				{
+					string $buffer2[];	
+					for ($k=0;$k<`size($filesToProcess)`;$k++)
+					{				
+								string $fileName =op_fileNameFromFileNode($filesToProcess[$k]); 	
+								string $oldPathF= op_filePathFromFileNode($filesToProcess[$k]);
+																									
+								if ($operationType==1 || $operationType ==3)													
+											$result= `sysFile -copy ($desPathName + $fileName) ($oldPathF + $fileName)`;			
+								else if ($operationType==0 || $operationType ==4)	
+											$result= `sysFile -move ($desPathName + $fileName) ($oldPathF+ $fileName)`;		
+
+																						
+								// print ($operationType +": " +$result + "-----$desPathName:" + $desPathName + $fileName +" : " +($oldPathF+ $fileName) +"\n");
+									//log
+									if ($result )
+										$success[size($success)]=$filesToProcess[$k]; 
+									else
+									{
+										$fail[size($fail)]=$filesToProcess[$k];	
+									}	
+					}
+				}
+								
+				// "set path" operation
+				if ($operationType ==2 || $operationType ==3 || $operationType ==4)	
+				{					
+						for ($p=0;$p<`size($filesToProcess)`;$p++)
+						{			
+								string $fileName =op_fileNameFromFileNode($filesToProcess[$p]); 
+								if (`size($fileName)`>0)
+								{
+											if (`nodeType $filesToProcess[$p]`=="mib_texture_lookup")
+										  {
+											  	string $texNode= `connectionInfo -sourceFromDestination ($filesToProcess[$p] +".tex")`; 	
+											    tokenize $texNode "." $buffer;
+													if (`nodeType $buffer[0]`=="mentalrayTexture")
+													{
+														setAttr ($buffer[0] + ".fileTextureName") -typ "string"  ($desPathName + $fileName);	
+														$result=1;		
+											 		}
+											 		else
+															$result=0;
+										 	} 
+											else if (`nodeType $filesToProcess[$p]`=="mentalrayIblShape")
+											{
+														setAttr ($filesToProcess[$p] + ".tx") -typ "string"  ($desPathName + $fileName);
+														$result=1;							
+											}
+											else
+											{
+													setAttr ($filesToProcess[$p] + ".fileTextureName") -typ "string"  ($desPathName + $fileName);							
+													$result=1;
+											}
+									//	print ("+**+++size($fileName): " +($desPathName + $fileName)+"\n");
+								}
+								else
+									$result=0;
+									
+									//log
+									if ($result)
+										$success[size($success)]=$filesToProcess[$p]; 
+									else
+										$fail[size($fail)]=$filesToProcess[$p]; 
+							}
+					}
+						
+		}//exists
+	
+
+	  progressWindow -endProgress; 		
+		catch(`waitCursor -state off`);   
+
+
+	  text -e -l ("Result might be invalid now. \nContinue by pressing \"Check files\" again:\n") tx_displayInfo;	
+	  				
+		//log	
+		$success	= stringArrayRemoveDuplicates($success);	
+		$fail	= stringArrayRemoveDuplicates($fail);	
+		$success = stringArrayRemove($fail, $success);
+
+
+		print ("\nop_checkTextures finished processing "+`size($filesToProcess)` + " textures:"+ "\n");			
+		if (`size($success)`>0)
+		{
+			print ("Successfully processed "+ `size($success)` + " textures:"+ "\n");
+			print $success; 
+		}
+		if (`size($fail)`>0)
+		{
+			print ("\nProcessing failed "+ `size($fail)`+ " textures:"+ "\n");
+			print $fail;
+		}
+ }
+ 
+
+
+
+

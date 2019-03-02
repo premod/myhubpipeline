@@ -1,0 +1,27 @@
+global proc getSelectedpropEpisodic5()
+{
+	string $propname1[] =`textScrollList -q -si propslist5`;
+	for($m=0; $m<size($propname1); $m++)
+	{
+		string $epispdes[] = {"Episode05"};
+		string $assets[] = {"CHARACTERS","SETS","PROPS"};
+		for($epi in $epispdes)
+		for($asset in $assets)
+		{
+			string $charsDirectory="Q:/TNN/04_PRODUCTION/REFERENCES/"+$epi+"/"+$asset+"/";
+			string $allFiles[] = `getFileList -folder $charsDirectory -filespec "*.ma"`;
+			for($name in $allFiles)
+			{
+				if($propname1[$m] == $name)
+				{
+					string $forNS = `basenameEx($propname1[$m])`;
+					string $fileDir = $charsDirectory;
+					string $fileName = $fileDir+$propname1[$m];	
+					file -rdi 1 -ns $forNS $fileName;
+					file -r  -ns $forNS $fileName;
+				}
+			} 	
+		}
+	}
+}
+

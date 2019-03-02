@@ -1,0 +1,16 @@
+global proc assetCleanerMod()
+{
+	if((`window -exists assetCleaner`) == true ) {deleteUI assetCleaner;}
+	window -wh 210 90 -t "Asset Cleaner Modeling" -s 0 assetCleaner;
+	rowColumnLayout -numberOfColumns 2
+       	-columnWidth 1 100
+       	-columnWidth 2 100;
+	text -l "";
+	text -l "";
+      button -bgc 0.443 0.573 0.765 -l "Char Cleaner" -c "charCleaner" ;
+	button -bgc 0.443 0.573 0.765 -l "Set/Prop Cleaner" -c "setPropCleaner";
+	button -bgc 0.443 0.573 0.765 -l "Char Optimiser" -c "charOptimiser"; 
+      button -bgc 0.443 0.573 0.765 -l "Set/Prop Optimiser" -c "setPropOptimiser"; 
+	showWindow;
+}
+

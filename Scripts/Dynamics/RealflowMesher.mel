@@ -1,0 +1,214 @@
+global proc MuestraLaAyuda ()
+{
+	//window -w 400 -h 175 -title "prueba prueba" VentanaQ;
+	//showWindow;
+    window  -w 400 -h 175 -sizeable false -title "RealFlow MAYA Mesher HELP" VentanaAyuda2;
+		columnLayout  
+			-adjustableColumn true 
+			-cat "both"		12 
+			-rs	10
+		Columna;
+			frameLayout -bs "etchedIn" -lv no -mw 5;
+				text 
+					-h 80
+					-w 150
+					-label "\n      Select the BIN files location, the frame offset and the prefix of the mesh files.\nUse the browser button to select one of the .bin files of the animation.\nThe prefix is 'Mesh' by default and the default offset is 0."
+					-align "left";
+				setParent..;
+			string $formula= `formLayout -numberOfDivisions 100 formula`;
+				string $botonOK= `button -w 50 -h 25 -al "center" -label "OK"`;
+				button -edit -c ("deleteUI VentanaAyuda2") $botonOK;
+			formLayout -edit
+				-attachForm			$botonOK	"top"		5
+				-attachForm			$botonOK	"bottom"	5
+				-attachPosition		$botonOK	"right"		0 75
+				-attachPosition		$botonOK	"left"		0 25
+			$formula;
+	showWindow;
+}
+
+global proc MuestraAboutML ()
+{
+    window -w 500 -h 300 -title "About RealFlow MAYA plug-ins" -sizeable true VentanaAyuda3;
+		columnLayout  
+			-adjustableColumn true 
+			-cat "both"		12 
+			-rs	10
+		Columna;
+			frameLayout -bs "etchedIn" -lv no -mw 5;
+				string $formula44= `formLayout -numberOfDivisions 100`; 
+					$userDir ="plug-ins/rflogo.bmp";
+ 					string $dibujo44= `picture -image $userDir pictCntl`;
+					setParent..;
+				setParent..;
+			formLayout -edit 
+				-attachForm			$dibujo44		"left"		20
+				-attachForm			$dibujo44		"bottom"	7
+			$formula44;
+
+			string $formula= `formLayout -numberOfDivisions 100 formula`;
+				string $botonOK= `button -w 50 -h 25 -al "center" -label "OK"`;
+				button -edit -c ("deleteUI VentanaAyuda3") $botonOK;
+			formLayout -edit
+				-attachForm			$botonOK	"top"		5
+				-attachForm			$botonOK	"bottom"	5
+				-attachPosition		$botonOK	"right"		0 75
+				-attachPosition		$botonOK	"left"		0 25
+			$formula;
+	showWindow;
+}
+
+global proc br ()
+{
+	// Presentamos caja de dialogo para selección y con filtro
+	string $directorio = `textFieldButtonGrp -query -fileName direct`;
+	string $lastDir = `optionVar -q "browseFolderMes"`;
+	$directorio += "*.bin";
+
+	// Get the file selected
+	string $resultado = `fileDialog -directoryMask $directorio`;
+
+	// If the result is empty means no file picked up
+	if ($resultado != "")
+	{
+		// Recuperamos resultado
+		string $dir= $resultado;
+
+		// Le quitamos las carpetas intermedias (relleno) pero dejamos la letra de la unidad
+		string $OriMenosRelleno= `substitute "/.*/" $dir ""`;
+		
+		// Nos quedamos con el directorio
+		string $buffer[];
+		$numTokens = tokenize ($dir, "/", $buffer);
+		if (`substring $dir 1 1` == "/")
+			$dir = "/";
+		else
+			$dir = "";
+		for ($i=0; $i<$numTokens-1; $i++)
+			$dir += $buffer[$i]+"/";
+
+		// Actualizamos control donde aparece el directorio
+		textFieldButtonGrp -edit -fileName $dir direct;
+
+		// Extraemos el nombre del fichero
+		string $nombreFich;
+		string $pruPrefijo;
+		if ($numTokens > 0)
+		{
+			$nombreFich = $buffer[$numTokens-1];
+			$nombreFich= `substitute ".bin" $nombreFich ""`;
+			int $longitud= `size $nombreFich`;
+			$longitud= $longitud - 5;
+			$pruPrefijo= `substring $nombreFich 1 $longitud`;
+		}		
+
+		// Editamos el prefijo que hemos extraido del nombre del fichero
+		textFieldGrp -edit -tx $pruPrefijo prefijo;
+
+		// Remember the folder contents for further sessions
+		optionVar -sv "browseFolderMes" $dir;
+
+		// Remember the prefix name for further sessions
+		optionVar -sv "prefixNameMes" $pruPrefijo;
+	}
+}
+
+global proc procedo () 
+{   
+	string $dir= `textFieldButtonGrp -query -fileName direct`;
+	$dir += `textFieldGrp -query -text prefijo`;
+	int $offset=`intFieldGrp -q -v1 offset`;
+
+	string $nombreMesh= `createNode transform -n RealflowMesh1`;
+	string $nombreShape= `createNode mesh -p $nombreMesh`;
+	sets -add initialShadingGroup $nombreShape;
+	string $nombreNodo= `createNode RealflowMesh -n RealflowMeshNode1`;
+	
+	setAttr -type "string" ($nombreNodo + ".Path") $dir;
+	setAttr ($nombreNodo + ".Offset") $offset;
+
+	connectAttr time1.outTime ($nombreNodo + ".Time");
+	connectAttr ($nombreNodo + ".outputMesh") ($nombreShape + ".inMesh");
+
+	// Remember the folder contents for further sessions
+	optionVar -sv "browseFolderMes" `textFieldButtonGrp -query -fileName direct`;
+
+	// Remember the prefix name for further sessions
+	optionVar -sv "prefixNameMes" `textFieldGrp -query -text prefijo`;
+}
+
+global proc RealflowMesher()
+{
+	// Check if the browseFolder exists, if not create with the
+	// current folder path
+	if (`optionVar -q "browseFolderMes"` == 0)
+		optionVar -sv "browseFolderMes" `pwd`;
+
+	// Check if the prefixName exists, if not create with the
+	// default value
+	if (`optionVar -q "prefixNameMes"` == 0)
+		optionVar -sv "prefixNameMes" "Mesh";
+
+	window -w 590 -h 175 -title "RealFlow Mesh Loader" -sizeable false VentanaP;    
+   		columnLayout 
+			-adjustableColumn true
+			-columnAttach "both" 3
+			-rs	10
+			;
+
+			frameLayout -label "File settings";
+				string $formula= `formLayout -numberOfDivisions 100`; 
+					string $columna= `columnLayout`; 
+						textFieldButtonGrp -bl "Browse" -bc br -fileName `optionVar -q "browseFolderMes"` -label "Folder location (.bin)" direct;
+						textFieldGrp -l "File prefix" -w 250 -tx `optionVar -q "prefixNameMes"` prefijo;
+						intFieldGrp -l "Frame offset" -w 300 -v1 0 -extraLabel "frames" offset;
+						intFieldGrp -edit -cal 1 "right" offset;
+						setParent..;
+					$userDir ="plug-ins/cubos.bmp";
+ 					string $dibujo= `picture -image $userDir pictCntl`;
+					setParent..;
+				formLayout -edit 
+					-attachForm			$dibujo		"left"		20
+					-attachForm			$dibujo		"bottom"	7
+
+					-attachForm			$columna		"right"	5
+					-attachForm			$columna		"bottom"	5
+					-attachControl		$columna		"left"	5 $dibujo
+
+				$formula;
+
+				setParent..;
+		string $form = `formLayout -numberOfDivisions 100`;
+			string $buttonHELP= `button -w 50 -h 25 -al "center" -label "HELP"`; 
+			string $buttonABOUT= `button -w 50 -h 25 -al "center" -label "ABOUT"`; 
+			string $buttonCANCEL= `button -w 50 -h 25 -al "center" -label "CANCEL"`; 
+			string $buttonOK= `button -w 50 -h 25 -al "center" -label "OK"`; 
+			button -edit -command ("MuestraLaAyuda") $buttonHELP;
+			button -edit -command ("MuestraAboutML") $buttonABOUT;
+			button -edit -command ("procedo" + ";" + "deleteUI VentanaP") $buttonOK;
+			button -edit -command ("deleteUI VentanaP") $buttonCANCEL;
+			setParent..;
+		setParent..;
+		formLayout -edit        
+			-attachForm            $buttonCANCEL     "top"    5
+			-attachForm			   $buttonCANCEL     "bottom" 5 
+			-attachPosition        $buttonCANCEL     "right"  0 65
+			-attachPosition        $buttonCANCEL     "left"  0 50
+
+			-attachForm            $buttonOK     "top"    5
+			-attachControl		   $buttonOK	 "left"   5 $buttonCANCEL
+			-attachForm			   $buttonOK     "bottom" 5 
+			-attachForm		       $buttonOK     "right"  5
+
+			-attachForm            $buttonHELP     "top"    5
+			-attachForm			   $buttonHELP     "bottom" 5 
+			-attachPosition        $buttonHELP     "right"  0 15
+			-attachForm	           $buttonHELP     "left"  5
+
+			-attachForm            $buttonABOUT     "top"    5
+			-attachForm			   $buttonABOUT     "bottom" 5 
+			-attachControl	       $buttonABOUT     "left"  5 $buttonHELP
+			-attachPosition        $buttonABOUT     "right"  0 30
+		$form;
+	showWindow;
+}

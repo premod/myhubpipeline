@@ -1,0 +1,1567 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: KBI_Materials_Attributes_Transfert
+''    Author:  
+''    Last Updated: Apr 04, 2009
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/utility_external/copying/5686.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+//////////////////////////////////////Informations/////////////////////////////////////////////////
+//KBI_Materials_Attributes_Transfert
+//Version 1.2
+//Mel by Nicolas Koubi
+//nico.koubi AT wanadoo.fr
+//Http://etoia.free.fr
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////Read-Me//////////////////////////////////////////////////
+//
+//
+// DESCRIPTION:
+//
+//		With this script you can transfert the attributes of a shader to one or multiple shader(s).
+//              (ex:a Blinn shader to 3 Phong and 2 Lambert).
+//              You can also individually transfert a specific attribute.
+//              
+//
+// TESTED ON :
+//
+//              Maya 2009 Unlimited SP1 - Linux (Ubuntu 8.10) -  64bits
+//              Maya 2009 Unlimited - Windows Xp SP3 - 32bits   <-- Only for the 1.1 Version
+//
+//
+// HOW TO USE IT:
+//
+//
+//              --How to install the script--
+//
+//              Put the script in your user scripts directory :
+//               - Windows: C:/Documents and Settings/USER_NAME/My Documents/maya/2009/scripts/
+//               - Linux: /home/USER_NAME/maya/2009/scripts/
+//
+//              Change USER_NAME by yours and 2009 if you have another version of maya 
+//              (exemple: C:/Documents and Settings/J.Doe/My Documents/maya/8.5/scripts/ )
+//
+//              In maya, source the script then put "KBI_Materials_Attributes_Transfert;" in the command line to load the script.
+//
+//
+//              --How to transfert all atributes with or without the color attribute between shaders--
+//
+//              Select the source shader first then those who will get the attributes and press the "Global With Color"
+//              or "Global Without Color" button.
+//
+//
+//              --How to transfert only one attribute between shaders--
+//
+//
+//              Select the source shader first then those who will get the attributes and hit the attribute button you want
+//              to transfert.
+//
+//
+// VERSIONS:
+//
+//              1.2 - 2009.04.04 - Now you can transfert to multiple and differents shaders at once.Minor UI redesign. 
+//
+//              1.1 - 2009.01.14 - Add transfert possibilities for Phong, PhongE, Lambert and Anisotropic.
+//
+//              1.0 - 2009.01.11 - Initial Release.
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//----------------------------------------------------------------------------------------------//
+////////////////////////////////////////// UI /////////////////////////////////////////////////
+//----------------------------------------------------------------------------------------------///
+
+
+//Scripting tools :
+			      //Query window size
+			      //window -q -wh KBI_Materials_Attributes_Transfert_UI; 
+
+			      //Clear window pref
+			      //windowPref -r KBI_Materials_Attributes_Transfert_UI;
+			      
+
+global proc KBI_Materials_Attributes_Transfert()
+{
+
+
+//------Delete the existing UI if any.
+
+if (`window -exists KBI_Materials_Attributes_Transfert_UI`)
+		deleteUI KBI_Materials_Attributes_Transfert_UI;
+if ( `windowPref -exists KBI_Materials_Attributes_Transfert_UI` )
+		windowPref -r KBI_Materials_Attributes_Transfert_UI;
+
+//------Window UI
+
+window -w 310 
+	      -h 162
+	      -title "KBI_Materials_Attributes_Transfert" 
+	      -menuBar true	      
+		KBI_Materials_Attributes_Transfert_UI;
+
+  //------Help/About Menu
+
+  menu -label "?" helpAboutMenu;
+     menuItem -label "About"
+		      -c "KBI_Materials_Attributes_Transfert_About"
+			aboutMenu;
+			
+//------Layout
+
+columnLayout -h 400
+			-w 290
+			-adj 1
+			  mainCol;
+
+//------Help
+
+ text -w 290 
+	-label "See the mel source for help"
+	-align "center" 
+	-font "smallFixedWidthFont"
+	helpTxt;
+
+//------Separator
+
+separator -h 10 
+		-horizontal 1 
+		-style "none"
+		mainSeparator;
+
+
+//------Frame Global
+
+frameLayout -label "Global Transfert"
+		      -collapsable 0
+		      -collapse 0
+		      -marginWidth 4
+		      -marginHeight 4
+		      -borderStyle "etchedIn"
+		      globalTransfertFrame;
+
+rowColumnLayout -numberOfColumns 1
+			      -columnWidth 1 290
+			      globalRCL;
+
+//------Buttons Global
+
+
+    //------Lambert with color
+
+    button -label "Global With Color" 
+		-ann "Transfert the attributes from a shader to another shader(s) with the attribute color"
+		-c "KBI_Global_Shader_Attr_Transfert;KBI_Color;"
+		materialAttrAllColorButton;
+
+
+    //------Lambert without color
+
+    button -label "Global Without Color" 
+		-ann "Transfert the attributes from a shader to another shader(s) without the attribute color"
+		-c "KBI_Global_Shader_Attr_Transfert"
+		materialAttrAllNoColorButton;
+
+
+
+setParent mainCol;
+
+
+//------Frame Individual
+
+string $expandFrame = "window -e -h 443  KBI_Materials_Attributes_Transfert_UI";
+string $collapseFrame = "window -e -h 162  KBI_Materials_Attributes_Transfert_UI";
+						
+frameLayout -label "Individual Transfert"
+		      -collapsable 1
+		      -collapse 1
+		      -preExpandCommand  $expandFrame
+		      -preCollapseCommand  $collapseFrame
+		      -marginWidth 4
+		      -marginHeight 4
+		      -borderStyle "etchedIn"
+		      individualTransfertFrame;
+
+rowColumnLayout -numberOfColumns 2 
+			      -columnWidth 1 145
+			      -columnWidth 2 145
+			      globalRCL;
+
+//------Buttons Individual
+
+    //------Color
+
+    button -label "Color" 
+		-ann "Transfert the color attribute from a shader to another shader"
+		-c "KBI_Color"
+		transfertColorButton;
+
+
+    //------Transparency
+
+    button -label "Transparency" 
+		-ann "Transfert the transparency attribute from a shader to another shader"
+		-c "KBI_Transparency"
+		transfertTransparencyButton;
+
+
+    //------AmbientColor
+
+    button -label "AmbientColor" 
+		-ann "Transfert the ambientColor attribute from a shader to another shader"
+		-c "KBI_AmbientColor"
+		transfertAmbientColorButton;
+
+
+    //------Incandescence
+
+    button -label "Incandescence" 
+		-ann "Transfert the Incandescence attribute from a shader to another shader"
+		-c "KBI_Incandescence"
+		transfertIncandescenceButton;
+
+
+    //------Diffuse
+
+    button -label "Diffuse" 
+		-ann "Transfert the Diffuse attribute from a shader to another shader"
+		-c "KBI_Diffuse"
+		transfertDiffuseButton;
+
+
+    //------Translucence
+
+    button -label "Translucence" 
+		-ann "Transfert the Translucence attribute from a shader to another shader"
+		-c "KBI_Diffuse"
+		transfertTranslucenceButton;
+
+
+    //------TranslucenceDepth
+
+
+    button -label "TranslucenceDepth" 
+		-ann "Transfert the TranslucenceDepth attribute from a shader to another shader"
+		-c "KBI_TranslucenceDepth"
+		transfertTranslucenceDepthButton;
+
+
+    //------TranslucenceFocus
+
+    button -label "TranslucenceFocus" 
+		-ann "Transfert the TranslucenceFocus attribute from a shader to another shader"
+		-c "KBI_TranslucenceFocus"
+		transfertTranslucenceFocusButton;
+
+
+    //------Eccentricity
+
+    button -label "Eccentricity" 
+		-ann "Transfert the Eccentricity attribute from a shader to another shader"
+		-c "KBI_Eccentricity"
+		transfertEccentricityButton;
+
+
+
+    //------SpecularRollOff
+
+    button -label "SpecularRollOff" 
+		-ann "Transfert the SpecularRollOff attribute from a shader to another shader"
+		-c "KBI_SpecularRollOff"
+		transfertSpecularRollOffButton;
+
+
+    //------SpecularColor
+
+    button -label "SpecularColor" 
+		-ann "Transfert the SpecularColor attribute from a shader to another shader"
+		-c "KBI_SpecularColor"
+		transfertSpecularColorButton;
+
+
+    //------Reflectivity
+
+    button -label "Reflectivity" 
+		-ann "Transfert the Reflectivity attribute from a shader to another shader"
+		-c "KBI_Reflectivity"
+		transfertReflectivityButton;
+
+
+    //------ReflectedColor
+
+    button -label "ReflectedColor" 
+		-ann "Transfert the ReflectedColor attribute from a shader to another shader"
+		-c "KBI_ReflectedColor"
+		transfertReflectedColorButton;
+
+
+    //------GlowIntensity
+
+    button -label "GlowIntensity" 
+		-ann "Transfert the GlowIntensity attribute from a shader to another shader"
+		-c "KBI_GlowIntensity"
+		transfertGlowIntensityButton;
+
+
+    //------MatteOpacityMode
+
+    button -label "MatteOpacityMode" 
+		-ann "Transfert the MatteOpacityMode attribute from a shader to another shader"
+		-c "KBI_MatteOpacityMode"
+		transfertMatteOpacityModeButton;
+
+
+    //------AnisotropicReflectivity
+
+    button -label "AnisotropicReflectivity" 
+		-ann "Transfert the AnisotropicReflectivity attribute from a shader to another shader"
+		-c "KBI_AnisotropicReflectivity"
+		transfertAnisotropicReflectivityButton;
+
+
+    //------Angle
+
+    button -label "Angle" 
+		-ann "Transfert the Angle attribute from a shader to another shader"
+		-c "KBI_Angle"
+		transfertAngleButton;
+
+
+    //------SpreadX
+
+    button -label "SpreadX" 
+		-ann "Transfert the SpreadX attribute from a shader to another shader"
+		-c "KBI_SpreadX"
+		transfertSpreadXButton;
+
+
+    //------SpreadY
+
+    button -label "SpreadY" 
+		-ann "Transfert the SpreadY attribute from a shader to another shader"
+		-c "KBI_SpreadY"
+		transfertSpreadYButton;
+
+
+    //------Roughness
+
+    button -label "Roughness" 
+		-ann "Transfert the Roughness attribute from a shader to another shader"
+		-c "KBI_Roughness"
+		transfertRoughnessButton;
+
+
+    //------FresnelRefractiveIndex
+
+    button -label "FresnelRefractiveIndex" 
+		-ann "Transfert the FresnelRefractiveIndex attribute from a shader to another shader"
+		-c "KBI_FresnelRefractiveIndex"
+		transfertFresnelRefractiveIndexButton;
+
+
+
+    //------CosinePower
+
+    button -label "CosinePower" 
+		-ann "Transfert the cosinePower attribute from a shader to another shader"
+		-c "KBI_CosinePower"
+		transfertcosinePowerButton;
+
+
+
+showWindow KBI_Materials_Attributes_Transfert_UI;
+
+}  //End of global proc KBI_Materials_Attributes_Transfert()
+
+
+KBI_Materials_Attributes_Transfert;
+
+
+//----------------------------------------------------------------------------------------------//
+///////////////////////////////////// Procedures ///////////////////////////////////////
+//----------------------------------------------------------------------------------------------//
+
+
+ /////////////////////////////////////////////////////////////////////////////////////////////////////
+//------Global Transfert
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+global proc KBI_Global_Shader_Attr_Transfert()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+        for ($eachShader in $GetSelShaders) 
+	    {
+
+      
+ 		//------ Transparency
+		
+ 		if (`objExists ($SelSourceShader + ".transparency")`)
+		{    
+		if (`objExists ($eachShader + ".transparency")`)
+		{			
+		  string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".transparencyR") ;
+		  string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".transparencyG") ;
+		  string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".transparencyB") ;
+
+		//Convert data to a float array.
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttrR;
+		    $ConvertData[1] = $ShaderSourceAttrG;
+		    $ConvertData[2] = $ShaderSourceAttrB;
+
+		//Set the attribute to the other shaders.
+
+		      setAttr ($eachShader + ".transparencyR") $ConvertData[0] ;
+		      setAttr ($eachShader + ".transparencyG") $ConvertData[1] ;
+		      setAttr ($eachShader + ".transparencyB") $ConvertData[2] ;
+		 }
+                 }      
+
+		//------ Ambient Color
+
+		if (`objExists ($SelSourceShader + ".ambientColor")`)
+		{
+		if (`objExists ($eachShader + ".ambientColor")`)
+		{			
+		  string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".ambientColorR") ;
+		  string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".ambientColorG") ;
+		  string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".ambientColorB") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttrR;
+		    $ConvertData[1] = $ShaderSourceAttrG;
+		    $ConvertData[2] = $ShaderSourceAttrB;
+		      
+		      setAttr ($eachShader + ".ambientColorR") $ConvertData[0] ;
+		      setAttr ($eachShader + ".ambientColorG") $ConvertData[1] ;
+		      setAttr ($eachShader + ".ambientColorB") $ConvertData[2] ;
+                }
+		}
+
+
+
+
+		//------ Incandescence
+
+		if (`objExists ($SelSourceShader + ".incandescence")`)
+		{
+		if (`objExists ($eachShader + ".incandescence")`)
+		{			
+		  string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".incandescenceR") ;
+		  string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".incandescenceG") ;
+		  string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".incandescenceB") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttrR;
+		    $ConvertData[1] = $ShaderSourceAttrG;
+		    $ConvertData[2] = $ShaderSourceAttrB;
+
+		      setAttr ($eachShader + ".incandescenceR") $ConvertData[0] ;
+		      setAttr ($eachShader + ".incandescenceG") $ConvertData[1] ;
+		      setAttr ($eachShader + ".incandescenceB") $ConvertData[2] ;
+                }
+		}
+
+
+
+
+		//------ Diffuse
+
+		if (`objExists ($SelSourceShader + ".diffuse")`)
+		{
+		if (`objExists ($eachShader + ".diffuse")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".diffuse") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".diffuse") $ConvertData[0] ;
+                 }
+		}
+
+
+
+
+		//------ Translucence
+
+		if (`objExists ($SelSourceShader + ".translucence")`)
+		{
+		if (`objExists ($eachShader + ".translucence")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".translucence") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".translucence") $ConvertData[0] ;
+                }
+		}
+
+
+
+
+
+		//------ TranslucenceDepth
+
+		if (`objExists ($SelSourceShader + ".translucenceDepth")`)
+		{
+		if (`objExists ($eachShader + ".translucenceDepth")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".translucenceDepth") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".translucenceDepth") $ConvertData[0] ;
+                }
+		}
+
+
+		//------ TranslucenceFocus
+
+		if (`objExists ($SelSourceShader + ".translucenceFocus")`)
+		{
+		if (`objExists ($eachShader + ".translucenceFocus")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".translucenceFocus") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+		      setAttr ($eachShader + ".translucenceFocus") $ConvertData[0] ;
+                }
+		}
+
+
+
+
+		//------ Eccentricity
+
+		if (`objExists ($SelSourceShader + ".eccentricity")`)
+		{
+		if (`objExists ($eachShader + ".eccentricity")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".eccentricity") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".eccentricity") $ConvertData[0] ;
+                }
+		}
+
+
+
+		//------ SpecularRollOff
+
+		if (`objExists ($SelSourceShader + ".specularRollOff")`)
+		{
+		if (`objExists ($eachShader + ".specularRollOff")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".specularRollOff") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+		      setAttr ($eachShader + ".specularRollOff") $ConvertData[0] ;
+                }
+		}
+
+
+
+
+		//------ SpecularColor
+
+		if (`objExists ($SelSourceShader + ".specularColor")`)
+		{
+		if (`objExists ($eachShader + ".specularColor")`)
+		{			
+		  string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".specularColorR") ;
+		  string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".specularColorG") ;
+		  string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".specularColorB") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttrR;
+		    $ConvertData[1] = $ShaderSourceAttrG;
+		    $ConvertData[2] = $ShaderSourceAttrB;
+
+
+		      setAttr ($eachShader + ".specularColorR") $ConvertData[0] ;
+		      setAttr ($eachShader + ".specularColorG") $ConvertData[1] ;
+		      setAttr ($eachShader + ".specularColorB") $ConvertData[2] ;
+                }
+		}
+
+
+
+
+
+		//------ Reflectivity
+
+		if (`objExists ($SelSourceShader + ".reflectivity")`)
+		{
+		if (`objExists ($eachShader + ".reflectivity")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".reflectivity") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".reflectivity") $ConvertData[0] ;
+                }
+		}
+
+
+
+
+
+		//------ ReflectedColor
+
+		if (`objExists ($SelSourceShader + ".reflectedColor")`)
+		{
+		if (`objExists ($eachShader + ".reflectedColor")`)
+		{			
+		  string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".reflectedColorR") ;
+		  string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".reflectedColorG") ;
+		  string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".reflectedColorB") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttrR;
+		    $ConvertData[1] = $ShaderSourceAttrG;
+		    $ConvertData[2] = $ShaderSourceAttrB;
+
+
+		      setAttr ($eachShader + ".reflectedColorR") $ConvertData[0] ;
+		      setAttr ($eachShader + ".reflectedColorG") $ConvertData[1] ;
+		      setAttr ($eachShader + ".reflectedColorB") $ConvertData[2] ;
+                }
+		}
+
+
+
+
+		//------ GlowIntensity
+
+		if (`objExists ($SelSourceShader + ".glowIntensity")`)
+		{
+		if (`objExists ($eachShader + ".glowIntensity")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".glowIntensity") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".glowIntensity") $ConvertData[0] ;
+                }
+		}
+
+
+		//------ MatteOpacityMode
+
+		if (`objExists ($SelSourceShader + ".matteOpacityMode")`)
+		{
+		if (`objExists ($eachShader + ".matteOpacityMode")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".matteOpacityMode") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+		      setAttr ($eachShader + ".matteOpacityMode") $ConvertData[0] ;
+               }
+		}
+
+
+
+
+		//------ MatteOpacity
+
+		if (`objExists ($SelSourceShader + ".matteOpacity")`)
+		{
+		if (`objExists ($eachShader + ".matteOpacity")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".matteOpacity") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".matteOpacity") $ConvertData[0] ;
+                 }
+		}
+
+
+
+
+
+		//------ anisotropicReflectivity
+
+		if (`objExists ($SelSourceShader + ".anisotropicReflectivity")`)
+		{
+		if (`objExists ($eachShader + ".anisotropicReflectivity")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".anisotropicReflectivity") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".anisotropicReflectivity") $ConvertData[0] ;
+                }
+		}
+
+
+
+		//------ Angle
+
+		if (`objExists ($SelSourceShader + ".angle")`)
+		{
+		if (`objExists ($eachShader + ".angle")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".angle") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".angle") $ConvertData[0] ;
+                }
+		}
+
+
+
+		//------ SpreadX
+
+		if (`objExists ($SelSourceShader + ".spreadX")`)
+		{
+		if (`objExists ($eachShader + ".spreadX")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".spreadX") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".spreadX") $ConvertData[0] ;
+                 }
+		}
+
+
+
+		//------ SpreadY
+
+		if (`objExists ($SelSourceShader + ".spreadY")`)
+		{
+		if (`objExists ($eachShader + ".spreadY")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".spreadY") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".spreadY") $ConvertData[0] ;
+                }
+		}
+
+
+
+		//------ Roughness
+
+		if (`objExists ($SelSourceShader + ".roughness")`)
+		{
+		if (`objExists ($eachShader + ".roughness")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".roughness") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".roughness") $ConvertData[0] ;
+                }
+		}
+
+
+
+		//------ FresnelRefractiveIndex
+
+		if (`objExists ($SelSourceShader + ".fresnelRefractiveIndex")`)
+		{
+		if (`objExists ($eachShader + ".fresnelRefractiveIndex")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".fresnelRefractiveIndex") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".fresnelRefractiveIndex") $ConvertData[0] ;
+                 }
+		}
+
+
+
+		//------ CosinePower
+
+		if (`objExists ($SelSourceShader + ".cosinePower")`)
+		{
+		if (`objExists ($eachShader + ".cosinePower")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".cosinePower") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".cosinePower") $ConvertData[0] ;
+                 }
+		}
+
+
+
+
+		//------ HighlightSize
+
+		if (`objExists ($SelSourceShader + ".highlightSize")`)
+		{
+		if (`objExists ($eachShader + ".highlightSize")`)
+		{			
+		  string $ShaderSourceAttr = getAttr ($SelSourceShader + ".highlightSize") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttr;
+
+
+		      setAttr ($eachShader + ".highlightSize") $ConvertData[0] ;
+                }
+		}
+
+
+
+
+
+		//------ Whiteness
+
+		if (`objExists ($SelSourceShader + ".whiteness")`)
+		{
+		if (`objExists ($eachShader + ".whiteness")`)
+		{			
+		  string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".whitenessR") ;
+		  string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".whitenessG") ;
+		  string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".whitenessB") ;
+
+		    float $ConvertData[];
+		    $ConvertData[0] = $ShaderSourceAttrR;
+		    $ConvertData[1] = $ShaderSourceAttrG;
+		    $ConvertData[2] = $ShaderSourceAttrB;
+
+
+		      setAttr ($eachShader + ".whitenessR") $ConvertData[0] ;
+		      setAttr ($eachShader + ".whitenessG") $ConvertData[1] ;
+		      setAttr ($eachShader + ".whitenessB") $ConvertData[2] ;
+                }
+		}
+
+
+
+      
+             }
+
+     print "Done !";
+}
+
+
+
+
+ /////////////////////////////////////////////////////////////////////////////////////////////////////
+//------Individual
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//------Color
+
+global proc KBI_Color()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+
+   string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".colorR") ;
+   string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".colorG") ;
+   string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".colorB") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttrR;
+     $ConvertData[1] = $ShaderSourceAttrG;
+     $ConvertData[2] = $ShaderSourceAttrB;
+
+        for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".colorR") $ConvertData[0] ;
+      setAttr ($eachShader + ".colorG") $ConvertData[1] ;
+      setAttr ($eachShader + ".colorB") $ConvertData[2] ;
+             }
+	     
+     print "Done !";	     
+}
+
+
+
+
+
+
+//------ Transparency
+
+global proc KBI_Transparency()
+{
+
+ //Get selected shaders in an array.
+
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+ //Take data for each color channel of the source shader attribute.
+
+   string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".transparencyR") ;
+   string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".transparencyG") ;
+   string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".transparencyB") ;
+
+ //Convert data to a float array.
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttrR;
+     $ConvertData[1] = $ShaderSourceAttrG;
+     $ConvertData[2] = $ShaderSourceAttrB;
+
+ //Set the attribute to the other shaders.
+        for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".transparencyR") $ConvertData[0] ;
+      setAttr ($eachShader + ".transparencyG") $ConvertData[1] ;
+      setAttr ($eachShader + ".transparencyB") $ConvertData[2] ;
+             }
+	     
+     print "Done !";	     
+}
+
+
+
+
+  
+//------ Ambient Color
+
+global proc KBI_AmbientColor()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".ambientColorR") ;
+   string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".ambientColorG") ;
+   string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".ambientColorB") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttrR;
+     $ConvertData[1] = $ShaderSourceAttrG;
+     $ConvertData[2] = $ShaderSourceAttrB;
+      
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".ambientColorR") $ConvertData[0] ;
+      setAttr ($eachShader + ".ambientColorG") $ConvertData[1] ;
+      setAttr ($eachShader + ".ambientColorB") $ConvertData[2] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ Incandescence
+
+global proc KBI_Incandescence()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".incandescenceR") ;
+   string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".incandescenceG") ;
+   string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".incandescenceB") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttrR;
+     $ConvertData[1] = $ShaderSourceAttrG;
+     $ConvertData[2] = $ShaderSourceAttrB;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".incandescenceR") $ConvertData[0] ;
+      setAttr ($eachShader + ".incandescenceG") $ConvertData[1] ;
+      setAttr ($eachShader + ".incandescenceB") $ConvertData[2] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ Diffuse
+
+global proc KBI_Diffuse()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".diffuse") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".diffuse") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+
+}
+
+
+
+
+//------ Translucence
+
+global proc KBI_Translucence()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".translucence") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".translucence") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+
+}
+
+
+
+
+
+//------ TranslucenceDepth
+
+global proc KBI_TranslucenceDepth()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".translucenceDepth") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".translucenceDepth") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+
+//------ TranslucenceFocus
+
+global proc KBI_TranslucenceFocus()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".translucenceFocus") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".translucenceFocus") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ Eccentricity
+
+global proc KBI_Eccentricity()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".eccentricity") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".eccentricity") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ SpecularRollOff
+
+global proc KBI_SpecularRollOff()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".specularRollOff") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".specularRollOff") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ SpecularColor
+
+global proc KBI_SpecularColor()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".specularColorR") ;
+   string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".specularColorG") ;
+   string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".specularColorB") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttrR;
+     $ConvertData[1] = $ShaderSourceAttrG;
+     $ConvertData[2] = $ShaderSourceAttrB;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".specularColorR") $ConvertData[0] ;
+      setAttr ($eachShader + ".specularColorG") $ConvertData[1] ;
+      setAttr ($eachShader + ".specularColorB") $ConvertData[2] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+
+//------ Reflectivity
+
+global proc KBI_Reflectivity()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".reflectivity") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".reflectivity") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+
+//------ ReflectedColor
+
+global proc KBI_ReflectedColor()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".reflectedColorR") ;
+   string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".reflectedColorG") ;
+   string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".reflectedColorB") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttrR;
+     $ConvertData[1] = $ShaderSourceAttrG;
+     $ConvertData[2] = $ShaderSourceAttrB;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".reflectedColorR") $ConvertData[0] ;
+      setAttr ($eachShader + ".reflectedColorG") $ConvertData[1] ;
+      setAttr ($eachShader + ".reflectedColorB") $ConvertData[2] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ GlowIntensity
+
+global proc KBI_GlowIntensity()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".glowIntensity") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".glowIntensity") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+//------ MatteOpacityMode
+
+global proc KBI_MatteOpacityMode()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".matteOpacityMode") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".matteOpacityMode") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ MatteOpacity
+
+global proc KBI_MatteOpacity()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".matteOpacity") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".matteOpacity") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+
+//------ anisotropicReflectivity
+
+global proc KBI_AnisotropicReflectivity()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".anisotropicReflectivity") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".anisotropicReflectivity") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+//------ Angle
+
+global proc KBI_Angle()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".angle") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".angle") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+//------ SpreadX
+
+global proc KBI_SpreadX()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".spreadX") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".spreadX") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+//------ SpreadY
+
+global proc KBI_SpreadY()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".spreadY") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".spreadY") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+//------ Roughness
+
+global proc KBI_Roughness()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".roughness") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".roughness") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+//------ FresnelRefractiveIndex
+
+global proc KBI_FresnelRefractiveIndex()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".fresnelRefractiveIndex") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".fresnelRefractiveIndex") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+//------ CosinePower
+
+global proc KBI_CosinePower()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".cosinePower") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".cosinePower") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+//------ HighlightSize
+
+global proc KBI_HighlightSize()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttr = getAttr ($SelSourceShader + ".highlightSize") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttr;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".highlightSize") $ConvertData[0] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+
+//------ Whiteness
+
+global proc KBI_Whiteness()
+{
+ string $GetSelShaders[] = `ls -sl`;
+  string $SelSourceShader = $GetSelShaders[0];
+
+   string $ShaderSourceAttrR = getAttr ($SelSourceShader + ".whitenessR") ;
+   string $ShaderSourceAttrG = getAttr ($SelSourceShader + ".whitenessG") ;
+   string $ShaderSourceAttrB = getAttr ($SelSourceShader + ".whitenessB") ;
+
+    float $ConvertData[];
+     $ConvertData[0] = $ShaderSourceAttrR;
+     $ConvertData[1] = $ShaderSourceAttrG;
+     $ConvertData[2] = $ShaderSourceAttrB;
+
+              for ($eachShader in $GetSelShaders) 
+	    {
+      setAttr ($eachShader + ".whitenessR") $ConvertData[0] ;
+      setAttr ($eachShader + ".whitenessG") $ConvertData[1] ;
+      setAttr ($eachShader + ".whitenessB") $ConvertData[2] ;
+             }
+	     
+	     print "Done !";
+}
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////------? Menu
+
+
+//------About Menu
+
+ global proc KBI_Materials_Attributes_Transfert_About ()
+ {
+  if (`window -exists KBI_Materials_Attributes_Transfert_About_UI`)
+		  deleteUI KBI_Materials_Attributes_Transfert_About_UI;
+  if ( `windowPref -exists KBI_Materials_Attributes_Transfert_About_UI` )
+		  windowPref -r KBI_Materials_Attributes_Transfert_About_UI;
+
+  //------About Window UI
+
+  window -w 240
+		-h 100
+		-title "About" 
+		-maximizeButton 0 
+		  KBI_Materials_Attributes_Transfert_About_UI;
+
+  columnLayout aboutCol;
+  
+  scrollField -wordWrap true 
+		      -editable 0
+		      -h 100
+		      -w 240
+		      -font "boldLabelFont"
+		      -text  ("KBI_Materials_Attributes_Transfert\n"
+				      + "Version 1.2\n"
+				      + "Mel by Nicolas Koubi\n"
+				  + "nico.koubi AT wanadoo.fr\n"
+				      + "http://etoia.free.fr")
+				  aboutMaterialsAttributesTransfertSField;
+      
+  showWindow KBI_Materials_Attributes_Transfert_About_UI;   
+}

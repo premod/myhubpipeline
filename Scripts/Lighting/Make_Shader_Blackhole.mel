@@ -1,0 +1,17 @@
+
+
+
+global proc Make_Shader_Blackhole()
+{
+string $sel[] = `ls -sl`;
+hyperShade -smn;
+string $selShad[] = `ls -sl` ;
+int $i;
+for($i = 0;$i<size($selShad);$i++)
+{
+	editRenderLayerAdjustment ($selShad[$i] + ".matteOpacityMode");
+	setAttr ($selShad[$i] + ".matteOpacityMode") 0;
+	refreshAE;
+}
+}
+Make_Shader_Blackhole;

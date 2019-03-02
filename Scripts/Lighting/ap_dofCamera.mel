@@ -1,0 +1,75 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: Auto DOF Camera
+''    Author: AlexPummer 
+''    Last Updated: Oct 26, 2008
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/rendering/mental_ray/2518.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+///// AlexPummer.com /////////////////////////////////////////////////////////////////////
+//                                                                                      //
+//  ScriptName: ap_dofCamera                                                            //
+//  Version: 1.0                                                                        //
+//  Last Updated:                                                                       //
+//  Tested for MayaVer: 2009 x64                                                        //
+//                                                                                      //
+//  MainProcedure: ap_dofCamera                                                         //
+//                                                                                      //
+//////////////////////////////////////////////////////////////////////////////////////////
+
+/*-------------------<    beginProcHelp     >---------------------------------------------
+ [  PROCEDURE: ap_dofCamera
+ [  ARGUEMENTS: "maya" if you intend to use maya's software render
+ [              "mr"   if you are going to use mental ray, this will enable creation of bokeh node
+ [  RETURN: NA
+ [  DESCRIPTION:
+ [
+  -------------------<     endProcHelp       >--------------------------------------------
+*/
+
+proc ap_dofCamera (string $renderType) {
+      select -cl;
+      camera -centerOfInterest 5
+             -focalLength 35
+             -lensSqueezeRatio 1
+             -cameraScale 1
+             -horizontalFilmAperture 1.41732
+             -horizontalFilmOffset 0
+             -verticalFilmAperture 0.94488
+             -verticalFilmOffset 0
+             -filmFit Fill
+             -overscan 1
+             -motionBlur 0
+             -shutterAngle 144
+             -nearClipPlane 0.01
+             -farClipPlane 1000
+             -orthographic 0
+             -orthographicWidth 30;
+      objectMoveCommand;
+      string $dofCamera = `cameraMakeNode 2 ""`;
+      string $dofCameraParent[]= `listRelatives -p $dofCamera`;
+      string $fullPath[] = `listRelatives -f $dofCamera`;
+
+
+      string $buffer_array[]=`listRelatives -typ "locator" -c -ad $dofCameraParent[0]`;//Determining the aim constraint
+      setAttr ($buffer_array[0]+".visibility") 1;                                      //Enabled visibility of aim contraint
+      //Finished Creating Camera
+
+      if ($renderType=="mr") {
+         string $dofBokehNode =`mrCreateCustomNode -asUtility "" mia_lens_bokeh`;         //Created MentalRay Shader
+         connectAttr -force ($dofBokehNode+".message") ($fullPath[0]+".miLensShader");    //Connection : Bokeh Shader -> Camera
+         connectAttr -f ($dofCameraParent[0]+".distanceBetween") ($dofBokehNode+".plane");//mentalRay Boken Shader connection
+      }
+      if ($renderType == "maya") {
+         connectAttr -f ($dofCameraParent[0]+".distanceBetween") ($fullPath[0]+".focusDistance");//Maya Dof connection
+         setAttr ($fullPath[0]+".depthOfField") 1;                                          //Turning on depth of Field for Camera.
+      }
+}
+
+ap_dofCamera mr;

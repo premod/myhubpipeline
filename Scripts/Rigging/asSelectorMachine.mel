@@ -1,0 +1,229 @@
+global proc asSelectorMachine ()
+{
+	if (`window -q -ex faceMachine`)deleteUI faceMachine;
+	window -t "Face Generator . . ." -wh 328 347 faceMachine;
+	columnLayout -adj 1;
+	rowLayout -nc 2 -adj 1 -cat 1 right 0; setParent..;
+	formLayout faceMachineFormLayout;
+		
+	iconTextButton -en 0 -w 320 -h 320 -i ("Q://CustomScripts//2009Scripts//Icons//face.bmp") "asSelectorMachineBGPicture";
+
+	button -l "A" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,1)"  "asSelectorMachine:EyeBrow_Right_1:80:41";
+	button -l "B" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,2)"  "asSelectorMachine:EyeBrow_Right_2:215:41";
+	button -l "C" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,3)"  "asSelectorMachine:EyeBrow_Right_3:235:41";
+	button -l "D" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,4)"  "asSelectorMachine:EyeBrow_Right_4:255:41";
+	button -l "E" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,5)"  "asSelectorMachine:EyeBrow_Right_5:285:41";
+	
+	button -l "F" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,6)"  "asSelectorMachine:EyeBrow_Left_1:80:41";
+	button -l "G" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,7)"  "asSelectorMachine:EyeBrow_Left_2:215:41";
+	button -l "H" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,8)"  "asSelectorMachine:EyeBrow_Left_3:235:41";
+	button -l "I" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,9)"  "asSelectorMachine:EyeBrow_Left_4:255:41";
+	button -l "J" -h 17 -bgc 0.4 0.4 0.4 -c "faceMachine_Bind(1,10)"  "asSelectorMachine:EyeBrow_Left_5:285:41";
+	
+	button -l "K" -h 17 -bgc .5 0.54 0.25 -c "faceMachine_Bind(1,11)"  "asSelectorMachine:EyeBrow_LeftSide_1:80:41";
+	button -l "L" -h 17 -bgc .5 0.54 0.25 -c "faceMachine_Bind(1,12)"  "asSelectorMachine:EyeBrow_RightSide_2:215:41";
+
+
+	button -l "M" -h 17 -bgc 1 0.74 0.25 -c "faceMachine_Bind(2,13)"  "asSelectorMachine:Nose_Middle:80:41";
+	button -l "N" -h 17 -bgc 1 0.74 0.25 -c "faceMachine_Bind(2,14)"  "asSelectorMachine:Nose_Left:215:41";
+	button -l "O" -h 17 -bgc 1 0.74 0.25 -c "faceMachine_Bind(2,15)"  "asSelectorMachine:Nose_Right:235:41";
+	
+	button -l "P" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,16)"  "asSelectorMachine:Mouth_Middle_Up:80:41";
+	button -l "Q" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,17)"  "asSelectorMachine:Mouth_LeftMiddle_Up:215:41";
+	button -l "R" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,18)"  "asSelectorMachine:Mouth_Right:235:41";
+	button -l "S" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,19)"  "asSelectorMachine:Mouth_LeftMiddle_Down:255:41";
+	button -l "T" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,20)"  "asSelectorMachine:Mouth_Middle_Down:215:41";
+	button -l "U" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,21)"  "asSelectorMachine:Mouth_RightMiddle_Down:235:41";
+	button -l "V" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,22)"  "asSelectorMachine:Mouth_Left:255:41";
+	button -l "W" -h 17 -bgc 1 0.36 0.30 -c "faceMachine_Bind(3,23)"  "asSelectorMachine:Mouth_RightMiddle_Up:80:41";
+
+	button -l "Y" -h 17 -bgc 1 0.46 0.55 -c "faceMachine_Bind(4,24)"  "asSelectorMachine:Cheek_Right:80:41";
+	button -l "X" -h 17 -bgc 1 0.46 0.55 -c "faceMachine_Bind(4,25)"  "asSelectorMachine:Cheek_Left:215:41";
+	
+	text -l "Select Mesh and Press here :" "asSelectorMachine:forTextInfo:80:41";
+	button -l "  Apply  " -bgc 1 0.46 0.55 -c "applySkinning"  "asSelectorMachine:forApply:215:41";
+		
+	formLayout -e
+		-af "asSelectorMachine:EyeBrow_Right_1:80:41" left 160
+		-af "asSelectorMachine:EyeBrow_Right_1:80:41" top 85
+		-af "asSelectorMachine:EyeBrow_Right_2:215:41" left 177
+		-af "asSelectorMachine:EyeBrow_Right_2:215:41" top 80
+		-af "asSelectorMachine:EyeBrow_Right_3:235:41" left 193
+		-af "asSelectorMachine:EyeBrow_Right_3:235:41" top 77
+		-af "asSelectorMachine:EyeBrow_Right_4:255:41" left 210
+		-af "asSelectorMachine:EyeBrow_Right_4:255:41" top 80
+		-af "asSelectorMachine:EyeBrow_Right_5:285:41" left 228
+		-af "asSelectorMachine:EyeBrow_Right_5:285:41" top 85
+
+		-af "asSelectorMachine:EyeBrow_Left_1:80:41" left 125
+		-af "asSelectorMachine:EyeBrow_Left_1:80:41" top 85
+		-af "asSelectorMachine:EyeBrow_Left_2:215:41" left 107
+		-af "asSelectorMachine:EyeBrow_Left_2:215:41" top 80
+		-af "asSelectorMachine:EyeBrow_Left_3:235:41" left 90
+		-af "asSelectorMachine:EyeBrow_Left_3:235:41" top 77
+		-af "asSelectorMachine:EyeBrow_Left_4:255:41" left 77
+		-af "asSelectorMachine:EyeBrow_Left_4:255:41" top 80
+		-af "asSelectorMachine:EyeBrow_Left_5:285:41" left 62
+		-af "asSelectorMachine:EyeBrow_Left_5:285:41" top 85
+
+		-af "asSelectorMachine:EyeBrow_LeftSide_1:80:41" left 63
+		-af "asSelectorMachine:EyeBrow_LeftSide_1:80:41" top 120
+		-af "asSelectorMachine:EyeBrow_RightSide_2:215:41" left 230
+		-af "asSelectorMachine:EyeBrow_RightSide_2:215:41" top 120
+		
+		-af "asSelectorMachine:Nose_Middle:80:41" left 145
+		-af "asSelectorMachine:Nose_Middle:80:41" top 150
+		-af "asSelectorMachine:Nose_Left:215:41" left 180
+		-af "asSelectorMachine:Nose_Left:215:41" top 170
+		-af "asSelectorMachine:Nose_Right:235:41" left 110
+		-af "asSelectorMachine:Nose_Right:235:41" top 170
+		
+		-af "asSelectorMachine:Mouth_Middle_Up:80:41" left 148
+		-af "asSelectorMachine:Mouth_Middle_Up:80:41" top 195
+		-af "asSelectorMachine:Mouth_Middle_Down:215:41" left 148
+		-af "asSelectorMachine:Mouth_Middle_Down:215:41" top 235
+		-af "asSelectorMachine:Mouth_Right:235:41" left 190
+		-af "asSelectorMachine:Mouth_Right:235:41" top 210
+		-af "asSelectorMachine:Mouth_Left:255:41" left 100
+		-af "asSelectorMachine:Mouth_Left:255:41" top 210
+		
+		-af "asSelectorMachine:Mouth_RightMiddle_Up:80:41" left 125
+		-af "asSelectorMachine:Mouth_RightMiddle_Up:80:41" top 197
+		-af "asSelectorMachine:Mouth_LeftMiddle_Up:215:41" left 170
+		-af "asSelectorMachine:Mouth_LeftMiddle_Up:215:41" top 197
+		-af "asSelectorMachine:Mouth_RightMiddle_Down:235:41" left 125
+		-af "asSelectorMachine:Mouth_RightMiddle_Down:235:41" top 225
+		-af "asSelectorMachine:Mouth_LeftMiddle_Down:255:41" left 170
+		-af "asSelectorMachine:Mouth_LeftMiddle_Down:255:41" top 225
+
+		-af "asSelectorMachine:Cheek_Right:80:41" left 220
+		-af "asSelectorMachine:Cheek_Right:80:41" top 160
+		-af "asSelectorMachine:Cheek_Left:215:41" left 65
+		-af "asSelectorMachine:Cheek_Left:215:41" top 160
+
+		-af "asSelectorMachine:forTextInfo:80:41" left 65
+		-af "asSelectorMachine:forTextInfo:80:41" top 315
+		-af "asSelectorMachine:forApply:215:41" left 210
+		-af "asSelectorMachine:forApply:215:41" top 315
+		
+		faceMachineFormLayout;
+	
+	showWindow;
+}
+asSelectorMachine ;
+global proc faceMachine_Bind(int $first,int $second)
+{
+	string $ext[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","Y","X"};
+	string $selVerts[] = `filterExpand -expand 1 -sm 31 `;
+	float $xyzPos[] = `xform -q -ws -a -t $selVerts[0]`;
+   	$x= $xyzPos[0];	$y= $xyzPos[1];	$z= $xyzPos[2];
+	switch ($first)
+	{
+		case 1:
+			string $jointName = ("EyeBrow_");
+			joint -p ($xyzPos[0]) ($xyzPos[1]) ($xyzPos[2]) -n ($jointName+$ext[$second-1]);
+			select -tgl $selVerts[0];
+			select -tgl ($jointName+$ext[$second-1]);
+			curve -d 1 -p 1 0 -1 -p -1 0 -1 -p -1 0 1 -p 1 0 1 -p 1 0 -1 -k 0 -k 1 -k 2 -k 3 -k 4 -n ($jointName+$ext[$second-1]+"_Ctrl") ;
+			scale -r 0.037 0.037 0.037 ;
+			rotate -r -os 91.508835 0 0 ;
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateZ") ($xyzPos[2]+0.03);
+			select -cl;
+			select ($jointName+$ext[$second-1]+"_Ctrl");
+			makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+			select -r ($jointName+$ext[$second-1]) ;	
+			select -tgl ($jointName+$ext[$second-1]+"_Ctrl"); 
+			parent -r ($jointName+$ext[$second-1]) ($jointName+$ext[$second-1]+"_Ctrl");
+			setAttr (($jointName+$ext[$second-1])+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1])+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1])+".translateZ") ($xyzPos[2]);
+			select -cl;
+		break;
+		case 2:
+			string $jointName = ("Nose_");
+			joint -p ($xyzPos[0]) ($xyzPos[1]) ($xyzPos[2]) -n ($jointName+$ext[$second-1]);
+			select -tgl $selVerts[0];
+			select -tgl ($jointName+$ext[$second-1]);
+			curve -d 1 -p 1 0 -1 -p -1 0 -1 -p -1 0 1 -p 1 0 1 -p 1 0 -1 -k 0 -k 1 -k 2 -k 3 -k 4 -n ($jointName+$ext[$second-1]+"_Ctrl") ;
+			scale -r 0.037 0.037 0.037 ;
+			rotate -r -os 91.508835 0 0 ;
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateZ") ($xyzPos[2]+0.03);
+			select -cl;
+			select ($jointName+$ext[$second-1]+"_Ctrl");
+			makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+			select -r ($jointName+$ext[$second-1]) ;	
+			select -tgl ($jointName+$ext[$second-1]+"_Ctrl"); 
+			parent ($jointName+$ext[$second-1]) ($jointName+$ext[$second-1]+"_Ctrl");
+			setAttr (($jointName+$ext[$second-1])+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1])+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1])+".translateZ") ($xyzPos[2]);
+			select -cl;
+
+		break;
+		case 3:
+			string $jointName = ("Mouth_");
+			joint -p ($xyzPos[0]) ($xyzPos[1]) ($xyzPos[2]) -n ($jointName+$ext[$second-1]);
+			select -tgl $selVerts[0];
+			select -tgl ($jointName+$ext[$second-1]);
+			curve -d 1 -p 1 0 -1 -p -1 0 -1 -p -1 0 1 -p 1 0 1 -p 1 0 -1 -k 0 -k 1 -k 2 -k 3 -k 4 -n ($jointName+$ext[$second-1]+"_Ctrl") ;
+			scale -r 0.037 0.037 0.037 ;
+			rotate -r -os 91.508835 0 0 ;
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateZ") ($xyzPos[2]+0.03);
+			select -cl;
+			select ($jointName+$ext[$second-1]+"_Ctrl");
+			makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+			select -r ($jointName+$ext[$second-1]) ;	
+			select -tgl ($jointName+$ext[$second-1]+"_Ctrl"); 
+			parent ($jointName+$ext[$second-1]) ($jointName+$ext[$second-1]+"_Ctrl");
+			setAttr (($jointName+$ext[$second-1])+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1])+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1])+".translateZ") ($xyzPos[2]);
+			select -cl;
+
+		break;
+		case 4:
+			string $jointName = ("Cheek_");
+			joint -p ($xyzPos[0]) ($xyzPos[1]) ($xyzPos[2]) -n ($jointName+$ext[$second-1]);
+			select -tgl $selVerts[0];
+			select -tgl ($jointName+$ext[$second-1]);
+			curve -d 1 -p 1 0 -1 -p -1 0 -1 -p -1 0 1 -p 1 0 1 -p 1 0 -1 -k 0 -k 1 -k 2 -k 3 -k 4 -n ($jointName+$ext[$second-1]+"_Ctrl") ;
+			scale -r 0.037 0.037 0.037 ;
+			rotate -r -os 91.508835 0 0 ;
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1]+"_Ctrl")+".translateZ") ($xyzPos[2]+0.03);
+			select -cl;
+			select ($jointName+$ext[$second-1]+"_Ctrl");
+			makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+			select -r ($jointName+$ext[$second-1]) ;	
+			select -tgl ($jointName+$ext[$second-1]+"_Ctrl"); 
+			parent ($jointName+$ext[$second-1]) ($jointName+$ext[$second-1]+"_Ctrl");
+			setAttr (($jointName+$ext[$second-1])+".translateX") ($xyzPos[0]);
+			setAttr (($jointName+$ext[$second-1])+".translateY") ($xyzPos[1]);
+			setAttr (($jointName+$ext[$second-1])+".translateZ") ($xyzPos[2]);
+			select -cl;
+		break;
+	}
+}
+
+global proc applySkinning()
+{
+	string $allJoints[] = {"EyeBrow_A","EyeBrow_B","EyeBrow_C","EyeBrow_D","EyeBrow_E","EyeBrow_F","EyeBrow_G","EyeBrow_H","EyeBrow_I",
+	"EyeBrow_J","Nose_M","Nose_N","Nose_O","Mouth_P","Mouth_Q","Mouth_R","Mouth_S","Mouth_T","Mouth_U","Mouth_V","Mouth_W","Cheek_X","Cheek_Y"};
+	for($each in $allJoints)
+	{
+		string $selObj[] =`ls -sl`;	
+		catch(`select $each`);
+		catch(`select -tgl $selObj[0]`);
+		catch(`skinCluster -e -ug -dr 4 -ps 0 -ns 10 -lw true -wt 0 -ai $each skinCluster1`);
+		catch(`setAttr ($each+".liw") 0`);
+		select -cl;
+	}
+}
+

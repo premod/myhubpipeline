@@ -1,0 +1,48 @@
+
+global proc fileOptimisation()
+{
+	string $getFileNamehere=`file -q -loc`;
+	string $getFilenameonly=`basenameEx $getFileNamehere`;
+	catch (`deleteUI -window blendShapePanel1Window`);
+	catch (`deleteUI -window clipEditorPanel1Window`);
+	catch (`deleteUI -window dopeSheetPanel1Window`);
+	catch (`deleteUI -window hyperShadePanel1Window`);
+	catch (`deleteUI -window outlinerPanel1Window`);
+	catch (`deleteUI -window renderViewWindow`);
+	catch (`deleteUI -window graphEditor1Window`);
+	catch (`deleteUI -window multiListerPanel1Window`);
+	catch (`deleteUI -window unifiedRenderGlobalsWindow`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel4`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel2`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel3`);
+	catch (`modelEditor -edit -displayAppearance boundingBox modelPanel1`);
+	print "";
+
+	string $eachLayer;
+	string $allLayers[] = `ls -typ "displayLayer"`;
+	for( $eachLayer in $allLayers )
+	{
+		string $layerSize[] = `editDisplayLayerMembers -q $eachLayer`;
+		if( $eachLayer == "defaultLayer" )
+		{
+			continue;
+		}
+		if( `size($layerSize)` == "0" )
+		{
+			delete $eachLayer;
+		} 
+	}
+	
+	string $getConfirmfrmuse=`confirmDialog -title "Alert!" -message "Do you want to organise and clean this scene?? May take time on occasions...Hold tight." -button "Clean" -button "Exit"`;
+	if ($getConfirmfrmuse=="Clean")
+	{
+		hyperShadePanelMenuCommand("hyperShadePanel1", "deleteUnusedNodes");
+		print "File Optimized...Proceeding to Save....\n\n";
+		SaveScene;
+	}
+	else
+	{
+		warning "File not Saved";
+	}
+}
+

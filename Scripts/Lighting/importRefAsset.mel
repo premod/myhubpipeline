@@ -1,0 +1,5 @@
+global proc importRefAsset() {
+string $objects[]=`file -q -shn -l`;
+for($i=1; $i<size($objects); $i++) {
+catch(`file -importReference $objects[$i]`);
+}}

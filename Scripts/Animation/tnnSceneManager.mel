@@ -1,0 +1,32 @@
+global proc tnnSceneManager(){
+if( (`window -exists addEpiElements`) == true ){deleteUI addEpiElements;}
+window -widthHeight 260 425 -t "TNN Scene Manager " -mb true addEpiElements;
+menu -l " Select Episode ";
+menuItem -l "Episode 05" -c "selectedpropEpisode05" ep05;
+menuItem -l "Episode 06" -c "selectedpropEpisode06" ep06;
+columnLayout -bgc 0 0 0 -adj true;
+textScrollList  -fn "fixedWidthFont" -h 350 propslist;
+button -h 30 -bgc 0.7 0.7 0.7 -l "Create  Scene" -c getSelectedprop;
+window -e -wh 260 425 addEpiElements;
+showWindow;
+}
+global proc selectedpropEpisode05(){
+textScrollList -e -ra propslist;
+string $setsDirectory05= "Q:/TNN/04_PRODUCTION/Episode05/scenes/ANIMATION/01_LAYOUT_WIP/SCENE_DESCRIPTION/SHOTS/";
+string $files1[] = `getFileList -folder ($setsDirectory05) -filespec "*.ma"`;
+string $listOfFiles1[] = `sort $files1`;
+int $propsize1=`size($listOfFiles1)`;
+for ($getPropnames1 in $listOfFiles1)
+for ($i=$propsize1; $i<=$propsize1; $i++)	{
+textScrollList -e -append (basenameEx($getPropnames1)) propslist;
+}}
+global proc selectedpropEpisode06(){
+textScrollList -e -ra propslist;
+string $setsDirectory06= "Q:/TNN/04_PRODUCTION/Episode06/scenes/ANIMATION/01_LAYOUT_WIP/SCENE_DESCRIPTION/SHOTS/";
+string $files1[] = `getFileList -folder ($setsDirectory06) -filespec "*.ma"`;
+string $listOfFiles1[] = `sort $files1`;
+int $propsize1=`size($listOfFiles1)`;
+for ($getPropnames1 in $listOfFiles1)
+for ($i=$propsize1; $i<=$propsize1; $i++)	{
+textScrollList -e -append (basenameEx($getPropnames1)) propslist;
+}}

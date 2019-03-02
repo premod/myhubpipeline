@@ -1,0 +1,539 @@
+
+// Sets up the Face Machine interface for later.  If only this function gets called and not fm_menuInitialize, then the interface
+// is set up for Anzovin Rig Nodes
+global proc fm_interfaceInitialize()
+{
+	global string $anz_poseTypeScripts[];
+	global string $anz_poseSaveScripts[];
+	global string $anz_deletePanelUIScripts[];
+	global string $anz_createPanelUIScripts[];
+	global string $anz_sceneOpenScripts[];
+	global string $anz_sceneCloseScripts[];
+	global string $anz_menuCreationScripts[];
+	global string $anz_characterChangeScripts[];
+	
+	int $index = anzUI_obtainAnzovinProductIndex("The Face Machine", 0);
+	
+	$anz_menuCreationScripts[$index] = "fm_createBasicFMMenu"; // This will be overwritten if we're not loading Anzovin Rig Nodes
+	$anz_poseTypeScripts[$index] = "fmp_getFMControlType";
+	$anz_poseSaveScripts[$index] = "fmp_savePose";
+	$anz_createPanelUIScripts[$index] = "fm_AddFaceMachineInterface";
+	$anz_deletePanelUIScripts[$index] = "fm_deleteFaceMachineInterface";
+	$anz_sceneOpenScripts[$index] = "fm_sceneOpen";
+	$anz_sceneCloseScripts[$index] = "fm_sceneClose";
+	$anz_characterChangeScripts[$index] = "fm_updateForCharacterChange";
+}
+
+// Convenience function for toggling an attribute on the current character
+global proc fm_toggleAttribute(string $characterNamespace, string $attr)
+{
+	setAttr ($characterNamespace + $attr) (1 - `getAttr ($characterNamespace + $attr)`);
+}
+
+// Toggles the box controls visibility, and does all the selection exclusion stuff when they're invisible
+global proc fm_toggleBoxControlsVisibility()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	string $strings[], $attrs1[], $attrs2[], $parentConstraint, $scaleConstraint;
+	
+	$strings = `listRelatives -children -type "parentConstraint" ($anzovinInterfaceCurrentCharacterNamespace + "FM_boxControlsPerspCam_buffer")`;
+	$parentConstraint = $strings[0];
+	$attrs1 = `parentConstraint -q -weightAliasList $parentConstraint`;
+	$strings = `listRelatives -children -type "scaleConstraint" ($anzovinInterfaceCurrentCharacterNamespace + "FM_boxControlsPerspCam_buffer")`;
+	$scaleConstraint = $strings[0];
+	$attrs2 = `scaleConstraint -q -weightAliasList $scaleConstraint`;
+	
+	if (`getAttr ($parentConstraint + "." + $attrs1[0])` != 0) {
+		
+		setAttr ($parentConstraint + "." + $attrs1[0]) 0;
+		setAttr ($parentConstraint + "." + $attrs1[1]) 1;
+		setAttr ($scaleConstraint + "." + $attrs2[0]) 0;
+		setAttr ($scaleConstraint + "." + $attrs2[1]) 1;
+		fmToggleSelectionExclusion(($anzovinInterfaceCurrentCharacter + "_boxControlsSet"), 1);
+	} else {
+		
+		setAttr ($parentConstraint + "." + $attrs1[0]) 1;
+		setAttr ($parentConstraint + "." + $attrs1[1]) 0;
+		setAttr ($scaleConstraint + "." + $attrs2[0]) 1;
+		setAttr ($scaleConstraint + "." + $attrs2[1]) 0;
+		fmToggleSelectionExclusion(($anzovinInterfaceCurrentCharacter + "_boxControlsSet"), 0);
+	}
+}
+
+global proc fm_toggleFaceMachineEvaluation()
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	
+	int $value = 1 - `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.enableFaceMachine")`;
+	
+	setAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.enableFaceMachine") $value;
+	
+	string $fmSkinClusters[] = `ls -type "fmSkinCluster" ($anzovinInterfaceCurrentCharacterNamespace + "*")`;
+	for($fmSkinCluster in $fmSkinClusters) {
+		if ($value == 1)
+			setAttr ($fmSkinCluster + ".nodeState") 0;
+		else
+			setAttr ($fmSkinCluster + ".nodeState") 1;
+	}
+	
+	string $fmRelativeBlends[] = `ls -type "fmRelativeBlend" ($anzovinInterfaceCurrentCharacterNamespace + "*")`;
+	for($fmRelativeBlend in $fmRelativeBlends) {
+		if ($value == 1)
+			setAttr ($fmRelativeBlend + ".nodeState") 0;
+		else
+			setAttr ($fmRelativeBlend + ".nodeState") 1;
+	}
+}
+
+global proc fm_basicMenuPostCommand()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	int $characterPresent = 0;
+	
+	if (size(anzUI_FindCharacters()) > 0) {
+		if ($anzovinInterfaceCurrentCharacter != "" && objExists($anzovinInterfaceCurrentCharacterNamespace + "faceMachine"))
+			$characterPresent = 1;
+	}
+	
+	if ($characterPresent == 1) {
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.primaryControls")` -enable 1
+				fmMenuShowPrimaryControls;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.secondaryControls")` -enable 1
+				fmMenuShowSecondaryControls;
+		
+		menuItem -e -checkBox (fm_boxControlsVisibleForCharacter($anzovinInterfaceCurrentCharacter)) -enable 1
+				fmMenuShowBoxControls;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_options.showIK_eye_FC")` -enable 1
+				fmMenuShowIKEyeControl;
+		
+		menuItem -e -checkBox `getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data.enableFaceMachine")` -enable 1
+				fmMenuEnableFaceMachine;
+	} else {
+		
+		menuItem -e -checkBox 0 -enable 0 fmMenuShowPrimaryControls;
+		menuItem -e -checkBox 0 -enable 0 fmMenuShowSecondaryControls;
+		menuItem -e -checkBox 0 -enable 0 fmMenuShowBoxControls;
+		menuItem -e -checkBox 0 -enable 0 fmMenuShowIKEyeControl;
+		menuItem -e -checkBox 0 -enable 0 fmMenuEnableFaceMachine;
+	}
+}
+
+// Creates the basic Face Machine menu, called if we're loading Anzovin Rig Nodes
+global proc fm_createBasicFMMenu()
+{
+	global string $anz_installedProducts[];
+	global int $anz_installedProductCount;
+	
+	// Create face machine menu:
+	
+	// If there's more than one product, then we're making a sub menu for The Face Machine:
+	if ($anz_installedProductCount > 1)
+		menuItem -label "The Face Machine" -postMenuCommand "fm_basicMenuPostCommand" -tearOff true -subMenu true fmMainMenu;
+	else {
+		menu -e -postMenuCommand "fm_basicMenuPostCommand" anzMainMenu;
+		menuItem -divider true;
+	}
+	
+	menuItem -label "Show Primary Controls" -checkBox false
+			-annotation "Toggle visibility of the primary face controls on the current character."
+			-command "fm_toggleControlVisibility(\"primaryControls\");"
+			fmMenuShowPrimaryControls;
+	menuItem -label "Show Secondary Controls" -checkBox false
+			-annotation "Toggle visibility of the secondary face controls on the current character."
+			-command "fm_toggleControlVisibility(\"secondaryControls\");"
+			fmMenuShowSecondaryControls;
+	menuItem -label "Show IK Eye Control"  -checkBox false
+			-annotation "Toggle visibility of the IK Eye Control for the current character."
+			-command "fm_toggleAttribute($anzovinInterfaceCurrentCharacterNamespace, \"FM_options.showIK_eye_FC\");"
+			fmMenuShowIKEyeControl;
+	menuItem -label "Show Box Controls in Scene"  -checkBox false
+			-annotation "Toggles visibility of the box controls in the scene so that they can be viewed in the FM_boxControlsPerspCam."
+			-command "fm_toggleBoxControlsVisibility"
+			fmMenuShowBoxControls;
+			
+	menuItem -divider true;
+	
+	menuItem -label "Enable The Face Machine"  -checkBox false
+			-annotation "Toggles evaluation of The Face Machine for the current character. (Disabling the Face Machine may improve evaluation performance.)"
+			-command "fm_toggleFaceMachineEvaluation"
+			fmMenuEnableFaceMachine;
+			
+	if ($anz_installedProductCount > 1)
+		setParent -menu ..;
+}
+
+
+global proc int fm_boxControlsVisibleForCharacter(string $character)
+{
+	string $strings[], $attrs[];
+	string $namespace = getCharacterNamespace($character);
+	
+	$strings = `listRelatives -children -type "parentConstraint" ($namespace + "FM_boxControlsPerspCam_buffer")`;
+	$attrs = `parentConstraint -q -weightAliasList $strings[0]`;
+	return (`getAttr ($strings[0] + "." + $attrs[0])` != 0);
+}
+
+
+global proc fm_needNewerVersionDialog()
+{
+	string $messageText;
+	string $urlText;
+	string $form = `setParent -q`;
+	string $relevantProduct = "The Face Machine";
+	if (`pluginInfo -q -registered faceMachine` == 0) {
+		$relevantProduct = "Anzovin Rig Nodes";
+		$messageText = ("This scene file contains a rig created using a newer version of The Face Machine than is implemented in the currently installed version of Anzovin Rig Nodes.  To download the latest version of Anzovin Rig Nodes, visit the URL below:");
+		$urlText = "http://www.anzovin.com/products/arn1mayaDownloads.html";
+	} else {
+		$messageText = ("This scene file contains a rig created using a newer version of The Face Machine and is incompatible with the currently installed version.  To download the latest version of The Face Machine, visit the URL below:");
+		$urlText = "http://www.anzovin.com/products/tfm1mayaDownloads.html";
+	}
+	
+	int $formWidth;
+	if (`about -mac` == 1)
+		$formWidth = 400;
+	else
+		$formWidth = 360;
+	
+	int $spacer = 5;
+	int $top = 0;
+	int $edge = 5;
+	int $textWidth = $formWidth - $edge*2;
+	
+	formLayout -e -width $formWidth $form;
+	string $words[];
+	
+	warning $messageText;
+	
+	int $count = `tokenize $messageText " " $words`;
+	string $currentText = $words[0];
+	string $text = `text -l $currentText`;
+	for($i = 1; $i < $count; ++$i) {
+		text -edit -l ($currentText + " " + $words[$i]) $text;
+		if (`text -q -width $text` > $textWidth) {
+			$currentText += ("\n" + $words[$i]);
+			text -edit -l $currentText $text;
+		} else
+			$currentText += (" " + $words[$i]);
+	}
+	string $textField;
+	if (`about -mac` == 1)
+		$textField = `textField -editable true -text $urlText`;
+	else
+		$textField = `textField -editable false -text $urlText`;
+	string $button = `button -l "OK" -c "layoutDialog -dismiss \"OK\""`;
+	formLayout -edit
+		-attachForm $text "top" $top
+		-attachForm $text "left" $edge
+		-attachNone $text "bottom"
+		-attachForm $text "right" $edge
+		-attachControl $textField "top" $spacer $text
+		-attachForm $textField "left" $edge
+		-attachNone $textField "bottom"
+		-attachForm $textField "right" $edge
+		-attachControl $button "top" $spacer $textField
+		-attachPosition $button "left" -40 50 
+		-attachNone $button "bottom"
+		-attachPosition $button "right" -40 50
+		$form;
+}
+
+global proc fm_needNewerVersionWarning()
+{
+	if (`pluginInfo -q -registered faceMachine` == 1)
+		layoutDialog -title "This scene requires a newer version of The Face Machine" -ui "fm_needNewerVersionDialog";
+	else
+		layoutDialog -title "This scene requires a newer version of Anzovin Rig Nodes" -ui "fm_needNewerVersionDialog";
+}
+
+
+// To be called on closing a scene / unloading a character
+global proc fm_sceneClose()
+{
+	fmClearSelectionExclusion;
+	
+	string $editors[] = `lsUI -editors`;
+	for($editor in $editors) {
+		if (endsWith($editor, "_fmFaceMapView"))
+			deleteUI $editor;
+	}
+}
+
+
+// To be called on opening a scene
+global proc fm_sceneOpen()
+{
+	string $characters[] = `anzUI_FindCharacters`;
+	
+	fmClearSelectionExclusion;
+	
+	// Set up all the selection exclusion sets in this scene:
+	for($character in $characters) {
+		if (fm_characterHasFaceMachine($character)) {
+			
+			string $namespace = getCharacterNamespace($character);
+			
+			// Force evaluation of the enableFaceMachine attribute, because we have to for some reason
+			int $enabled = `getAttr ($namespace + "FM_data.enableFaceMachine")`;
+			setAttr ($namespace + "FM_data.enableFaceMachine") $enabled;
+			
+			int $requiredImplementation = 1;
+			if (attributeExists("faceMachineMinImplementation", ($namespace + "AnzovinInterfaceNode")))
+				$requiredImplementation = `getAttr ($namespace + "AnzovinInterfaceNode.faceMachineMinImplementation")`;
+			if ($requiredImplementation > `fmVersionInfo -implementation`)
+				scriptJob -runOnce true -idleEvent "fm_needNewerVersionWarning;";
+			
+			string $faceMapObjects[] = `listRelatives -type transform -allDescendents ($namespace + "faceMap_buttons")`;
+			$faceMapObjects[size($faceMapObjects)] = ($namespace + "faceMap_background");
+			
+			string $cameras[] = {($namespace + "FM_faceMapCam")};
+			
+			fmAddSelectionExclusion($faceMapObjects, $cameras, ($character + "_faceMapButtonsSet"));
+			fmToggleSelectionExclusion(($character + "_faceMapButtonsSet"), 1);
+			
+			
+			
+			string $sandboxObjects[] = `listRelatives -type transform -allDescendents ($namespace + "FM_boxControlsPerspCam_buffer")`;
+			string $cameras[] = {($namespace + "FM_boxControlsPerspCam"), ($namespace + "FM_boxControlsOrthoCam")};
+			
+			
+			fmAddSelectionExclusion($sandboxObjects, $cameras, ($character + "_boxControlsSet"));
+			
+			if (fm_boxControlsVisibleForCharacter($character) == 1)
+				fmToggleSelectionExclusion(($character + "_boxControlsSet"), 0);
+			else
+				fmToggleSelectionExclusion(($character + "_boxControlsSet"), 1);
+		}
+	}
+}
+
+
+proc string fm_createDoodadInterface(string $character)
+{
+	string $characterNamespace = getCharacterNamespace($character);
+	string $topLayout = `frameLayout -borderVisible true -borderStyle "in" -labelVisible false -marginWidth 0 -marginHeight 0`;
+	
+		string $modelEditorName = ($character + "_fmFaceMapView");
+		if (`modelEditor -exists $modelEditorName`)
+			deleteUI $modelEditorName;
+		
+		modelEditor $modelEditorName;
+		modelEditor -edit -camera ($characterNamespace + "FM_faceMapCam") $modelEditorName;
+		modelEditor -edit
+					-grid 0
+					-displayLights "none"
+					-displayAppearance "smoothShaded"
+					-sortTransparent 0
+					-nc 1 -ns 0 -pm 1 -sds 0 -pl 0 -lt 0 -ca 0 -cv 0 -hu 0 -j 0 -ikh 0 -df 0 -dy 0 -fl 0 -hs 0 -fo 0 -lc 0 -dim 0 -ha 0 -pv 0 -tx 0 -str 0
+					$modelEditorName;
+				
+		string $selection[] = `ls -sl`;
+		
+		// Add only the box controls to the view
+		modelEditor -edit -viewSelected 0 $modelEditorName;
+		select ($characterNamespace + "FM_faceMapGroup");
+		modelEditor -edit -viewSelected 1 -addSelected $modelEditorName;
+		select $selection;
+		
+	setParent ..;
+	
+ 	return $topLayout;
+}
+
+
+
+proc string fm_createOutlinerInterface(string $character)
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	string $selConName;
+	
+	string $characterNamespace = getCharacterNamespace($character);
+	
+	string $topLayout = `frameLayout -borderVisible true -borderStyle "in" -labelVisible false -marginWidth 0 -marginHeight 0`;
+	//string $form = `formLayout ($character + "_outlinerFormLayout")`;
+		
+		$selConName = ($character + "_fmCharacterSelectionConnection");
+		if (`selectionConnection -exists $selConName`)
+  			deleteUI $selConName;
+  		selectionConnection -object ($characterNamespace + "FaceMachineControls") $selConName;
+		
+	  	string $editor = `outlinerEditor
+ 			-mainListConnection $selConName // "worldList"
+ 			-selectionConnection "modelList" 
+ 			-setsIgnoreFilters false
+ 			-showShapes false
+ 			-showAttributes false
+ 			-showConnected false
+ 			-showAnimCurvesOnly false
+ 			-autoExpand false
+ 			-showDagOnly true
+ 			-showNamespace false
+ 			-ignoreDagHierarchy false
+ 			-expandConnections false
+ 			-expandObjects false
+ 			-showCompounds true
+ 			-showNumericAttrsOnly false
+ 			-highlightActive true
+ 			-autoSelectNewObjects false
+ 			-doNotSelectNewObjects false
+ 			-transmitFilters false
+ 			-showSetMembers true
+ 			-dropIsParent false`;
+ 			//-filter fmCurrentCharacterFilter
+ 			//-setFilter fmCurrentCharacterFilter
+			
+		/*
+ 		formLayout -edit
+ 			-attachForm     $editor     "top"    0
+ 			-attachForm     $editor     "left"   0
+ 			-attachForm     $editor     "right"    0
+ 			-attachForm     $editor     "bottom"   0
+ 			$form;*/
+		
+ 	setParent ..;
+ 				
+ 	return $topLayout;
+ }
+ 
+
+ global proc string fm_createBoxControlsView(string $character)
+ {
+	string $characterNamespace = getCharacterNamespace($character);
+	string $topLayout = `frameLayout -borderVisible true -borderStyle "in" -labelVisible false -marginWidth 0 -marginHeight 0`;
+	
+		string $modelEditorName = ($character + "_fmBoxControlsView");
+		if (`modelEditor -exists $modelEditorName`)
+			deleteUI $modelEditorName;
+		
+		modelEditor $modelEditorName;
+		modelEditor -edit -camera ($characterNamespace + "FM_boxControlsOrthoCam") $modelEditorName;
+		modelEditor -edit
+					-grid 0
+					-displayAppearance "wireframe" 
+					-displayLights "none"
+					-nc 1 -ns 0 -pm 1 -sds 0 -pl 0 -lt 0 -ca 0 -cv 0 -hu 0 -j 0 -ikh 0 -df 0 -dy 0 -fl 0 -hs 0 -fo 0 -lc 0 -dim 0 -ha 0 -pv 0 -tx 0 -str 0
+					$modelEditorName;
+				
+		string $selection[] = `ls -sl`;
+		
+		// Add only the box controls to the view
+		modelEditor -edit -viewSelected 0 $modelEditorName;
+		select ($characterNamespace + "FM_boxControlsBuffer");
+		modelEditor -edit -viewSelected 1 -addSelected $modelEditorName;
+		select $selection;
+		
+	setParent ..;
+	
+ 	return $topLayout;
+ }
+ 
+global proc int fm_characterHasFaceMachine(string $character)
+{
+	string $interfaceNode = (getCharacterNamespace($character) + "AnzovinInterfaceNode");
+	if (`objExists $interfaceNode`) {
+		if (attributeExists("faceMachinePresent", $interfaceNode)) {
+			if (`getAttr ($interfaceNode + ".faceMachinePresent")` == 1)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+global proc fm_AddFaceMachineInterface()
+{
+	global string $anzovinInterfaceCurrentCharacter;
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	string $child1, $child2, $child3;
+	string $characters[] = `anzUI_FindCharacters`;
+	
+	// Add tabs to the Anzovin interface:
+	
+	string $orgParent = `setParent -q`;
+	
+	for($character in $characters) {
+		if (fm_characterHasFaceMachine($character)) {
+			
+			setParent ($character + "_tabLayout");
+				
+				// Obnoxious work around for UI bug on Mac OS X - we are forced to switch the placement of the outliner
+				// and face map tab, because for some reason on Mac OS X having a tab with a modelEditor in it as the
+				// the first tab causes weird things to happen.
+				if (`about -mac` == 1) {
+					$child2 = fm_createOutlinerInterface($character);
+					$child1 = fm_createDoodadInterface($character);
+				} else {
+					$child1 = fm_createDoodadInterface($character);
+					$child2 = fm_createOutlinerInterface($character);
+				}
+				
+  				$child3 = fm_createBoxControlsView($character);
+				
+  			tabLayout -edit
+  				-tabLabel $child1 "TFM Maps" -tabLabel $child2 "TFM Outliner" -tabLabel $child3 "TFM Box Controls" 
+  				($character + "_tabLayout");
+		}
+	}
+	setParent $orgParent;
+	
+}
+
+global proc fm_deleteFaceMachineInterface()
+{
+	string $characters[] = `anzUI_FindCharacters`;
+	
+	for($character in $characters) {
+		string $modelEditorName = ($character + "_fmBoxControlsView");
+		if (`modelEditor -exists $modelEditorName`)
+			deleteUI $modelEditorName;
+	}
+	
+}
+
+
+
+global proc fm_toggleControlVisibility(string $attr)
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	
+	int $value = (1-`getAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data." + $attr)`);
+	setAttr ($anzovinInterfaceCurrentCharacterNamespace + "FM_data." + $attr) $value;
+	
+	if ($value == 1)
+		polyColorSet -currentColorSet -colorSet "toggledSet" ($anzovinInterfaceCurrentCharacterNamespace + $attr + "_faceMapToggle");
+	else
+		polyColorSet -currentColorSet -colorSet "untoggledSet" ($anzovinInterfaceCurrentCharacterNamespace + $attr + "_faceMapToggle");
+	
+	// Update relevant menu items:
+	if ($attr == "primaryControls")
+		menuItem -e -checkBox $value fmMenuShowPrimaryControls;
+	else
+		menuItem -e -checkBox $value fmMenuShowSecondaryControls;
+		
+}
+
+
+global proc fm_toggleControlsVisibilityFaceMap(string $faceMap)
+{
+	if ($faceMap == "primaryControls_faceMapToggle")
+		fm_toggleControlVisibility("primaryControls");
+	else
+		fm_toggleControlVisibility("secondaryControls");
+		
+}
+
+global proc fm_updateForCharacterChange()
+{
+	string $menuUpdateScript = "";
+	
+	if (`menuItem -exists fmMainMenu` == 1)
+		$menuUpdateScript = `menuItem -q -postMenuCommand fmMainMenu`;
+	else if (`menu -exists anzMainMenu` == 1)
+		$menuUpdateScript = `menu -q -postMenuCommand anzMainMenu`;
+	
+	eval($menuUpdateScript);
+}

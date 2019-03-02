@@ -1,0 +1,37 @@
+global proc cleanReferenceEditior()
+{
+	string $selList[] = `ls -rf`;
+	for($i=0; $i<size($selList); $i++)
+	{
+		catch(`file -unloadReference $selList[$i]`);
+	}
+	string $currPath[] = `file -q -r`;
+	for($each in $currPath)
+	{
+		string $buffer[];
+		$numTokens = `tokenize $each "." $buffer`;
+
+		int $sha = endsWith($buffer[0], "_SHA");
+		print $sha;
+		if($sha == "1")
+		{
+			file -rr $each;
+		}
+	}
+	dConnectAttributes();
+}
+
+global proc dConnectAttributes()
+{
+	string $selList[] = `ls -rf`;
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		if ( `file -q -dr $currPath[$i]` )
+		{
+			print ($currPath[$i]+"\n");
+			referenceEdit -fld true -r $currPath[$i]; 
+			referenceEdit -failedEdits true -successfulEdits true -editCommand disconnectAttr -r $currPath[$i];
+		}
+	}
+}

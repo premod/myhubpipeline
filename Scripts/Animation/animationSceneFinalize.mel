@@ -1,0 +1,218 @@
+global proc animationSceneFinalize()
+{
+	if (`window -q -ex animFinalizeWin`)deleteUI animFinalizeWin;
+	window -t "Animation Scene Finalization" -wh 674 725 animFinalizeWin;
+	rowColumnLayout -numberOfColumns 2 -columnAttach 1 "right" 0
+   	-columnWidth 1 105 -columnWidth 2 550 animLayout;
+	text -l "";
+	text -l "";
+	string $fileName = basename( `file -q -sn`, "" );
+	text -label "File Name:";
+	textField -fi $fileName myField;
+	text -l "";
+	text -l "";
+	string $dirname = dirname(`file -q -sn`);
+	text -label "File Path:";
+	textField -fi $dirname;
+	text -l "";
+	text -l "";
+	string $perCams[] = `listCameras -p`;
+	string $items[] = {"persp"};
+	string $diff[] = stringArrayRemove($items, $perCams);
+	text -label "Persp Cams:";
+	textScrollList -numberOfRows 4 pName;
+	for($pCam in $diff)
+	{
+		textScrollList -e -a $pCam pName;
+	}
+	text -l "";
+	text -l "";
+	text -label "Ortho Cams:";
+	string $orthoCams[] = `listCameras -o`;
+	string $items[] = {"front","top","side"};
+	string $diff[] = stringArrayRemove($items, $orthoCams);
+	textScrollList -numberOfRows 4 orthoName;
+	for($oCam in $diff)
+	{
+		textScrollList -e -a $oCam orthoName;
+	}
+	text -l "";
+	text -l "";
+	float $min = `playbackOptions -q -min`;
+	float $max = `playbackOptions -q -max`;
+	string $res = ($min+" - "+$max);
+	text -label "Frame Range:";
+	textField -tx $res;
+	text -l "";
+	text -l "";
+	text -label "FPS:";
+	string $fps = `optionVar -q workingUnitTimeDefault`; 
+	if($fps == "pal")
+	{
+		string $f = "25";
+		textField -tx $f;
+	}
+	else if($fps == "film")
+	{
+		string $p = "24";
+		textField -tx $p;
+	}
+	else
+	{
+		textField -tx $fps;
+	}
+	text -l "";
+	text -l "";
+	float $deviceRation =	getAttr ("defaultResolution.deviceAspectRatio");
+	text -label "Device Aspect Ratio:";
+	textField -tx $deviceRation;
+	text -l "";
+	text -l "";
+	text -label "Pixel Aspect Ratio:";
+	float $pixelRation =	getAttr ("defaultResolution.pixelAspect");
+	textField -tx $pixelRation;
+	text -l "";
+	text -l "";
+	string $list[] = `listConnections defaultRenderGlobals.resolution`;
+	float $width = getAttr ( $list[0]+".width");
+	float $height = getAttr ( $list[0]+".height");
+	string $result = $width+" : "+$height; 
+	text -label "Resolution:";
+	textField -tx $result;
+	text -l "";
+	text -l "";
+	text -label "Refs Loaded:";
+	textScrollList -numberOfRows 6 loadRefs;
+	string $selList[] = `ls -rf`;
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		if ( !`file -q -dr $currPath[$i]` )
+		{
+			textScrollList -e -a $currPath[$i] loadRefs;
+		}
+	}
+	text -l "";
+	text -l "";
+	text -label "Refs Not Loaded:";
+	textScrollList -numberOfRows 6 notLoadRefs;	
+	string $selList[] = `ls -rf`;
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		if ( `file -q -dr $currPath[$i]` )
+		{
+			textScrollList -e -a $currPath[$i] notLoadRefs;	
+		}
+	}
+	text -l "";
+	text -l "";
+	text -label "Non Ref Objects:";
+	textScrollList -numberOfRows 4 nonRefs;
+	string $trans[] = `ls -typ "mesh"`;
+	for($each in $trans)
+	{
+		string $mat = `match ":" $each`;
+		int $size = size($mat);
+		if($size == "0")
+		{
+			textScrollList -e -a $each nonRefs;
+		}	
+	}
+
+	text -label "Tex Paths:";
+	textScrollList -numberOfRows 4 texPath;
+	string $path[] = `ls -typ "file"`;
+	for($each in $path)
+	{
+		string $tex = `getAttr($each+".ftn")`;
+		textScrollList -e -a $tex texPath;
+	} 
+	button -l "       Finalize       " -c "writeFilePath()";
+	showWindow;
+}
+
+global proc writeFilePath()
+{
+	fileBrowser( "finalize", "Text", "", 4 ); 
+}
+
+global proc finalize(string $dirPath,string $fileType)
+{
+	string $fileName = basename( `file -q -sn`, "" );
+	string $dirname = dirname(`file -q -sn`);
+	float $min = `playbackOptions -q -min`;
+	float $max = `playbackOptions -q -max`;
+	string $res = ($min+" - "+$max);
+	string $fps = `optionVar -q workingUnitTimeDefault`; 
+	float $deviceRation = getAttr ("defaultResolution.deviceAspectRatio");
+	float $pixelRation =	getAttr ("defaultResolution.pixelAspect");
+	string $list[] = `listConnections defaultRenderGlobals.resolution`;
+	float $width = getAttr ( $list[0]+".width");
+	float $height = getAttr ( $list[0]+".height");
+	string $result = $width+" : "+$height; 
+
+	string $base = basenameEx($fileName);
+	$exampleFileName = $dirPath+"/"+$base+".txt";
+	$fileId=`fopen $exampleFileName "w"`;
+
+	fwrite $fileId ("File Name : "+$fileName+"\n"+"File Path : "+$dirname+"\n"+"Frame Range : "+$res+"\n"+"FPS : "+$fps
+	+"\n"+"Device ARatio : "+$deviceRation+"\n"+"Pixel ARatio : "+$pixelRation+"\n"+"Resolution : "+$result+"\n");
+
+	string $perCams[] = `listCameras -p`;
+	string $items[] = {"persp"};
+	string $diff[] = stringArrayRemove($items, $perCams);
+	for($pCam in $diff)
+	{
+		fwrite $fileId ("Persp Cams : "+$pCam+"\n");
+	}
+
+	string $orthoCams[] = `listCameras -o`;
+	string $items[] = {"front","top","side"};
+	string $diff[] = stringArrayRemove($items, $orthoCams);
+	for($oCam in $diff)
+	{
+		fwrite $fileId ("Ortho Cams : "+$oCam+"\n");
+	}
+
+	string $selList[] = `ls -rf`;
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		if ( !`file -q -dr $currPath[$i]` )
+		{
+			fwrite $fileId ("Refs Loaded : "+$currPath[$i]+"\n");
+		}
+	}
+	
+	string $selList[] = `ls -rf`;
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		if ( `file -q -dr $currPath[$i]` )
+		{
+			fwrite $fileId ("Refs Not Loaded : "+$currPath[$i]+"\n");
+		}
+	}
+
+	string $trans[] = `ls -typ "mesh"`;
+	for($each in $trans)
+	{
+		string $mat = `match ":" $each`;
+		int $size = size($mat);
+		if($size == "0")
+		{
+			fwrite $fileId ("Non Ref Objects : "+$each+"\n");
+		}	
+	}
+	
+	string $path[] = `ls -typ "file"`;
+	for($each in $path)
+	{
+		string $tex = `getAttr($each+".ftn")`;
+		fwrite $fileId ("Tex Path : "+$tex+"\n");
+
+	} 
+	fwrite $fileId ("File End Here. "+"\n");
+	fclose $fileId;	
+}

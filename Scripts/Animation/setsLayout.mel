@@ -1,0 +1,126 @@
+global proc setsLayout()
+{
+	string $floderName;
+	if(`window -ex "displaySetsWin"`) deleteUI "displaySetsWin";
+	window -t "Sets" -wh 184 128 -s 0 "displaySetsWin";
+	columnLayout -adj true;
+	text -l "";
+	string $currPath[] = `file -q -r`;
+	for($i=0; $i<size($currPath); $i++)
+	{
+		string $set[];
+		$numTokens = `tokenize $currPath[$i] "/" $set`;
+		if(($set[5] == "SETS") || ($set[6] == "SETS"))
+		{
+			string $refFile = basenameEx($currPath[$i]);
+			button -l $refFile -c ("press("+$i+")") ("myButton"+$i);
+		}
+	}
+	showWindow;
+}
+
+global proc press(string $refFile)
+{
+	string $bName = `button -q -l ("myButton"+$refFile)`;
+	string $array[] = {"COMMON","EPISODE_07","EPISODE_08","EPISODE_09","EPISODE_10","EPISODE_11"};
+	for($folder in $array)
+	{ 
+		string $dirPath = "Q:/THE99/PRODUCTION/REFERENCES/"+$folder+"/SETS/";
+		string $files[] = `getFileList -folder ($dirPath) -fs "*.ma"`;
+		for($a in $files)
+		{
+			string $b = basenameEx($a);
+			if($b == $bName)
+			{
+				getSets($b,$folder);
+			}
+			else
+			{
+				string $ar[] = {"PRI","SEC"};
+				for($each in $ar)
+				{
+					string $mat = `match $each $bName`;
+					if(($mat == "PRI") || ($mat == "SEC"))
+					{
+						warning "Already Loaded";
+					}
+				}
+			}
+		}
+	}
+}
+
+global proc getSets(string $b,string $folder)
+{
+	if(`window -ex "primaryWin"`) deleteUI "primaryWin";
+	window -t $b -wh 210 270 primaryWin ;
+	columnLayout -adj true;
+	string $buffer[];
+	$numTokens = `tokenize $b "_" $buffer`;
+	string $primaryPath = "Q:/THE99/PRODUCTION/REFERENCES/"+$folder+"/SETS/"+$buffer[0]+"/"; 
+	string $getPrimary[] = `getFileList -folder ($primaryPath) -fs "*.jpg"`;
+	text -l "Layout" -fn "boldLabelFont";
+	for($k=0; $k<size($getPrimary); $k++)
+	{
+		button -l $getPrimary[$k] -c ("getSetImage("+$k+")") ("myButtn"+$k);
+	}
+	text -l "";
+	text -l "Primary <-----> Secondary" -fn "boldLabelFont";
+	text -l "";
+	string $getPrimary[] = `getFileList -folder ($primaryPath) -fs "*.ma"`;
+
+	string $array[] = {"COMMON","EPISODE_07","EPISODE_08","EPISODE_09","EPISODE_10","EPISODE_11"};
+	int $count; 
+	for($each in $array)
+	{
+		if($each  == $folder)
+		{
+			break;
+		}
+		$count++;
+	}
+	for($k=0; $k<size($getPrimary); $k++)
+	{
+		button -l $getPrimary[$k] -c ("getSetAll("+$k+","+$count+")") ("myButton"+$k);
+	}
+	
+	showWindow;
+}
+
+global proc getSetAll(string $k,int $count)
+{
+	string $but = `button -q -l ("myButton"+$k)`;
+	string $buffer[];
+	$numTokens = `tokenize $but "_" $buffer`;
+	string $array[] = {"COMMON","EPISODE_07","EPISODE_08","EPISODE_09","EPISODE_10","EPISODE_11"};
+	string $dirPath = "Q:/THE99/PRODUCTION/REFERENCES/"+$array[$count]+"/SETS/"+$buffer[0]+"/";
+	print $dirPath;
+	string $files[] = `getFileList -folder ($dirPath)`;
+	for($a in $files)
+	{
+		string $c = basenameEx($a);
+		if($but == $a)
+		{
+			file -r -ns $c ($dirPath+$a);
+		}
+	}
+}
+
+global proc getSetImage(string $k)
+{
+	string $butt = `button -q -l ("myButtn"+$k)`;
+	string $buffer[];
+	$numTokens = `tokenize $butt "_" $buffer`;
+	string $array[] = {"COMMON","EPISODE_07","EPISODE_08","EPISODE_09","EPISODE_10","EPISODE_11"};
+	for($folder in $array)
+	{ 
+		string $buffer1[];
+		$numTokens = `tokenize $buffer[0] "." $buffer1`;
+		if($buffer1[1] == "jpg")
+		{
+			string $dirPath = "Q:/THE99/PRODUCTION/REFERENCES/"+$folder+"/SETS/"+basenameEx($buffer1[0])+"/"+$butt;
+			system("load " + $dirPath);	
+		}
+	}
+}	
+

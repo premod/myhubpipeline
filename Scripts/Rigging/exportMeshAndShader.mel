@@ -1,0 +1,24 @@
+global proc exportMeshAndShader()
+{
+	fileBrowser( "meshWithLambert", "Text", "", 4 ); 
+}
+
+global proc meshWithLambert(string $dirPath, string $fileType)
+{
+	string $fileName = `file -q -sn`;
+	string $name = basenameEx($fileName);
+	catch(`select -r Rig`);
+	//catch(`select -add -ne Sets`);
+	sets -e -forceElement initialShadingGroup;
+	file -op "v=0" -typ "mayaAscii" -pr -es ($dirPath+"/"+$name);
+	
+	string $selMat[] = `ls -typ "shadingEngine"`;
+	select -r -ne $selMat;
+	string $n = basenameEx($fileName);
+	file -op "v=0" -typ "mayaAscii" -pr -es ($dirPath+"/"+$n+"_Sh"+".ma");
+	
+	select -r Surfaces;
+	DeleteHistory;
+	file -op "v=0" -typ "mayaAscii" -es ($dirPath+"/"+$n+"_Mesh"+".ma");
+}
+exportMeshAndShader;

@@ -1,0 +1,8 @@
+global proc changePolySmooth()
+{
+	string $change[] = `ls -type "polySmoothFace"`;
+	for($each in $change)
+	{
+		setAttr ($each+".divisions") 0;
+	}
+}

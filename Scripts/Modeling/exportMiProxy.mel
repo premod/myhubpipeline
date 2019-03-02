@@ -1,0 +1,52 @@
+global proc exportMiProxy()
+{ 
+	if ((`window -ex miProxyWin`)== true) deleteUI miProxyWin;
+	window -t "Mi PipeLine..." -wh 174 94 -s 0 miProxyWin;
+	columnLayout -adj 1;
+	button -l "Prepare Scene 4 .MI" -c "setPropCleaner";
+	button -l "Export Group as .MI" -c "mentalRayProxy";
+	showWindow;
+}
+
+global proc mentalRayProxy()
+{
+	fileBrowser( "desFile", "Text", "", 4 ); 
+	forLayers();
+}
+
+global proc int desFile( string $dirPath, string $fileType )
+{
+	unifiedRenderGlobalsWindow;
+	setCurrentRenderer("mentalRay");
+	string $miName[] = `ls -sl`; 
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	string $basename = $miName[0];
+	catch(`addAttr -ln ("Proxy"+$basename) -dt "string"`);
+	for($each in $miName)
+	{
+		catch(`setAttr -type "string" ($each+"."+("Proxy"+$basename)) ($dirPath+"/"+$basename+".mi")`);
+	}
+	file -op "v=0" -typ "mayaAscii" -pr -es ($dirPath+"/"+($miName[0]+".mi"));
+	file -op "binary=1;compression=0;tabstop=8;perframe=0;padframe=0;perlayer=0;pathnames=3313333333;assembly=1;fragment=1;fragsurfmats=1;fragsurfmatsassign=1;fragincshdrs=1;fragchilddag=1;passcontrimaps=1;passusrdata=0;	filter=00000011010000001101000;overrideAssemblyRootName=0;assemblyRootName=" -typ "mentalRay"; 
+	Mayatomr -mi  -exportFilter 721600 -active -binary -fe  -fem  -fma  -fis  -fcd  -pcm  -as  -asn "111" -xp "3313333333" -file ($miName[0]+".mi");
+	window -e -vis 0 unifiedRenderGlobalsWindow;
+	print "Exported";
+	return 1;
+}
+global proc forLayers()
+{
+	unifiedRenderGlobalsWindow;
+	setCurrentRenderer("mentalRay");
+	catch(`delete AO`);
+	catch(`delete customVector`);
+	createNode renderPass;
+	applyAttrPreset "renderPass1" "C:/Program Files/Autodesk/Maya2009/presets/attrPresets/renderPass/ambientOcclusion.mel" 1;
+	rename "renderPass1" "AO";
+	createNode renderPass;
+	applyAttrPreset "renderPass1" "C:/Program Files/Autodesk/Maya2009/presets/attrPresets/renderPass/customVector.mel" 1;
+	rename "renderPass1" "customVector";
+	catch(`connectAttr -nextAvailable defaultRenderLayer.renderPass AO.owner`);
+	catch(`connectAttr -nextAvailable defaultRenderLayer.renderPass customVector.owner`);
+	window -e -vis 0 unifiedRenderGlobalsWindow;
+	print "Passes Created";
+}

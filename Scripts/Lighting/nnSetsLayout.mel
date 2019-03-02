@@ -1,0 +1,203 @@
+global proc nnSetsLayout()
+{
+	if( (`window -exists setLayoutWin`) == true ){deleteUI setLayoutWin;}
+	window -widthHeight 318 447 -t "THE 99 Sets Layout         Sanraa Media..." -mb true -s 0 setLayoutWin;
+
+	menu -l " Item List ";
+	menuItem -l " Sets  "  -c setLayoutImages forComSets;
+	
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 epiTabLayout`;
+	formLayout -edit
+	     -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+
+     	string $common = `columnLayout -bgc 0 0 0 -adj true COMMON`;
+		textScrollList -ams true -fn "fixedWidthFont" -h 313 imagelist;
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Show Image" -c showSelectedImageHere;
+		button  -h 25 -l "Refresh List";
+       setParent ..;
+
+     	string $episode7 = `columnLayout -bgc 0 0 0 -adj true EPISODE_07`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 imagelist1;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Show Image" -c showSelectedImageHere;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $episode8 = `columnLayout -bgc 0 0 0 -adj true EPISODE_08`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 imagelist2;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Show Image" -c showSelectedImageHere;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $episode9 = `columnLayout -bgc 0 0 0 -adj true EPISODE_09`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 imagelist3;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Show Image" -c showSelectedImageHere;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	tabLayout -edit -tabLabel $common " COMMON " -tabLabel $episode7 " EPISODE 07 " -tabLabel $episode8 " EPISODE 08 " -tabLabel $episode9 " EPISODE 09 "$tabs ;
+	
+ showWindow;
+}
+
+global proc setLayoutImages()
+{
+	string $buffer[];
+	textScrollList -e -ra imagelist;
+	string $setsDirectory="Q:/THE99/PRODUCTION/REFERENCES/COMMON/SETS/";
+	string $folders[] = `getFileList -folder $setsDirectory`;
+	string $maFiles[] = `getFileList -folder $setsDirectory -fs "*.ma"`;
+	string $diff[] = stringArrayRemove($maFiles,$folders);
+	string $listOfFiles[] = `sort $diff`;
+	for($each in $listOfFiles)
+	{
+		string $imagePath =$setsDirectory+$each+"/";
+		string $imageName[] = `getFileList -folder $imagePath -fs "*.jpg"`;
+		textScrollList -e -append $imageName imagelist;
+	}
+	
+	string $buffer1[];
+	textScrollList -e -ra imagelist1;
+	string $setsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/EPISODE_07/SETS/";
+	string $folders1[] = `getFileList -folder $setsDirectory1`;
+	string $maFiles1[] = `getFileList -folder $setsDirectory1 -fs "*.ma"`;
+	string $diff1[] = stringArrayRemove($maFiles1,$folders1);
+	string $listOfFiles1[] = `sort $diff1`;
+	for($each1 in $listOfFiles1)
+	{
+		string $imagePath1 =$setsDirectory1+$each1+"/";
+		string $imageName1[] = `getFileList -folder $imagePath1 -fs "*.jpg"`;
+		textScrollList -e -append $imageName1 imagelist1;
+	}
+
+	string $buffer2[];
+	textScrollList -e -ra imagelist2;
+	string $setsDirectory2="Q:/THE99/PRODUCTION/REFERENCES/EPISODE_08/SETS/";
+	string $folders2[] = `getFileList -folder $setsDirectory2`;
+	string $maFiles2[] = `getFileList -folder $setsDirectory2 -fs "*.ma"`;
+	string $diff2[] = stringArrayRemove($maFiles2,$folders2);
+	string $listOfFiles2[] = `sort $diff2`;
+	for($each2 in $listOfFiles2)
+	{
+		string $imagePath2 =$setsDirectory2+$each2+"/";
+		string $imageName2[] = `getFileList -folder $imagePath2 -fs "*.jpg"`;
+		textScrollList -e -append $imageName2 imagelist2;
+	}
+
+	string $buffer3[];
+	textScrollList -e -ra imagelist3;
+	string $setsDirectory3="Q:/THE99/PRODUCTION/REFERENCES/EPISODE_09/SETS/";
+	string $folders3[] = `getFileList -folder $setsDirectory3`;
+	string $maFiles3[] = `getFileList -folder $setsDirectory3 -fs "*.ma"`;
+	string $diff3[] = stringArrayRemove($maFiles3,$folders3);
+	string $listOfFiles3[] = `sort $diff3`;
+	for($each3 in $listOfFiles3)
+	{
+		string $imagePath3 =$setsDirectory3+$each3+"/";
+		string $imageName3[] = `getFileList -folder $imagePath3 -fs "*.jpg"`;
+		textScrollList -e -append $imageName3 imagelist3;
+	}
+}
+
+global proc showSelectedImageHere()
+{
+	//textScrollList -e -da imagelist;
+	//textScrollList -e -da imagelist1;
+	//textScrollList -e -da imagelist2;
+	//textScrollList -e -da imagelist3;
+	string $tabType = `tabLayout -q -st epiTabLayout`;
+	switch($tabType)
+	{
+		case "COMMON":
+		string $image[] = `textScrollList -q -si imagelist`;
+		string $setsDirectory="Q:/THE99/PRODUCTION/REFERENCES/COMMON/SETS/";
+		string $folders[] = `getFileList -folder $setsDirectory`;
+		string $maFiles[] = `getFileList -folder $setsDirectory -fs "*.ma"`;
+		string $diff[] = stringArrayRemove($maFiles,$folders);
+		string $listOfFiles[] = `sort $diff`;
+		for($each in $listOfFiles)
+		{
+			string $imagePath =$setsDirectory+$each+"/";
+			string $imageName[] = `getFileList -folder $imagePath -fs "*.jpg"`;
+			for($mmm in $imageName)
+			{
+				if($mmm == $image[0])
+				{
+					string $displayPath = $setsDirectory+$each+"/"+$mmm;
+					system("load " + $displayPath);
+				}
+			}
+		}	
+		break;
+		
+		case "EPISODE_07":
+		string $image1[] = `textScrollList -q -si imagelist1`;
+		string $setsDirectory1="Q:/THE99/PRODUCTION/REFERENCES/EPISODE_07/SETS/";
+		string $folders1[] = `getFileList -folder $setsDirectory1`;
+		string $maFiles1[] = `getFileList -folder $setsDirectory1 -fs "*.ma"`;
+		string $diff1[] = stringArrayRemove($maFiles1,$folders1);
+		string $listOfFiles1[] = `sort $diff1`;
+		for($each1 in $listOfFiles1)
+		{
+			string $imagePath1 =$setsDirectory1+$each1+"/";
+			string $imageName1[] = `getFileList -folder $imagePath1 -fs "*.jpg"`;
+			for($mmm1 in $imageName1)
+			{
+				if($mmm1 == $image1[0])
+				{
+					string $displayPath1 = $setsDirectory1+$each1+"/"+$mmm1;
+					system("load " + $displayPath1);
+				}
+			}
+		}	
+		break;
+
+		case "EPISODE_08":
+		string $image2[] = `textScrollList -q -si imagelist2`;
+		string $setsDirectory2="Q:/THE99/PRODUCTION/REFERENCES/EPISODE_08/SETS/";
+		string $folders2[] = `getFileList -folder $setsDirectory2`;
+		string $maFiles2[] = `getFileList -folder $setsDirectory2 -fs "*.ma"`;
+		string $diff2[] = stringArrayRemove($maFiles2,$folders2);
+		string $listOfFiles2[] = `sort $diff2`;
+		for($each2 in $listOfFiles2)
+		{
+			string $imagePath2 =$setsDirectory2+$each2+"/";
+			string $imageName2[] = `getFileList -folder $imagePath2 -fs "*.jpg"`;
+			for($mmm2 in $imageName2)
+			{
+				if($mmm2 == $image2[0])
+				{
+					string $displayPath2 = $setsDirectory2+$each2+"/"+$mmm2;
+					system("load " + $displayPath2);
+				}
+			}
+		}	
+
+		break;
+		case "EPISODE_09":
+		string $image3[] = `textScrollList -q -si imagelist3`;
+		string $setsDirectory3="Q:/THE99/PRODUCTION/REFERENCES/EPISODE_09/SETS/";
+		string $folders3[] = `getFileList -folder $setsDirectory3`;
+		string $maFiles3[] = `getFileList -folder $setsDirectory3 -fs "*.ma"`;
+		string $diff3[] = stringArrayRemove($maFiles3,$folders3);
+		string $listOfFiles3[] = `sort $diff3`;
+		for($each3 in $listOfFiles3)
+		{
+			string $imagePath3 =$setsDirectory3+$each3+"/";
+			string $imageName3[] = `getFileList -folder $imagePath3 -fs "*.jpg"`;
+			for($mmm3 in $imageName3)
+			{
+				if($mmm3 == $image3[0])
+				{
+					string $displayPath3 = $setsDirectory3+$each3+"/"+$mmm3;
+					system("load " + $displayPath3);
+				}
+			}
+		}	
+		break;
+	}
+}

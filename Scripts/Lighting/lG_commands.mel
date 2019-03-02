@@ -1,0 +1,1454 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+global proc lG_startScriptJobs()
+{
+	string $cmd = "evalDeferred( \"lightGirl\" )";
+	scriptJob -parent lightGirl -event "SceneOpened" $cmd;
+	scriptJob -parent lightGirl -event "SelectionChanged" "lG_updateLightListCountCommand";
+	//scriptJob -parent lightGirl -event "NameChanged" "lG_renameCallback";
+	//scriptJob -parent lightGirl -uiDeleted "lightGirl" "lG_deleteAllOpenWindows";
+}
+
+global proc lG_deleteAllOpenWindows()
+{
+	//print("Deleting lightGirl UI...\n");
+	
+	string $windows[] = {
+		"lG_aboutWin",
+		"",
+		"lG_colorIntensityWin",
+		"lG_globalCustomAttrWin",
+		"lG_managerWin",
+		"lG_sheetWin"
+	};
+	
+	for($i=0;$i<size($windows);$i++) {
+		//print("Window: '" + $windows[$i] + "'\n");
+		if(`window -exists $windows[$i]`) {
+			//print("...deleted\n");
+			deleteUI $windows[$i];
+		}
+	}
+}
+
+global proc lG_createLightGirlScriptNode(int $lock)
+{
+	// create scriptNode for variable storage...
+	if(!`objExists("lightGirl")`) {
+		string $sNode = `scriptNode -st 0 -n "lightGirl"`;
+		
+		addAttr -ln "info" -dt "string" lightGirl;
+		setAttr -type "string" lightGirl.info "lightGirl scriptNode";
+		
+		if($lock) {
+			if(`objExists($sNode)`) {
+				lockNode $sNode;
+			}
+		}
+	}
+}
+
+global proc lG_setScriptNodeLockState(int $lock)
+{
+	lockNode -lock $lock lightGirl;
+}
+
+global proc lG_updateSatelliteUI()
+{
+	if(`window -exists lG_managerWin` == true)
+		deleteUI lG_managerWin;
+	
+	if(`window -exists lG_sheetWin` == true)
+		deleteUI lG_sheetWin;
+}
+
+global proc lG_updateLightConnections()
+{
+	lG_setScriptNodeLockState(0);
+	
+	global int $g_lG_enableLightConnections;
+	if($g_lG_enableLightConnections) {
+		global string $g_lG_allLights[];
+		
+		if(`objExists("lightGirl")`) {
+			string $attrs[] = `listAttr -ud ("lightGirl")`;
+			for($i=0;$i<size($attrs);$i++) {
+				if(!`gmatch $attrs[$i] "lGLS_*"` && $attrs[$i] != "info") {
+					string $connections[] = `listConnections ("lightGirl." + $attrs[$i])`;
+					if(`size $connections`) {
+						disconnectAttr ("lightGirl" + "." + $attrs[$i]) ($connections[0] + ".lightGirl");
+					}
+					deleteAttr ("lightGirl." + $attrs[$i]);
+				}
+			}
+			
+			for($i=0;$i<size($g_lG_allLights);$i++) {
+				string $parent = lG_getTransform($g_lG_allLights[$i]);
+				//string $attrName = "lightConnection" + ($i+1);
+				string $attrName = substituteAllString($parent, "|", "");
+				
+				if(!`objExists ($parent + ".lightGirl")`) {
+					addAttr -ln "lightGirl" -dt "string" $parent;
+				}
+				
+				addAttr -ln $attrName -dt "string" lightGirl;
+				connectAttr ("lightGirl" + "." + $attrName) ($parent + ".lightGirl");
+			}
+		}
+	}
+	
+	lG_setScriptNodeLockState(1);
+}
+
+global proc lG_renameCallback()
+{
+	//print("## lG_renameCallback() ##\n");
+	
+	global string $g_lG_allLights[];
+	global string $g_lG_allLights_SAVE_[];
+	global int $g_lG_nameAsShape;
+	global int $g_lG_showLightsInInterface;
+	
+	int $refresh=0;
+	
+	if(`objExists("lightGirl")`) {
+		string $attrs[] = `listAttr -ud lightGirl`;
+		for($i=0;$i<size($attrs);$i++) {
+			//print("Attribute: " + $attrs[$i] + "\n");
+			string $connections[] = `listConnections -d 1 -s 0 ("lightGirl." + $attrs[$i])`;
+			for($j=0;$j<size($connections);$j++) {
+				//print("\tConnection: " + $connections[$j] + "\n");
+				
+				if($attrs[$i] != $connections[$j]) {
+					for($k=0;$k<size($g_lG_allLights);$k++) {
+						string $tmp = "*" + $attrs[$i] + "*";
+						if(`gmatch $g_lG_allLights[$k] $tmp`) {
+							//print("Old Light: " + $g_lG_allLights[$k] + "\n");
+							
+							$refresh=1;
+							break;
+							
+							// update master list...
+							//$g_lG_allLights[$k] = lG_getShape($connections[$j]);
+							
+							/*
+							if($g_lG_showLightsInInterface) {
+								string $currentLightUI = substituteAllString($g_lG_allLights_SAVE_[$k], "|", "");
+								string $frame = "lFrame" + $currentLightUI + "_" + $k;
+								
+								// update master list...
+								$g_lG_allLights[$k] = lG_getShape($connections[$j]);
+							
+								string $newLightName="";
+								if($g_lG_nameAsShape)
+									$newLightName = $g_lG_allLights[$k];
+								else
+									$newLightName = lG_getTransform($g_lG_allLights[$k]);
+								
+								$newLightName = substituteAllString($newLightName, "|", "");
+								frameLayout -e -cl 1 -label $newLightName $frame;
+								frameLayout -e -cl 0 $frame;
+								//print("Renaming!!!!!!!!!\n");
+							}
+							*/
+						}
+					}
+				}
+			}
+		}	
+	}
+	
+	if($refresh)
+		lightGirlCmd();
+}
+
+global proc lG_fileBrowserDialog(string $title, string $an, string $fileType, int $mode, string $cmd)
+{
+	fileBrowserDialog -wt $title -mode $mode -fc $cmd -an $an -ft $fileType;
+}
+
+global proc string lG_dialogPrompt(string $title, string $msg, string $default)
+{
+	string $value="";
+	$msg = $msg + ":";
+	string $result = `promptDialog
+		-title $title
+		-message $msg
+		-text $default
+		-button "OK"
+		-button "Cancel"
+		-defaultButton "OK"
+		-cancelButton "Cancel"
+		-dismissString "Cancel"`;
+
+	// If the result was "OK", then proceed
+	if ( $result == "OK" ) {
+		$value = `promptDialog -q`;
+	}
+	
+	return $value;
+}
+
+global proc int lG_confirmPrompt(string $title, string $msg)
+{
+	int $value=0;
+	string $result = `confirmDialog 
+		-title $title
+		-message $msg
+		-button "Yes"
+		-button "No"
+		-defaultButton "Yes"
+		-cancelButton "No"
+		-dismissString "No"`;
+
+	// If the result was "Yes", then proceed
+	if ( $result == "Yes" ) {
+		$value = 1;
+	}
+	
+	return $value;
+}
+
+global proc string lG_getLightType(string $light)
+{	
+	return nodeType(lG_getShape($light));
+}
+
+global proc lG_setMRLightProfileFileName(string $filename, string $filetype) {
+	global string $g_lG_allLights[];
+	
+	for($i=0;$i<size($g_lG_allLights);$i++) {
+		if(lG_getLightType($g_lG_allLights[$i]) == "pointLight") {
+			if(lG_checkForConnectionOfType($g_lG_allLights[$i], "mentalrayLightProfile")) {
+				string $mRLP = lG_getConnectionOfType($g_lG_allLights[$i], "mentalrayLightProfile");
+				setAttr -type "string" ($mRLP + ".fileName") $filename;
+			}
+		}
+	}
+}
+
+global proc lG_createMRLightProfile()
+{
+	global string $g_lG_allLights[];
+	
+	for($i=0;$i<size($g_lG_allLights);$i++) {
+		if(lG_getLightType($g_lG_allLights[$i]) == "pointLight") {
+			if(!lG_checkForConnectionOfType($g_lG_allLights[$i], "mentalrayLightProfile")) {
+				mentalrayLightProfileNodeCreate ($g_lG_allLights[$i] + ".miLightProfile");
+			}
+		}
+	}
+}
+
+global proc int lG_checkForConnectionOfType(string $light, string $type)
+{
+	int $match = 0;
+	string $shape = lG_getShape($light);
+	string $connections[] = `listConnections -d 1 -s 1 $shape`;
+	for($i=0;$i<size($connections);$i++) {
+		if($type == `nodeType $connections[$i]`) {
+			$match = 1;
+			break;
+		}
+	}
+	
+	return $match;
+}
+
+global proc string lG_getConnectionOfType(string $light, string $type)
+{
+	int $match = 0;
+	string $shape = lG_getShape($light);
+	string $connections[] = `listConnections -d 1 -s 1 $shape`;
+	for($i=0;$i<size($connections);$i++) {
+		if($type == `nodeType $connections[$i]`) {
+			$match = 1;
+			break;
+		}
+	}
+	
+	return $connections[$i];
+}
+
+global proc string[] lG_getLightsWithAttribute(string $lights[], string $attr, int $value)
+{
+	//global string $g_lG_allLights[];
+	
+	string $matchingLights[];
+	int $l=0;
+	
+	//print("Attr: '" + $attr + "'\n");
+	//print("Value: '" + $value + "'\n");
+	
+	for($i=0;$i<size($lights);$i++) {
+		//print("Light: '" + $lights[$i] + "'\n");
+		if(`objExists($lights[$i] + "." + $attr)`) {
+			//print("Attr exists...\n");
+			if(`getAttr ($lights[$i] + "." + $attr)` == $value) {
+				//print("Attr matches...\n");
+				$matchingLights[$l] = $lights[$i];
+				$l++;
+			}
+		}
+	}
+	
+	return $matchingLights;
+}
+
+/*
+ * FUNCTION NAME	lG_renameCurrentLight
+ * DESCRIPTION		Renames the current light and refreshes main UI
+ * CALLED BY		lightGirl
+ * INPUT		$currentLight, $lightNum
+ * RETURN		None
+ */
+ 
+global proc lG_renameCurrentLight(string $currentLight, int $lightNum, string $frame)
+{
+	global string $g_lG_allLights[];
+	
+	string $currentLightList[] = `listRelatives -parent $currentLight`;
+	string $newName = lG_dialogPrompt("Rename Light", "New Name", $currentLightList[0]);
+	
+	if (catch (`rename $currentLightList[0] $newName`)) {
+		error("Invalid Name!");
+      	}
+
+	//print("New Name: " + $newName + "\n");
+	$g_lG_allLights[$lightNum] = lG_getShape($newName);
+	
+	//frameLayout -e -label $newName $frame;
+	lG_lightGirlCmd();
+}
+
+global proc lG_duplicateCurrentLight(string $light)
+{
+	duplicate -rr $light;
+}
+
+global proc lG_createNewLightOfType(string $light)
+{
+	string $type = lG_getLightType($light);
+	
+	switch($type) {
+		case "ambientLight":
+			defaultAmbientLight(1, 0.45, 1,1,1, "0", 0,0,0, "1");
+			break;
+		case "directionalLight":
+			defaultDirectionalLight(1, 1,1,1, "0", 0,0,0, 0);
+			break;
+		case "pointLight":
+			defaultPointLight(1, 1,1,1, 0, 0, 0,0,0, 1);
+			break;
+		case "spotLight":
+			defaultSpotLight(1, 1,1,1, 0, 40, 0, 0, 0, 0,0,0, 1, 0);
+			break;
+		case "areaLight":
+			defaultAreaLight(1, 1,1,1, 0, 0, 0,0,0, 1, 0);
+			break;
+		case "volumeLight":
+			defaultVolumeLight(1, 1,1,1, 0, 0, 0,0,0, 1);
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_lightGirlCmd
+ * DESCRIPTION		Refreshes the lightGirl Layout UI
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_lightGirlCmd()
+{
+	//print("## lG_lightGirlCmd() ##\n");
+	
+	// refresh layout if additional or fewer lights driven by user
+	
+	global string $g_lG_allLights[];
+	string $tempLights[];
+
+	// if a light has been deleted, this code updates $g_lG_allLights
+	int $j=0;
+	for($i=0;$i<size($g_lG_allLights);$i++) {
+		if (`objExists $g_lG_allLights[$i]`) {
+			$tempLights[$j]=$g_lG_allLights[$i];
+			$j++;
+		}	
+	}
+	clear $g_lG_allLights;
+	$g_lG_allLights = $tempLights;
+
+	waitCursor -state on;
+	lightGirlCmd();
+	waitCursor -state off;
+}
+
+/*
+ * FUNCTION NAME	lG_lightGirlUnloadLights
+ * DESCRIPTION		Unloads all lights
+ * CALLED BY		lightGirl & Sheet
+ * INPUT		layout name
+ * RETURN		None
+ */
+ 
+global proc lG_lightGirlUnloadLights(string $layout)
+{
+	global string $g_lG_allLights[];
+	clear $g_lG_allLights;
+	
+	lG_lightGirlCmd(); // refresh main interface
+	
+	// refresh sheet (if open)
+	
+	// lightGirlCmd
+}
+
+ //global proc lG_getAttr()
+ //{
+	 
+ //}
+ 
+/*
+ * FUNCTION NAME	lG_setAttr
+ * DESCRIPTION		util for setting attributes...
+ * CALLED BY		lightGirl
+ * INPUT		attribute, value, usePrompt, promptTitle, promptMsg
+ * RETURN		None
+ */
+
+global proc lG_setAttr(string $objects[], string $type /*off = NULL*/, string $attr, int $value, int $usePrompt, string $promptTitle, string $promptMsg, string $promptDefaultText)
+{
+	// global int $g_lG_showLightsInInterface; -- MAY NEED LATER...
+		
+	if($usePrompt) {
+		$promptMsg = $promptMsg + ":";
+		
+		string $result = `promptDialog
+			-title $promptTitle
+			-message $promptMsg
+			-text $promptDefaultText
+			-button "OK"
+			-button "Cancel"
+			-defaultButton "OK"
+			-cancelButton "Cancel"
+			-dismissString "Cancel"`;
+
+		// If the result was "OK", then proceed
+		if ( $result == "OK" ) {
+			$value = `promptDialog -q`;
+		} else {
+			return;
+		}
+	}
+
+	global string $g_lG_allLights[];
+	string $nodes[];
+	
+	//if(`size($objects)`) {
+	//	$nodes = $objects;
+	//}
+	
+	//print("Type: " + $type + "\n");
+	
+	if(`size($g_lG_allLights)`) {
+		for($i=0;$i<size($g_lG_allLights);$i++) {
+			//print("-" + $g_lG_allLights[$i] + "\n");
+			//print("Type: " + $type + "\n");
+			if($type != "NULL") {
+				$nodes = `listConnections -s 1 -d 1 -type $type $g_lG_allLights[$i]`;
+				for($j=0;$j<size($nodes);$j++) {
+					if (`objExists ($nodes[$j] + "." + $attr)`) {
+						setAttr($nodes[$j] + "." + $attr) $value;
+					}
+				}
+			} else {
+				for($j=0;$j<size($g_lG_allLights);$j++) {
+					if (`objExists ($g_lG_allLights[$i] + "." + $attr)`) {
+						setAttr($g_lG_allLights[$i] + "." + $attr) $value;
+					}
+				}
+			}
+		}
+	} else {
+		warning("No lights...");
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_menuCollapseCommand
+ * DESCRIPTION		Expands/Collapses ALL Light Frames in the lightGirl UI
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_menuCollapseCommand(int $whichMenu)
+{
+	// collapse all main frames
+	string $lFrame;
+	global string $g_lG_allLights[];
+	string $currentLight;
+	string $currentLightUI;
+
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		$currentLight = $g_lG_allLights[$i];
+		$currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		$lFrame = "lFrame" + $currentLightUI + "_" + $i;
+
+		if ($whichMenu == 1)
+		{
+			frameLayout -edit -collapse true $lFrame;
+		}
+		else if ($whichMenu == 2)
+		{
+			frameLayout -edit -collapse false $lFrame;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_menuSwatchCommand
+ * DESCRIPTION		Shows/Hides Shape and Sample Swatches for each light in the light Girl UI 
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_menuSwatchCommand()
+{
+	global int $g_lG_showLightsInInterface;
+	
+	if($g_lG_showLightsInInterface) {
+		global string $g_lG_allLights[];
+		
+		global int $g_lG_showSwatches;
+	
+		if ($g_lG_showSwatches == 0) {
+			$g_lG_showSwatches = 1;
+		} else {
+			$g_lG_showSwatches = 0;
+		}
+		
+		for($i=0;$i<size($g_lG_allLights);$i++) {
+			string $lG_currentLight = substituteAllString($g_lG_allLights[$i], "|", "");
+			$lG_attrVisCtrl = $lG_currentLight + "swatchVisCtrl";
+			rowLayout -e -vis $g_lG_showSwatches $lG_attrVisCtrl;
+			
+			$lG_curSwatchSeparator = $lG_currentLight + "swatchSeparator";
+			separator -e -vis $g_lG_showSwatches $lG_curSwatchSeparator;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_shadowUseTypeCheckBoxCommand
+ * DESCRIPTION		Changes shadow attributes to ON or OFF for 'useDepthMapShadows' and/or 'useRayTraceShadows'
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_shadowUseTypeCheckBoxCommand(string $currentLight, int $method, int $value, string $lCBDMGroup, string $lCBRTGroup)
+{ // value not currently used...
+	global int $g_lG_showLightsInInterface;
+	
+	// check shadow type and show respective changes in checkboxes
+	
+	string $currentLightUI = substituteAllString($currentLight, "|", "");
+	
+	// Depth Map
+	if ($method == 1)
+	{
+		if (`nodeType($currentLight)` != "ambientLight")
+		{
+			if($g_lG_showLightsInInterface) {
+				if($value != 0)
+					checkBox -edit -value false $lCBRTGroup;
+			
+				int $lG_perLightDmap = `checkBox -q -v$lCBDMGroup`;
+				rowLayout -e -vis $lG_perLightDmap ($currentLightUI + "shadowColorDMVisCtrl");
+				rowLayout -e -vis $lG_perLightDmap ($currentLightUI + "dmapResolutionVisCtrl");
+				rowLayout -e -vis $lG_perLightDmap ($currentLightUI + "dmapFilterSizeVisCtrl");
+			}
+			
+			//setAttr($currentLight + ".useDepthMapShadows") $value;
+			setAttr($currentLight + ".useDepthMapShadows") (!`getAttr($currentLight + ".useDepthMapShadows")`);
+		}
+		if($g_lG_showLightsInInterface) {
+			int $lG_perLightRayTrace = (`getAttr ($currentLight + ".useRayTraceShadows")`);
+			rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "shadowColorRTVisCtrl");
+			if (`nodeType($currentLight)` != "ambientLight" && `nodeType($currentLight)` != "areaLight" && `nodeType($currentLight)` != "directionalLight") {
+				rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "lightRadiusVisCtrl");
+			}
+			rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "shadowRaysVisCtrl");
+			rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "rayDepthLimitVisCtrl");
+		}
+	}
+	
+	// Ray Trace
+	if ($method == 2)
+	{
+		if($g_lG_showLightsInInterface) {
+			int $lG_perLightRayTrace = `checkBox -q -v$lCBRTGroup`;
+			
+			
+			if (`nodeType($currentLight)` != "ambientLight")
+			{
+				if($value != 0)
+					checkBox -edit -value false $lCBDMGroup;
+			}	
+			
+			rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "shadowColorRTVisCtrl");
+			
+			if (`nodeType($currentLight)` != "ambientLight" && `nodeType($currentLight)` != "areaLight" && `nodeType($currentLight)` != "directionalLight") {
+				rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "lightRadiusVisCtrl");
+			}
+			
+			rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "shadowRaysVisCtrl");
+			rowLayout -e -vis $lG_perLightRayTrace ($currentLightUI + "rayDepthLimitVisCtrl");
+		}
+		
+		//setAttr($currentLight + ".useRayTraceShadows") $value;
+		setAttr($currentLight + ".useRayTraceShadows") (!`getAttr($currentLight + ".useRayTraceShadows")`);
+			
+		if (`nodeType($currentLight)` != "ambientLight")
+		{
+			if($g_lG_showLightsInInterface) {
+				int $lG_perLightDmap = `checkBox -q -v$lCBDMGroup`;
+				rowLayout -e -vis $lG_perLightDmap ($currentLightUI + "shadowColorDMVisCtrl");
+				rowLayout -e -vis $lG_perLightDmap ($currentLightUI + "dmapResolutionVisCtrl");
+				rowLayout -e -vis $lG_perLightDmap ($currentLightUI + "dmapFilterSizeVisCtrl");
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_menuToggleNameDisplayCommand
+ * DESCRIPTION		Sets whether the displayed name is a shape or transform
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_menuToggleNameDisplayCommand()
+{
+	global int $g_lG_nameAsShape;
+	$g_lG_nameAsShape = !$g_lG_nameAsShape;
+	
+	string $lGCurrentLightName[];
+	
+	global string $g_lG_allLights[];
+	
+	for($i=0;$i<size($g_lG_allLights);$i++) {
+		$lG_currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		$lFrame = "lFrame" + $lG_currentLightUI + "_" + $i;
+		
+		if ($g_lG_nameAsShape == 0) {
+			$lGCurrentLightName = `listRelatives -parent $g_lG_allLights[$i]`;
+		} else {
+			$lGCurrentLightName[0] = $g_lG_allLights[$i];
+		}
+		
+		//int $lGFrameWidth = (`size($lGCurrentLightName[0])` * 8);
+		
+		frameLayout
+			-e
+			-label $lGCurrentLightName[0]
+			//-lw $lGFrameWidth
+			$lFrame;
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_menuToggleButtonCommand
+ * DESCRIPTION		Sets whether buttons are displayed in light layouts
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_menuToggleButtonCommand()
+{
+	global int $g_lG_showLightsInInterface;
+	
+	if($g_lG_showLightsInInterface) {
+		global string $g_lG_allLights[];
+		
+		global int $g_lG_buttonCheck;
+		
+		$g_lG_buttonCheck = !$g_lG_buttonCheck;
+		
+		for($i=0;$i<size($g_lG_allLights);$i++) {
+			string $lG_currentLight = substituteAllString($g_lG_allLights[$i], "|", "");
+			$lG_attrVisCtrl = $lG_currentLight + "buttonVisCtrl";
+			rowLayout -e -vis $g_lG_buttonCheck $lG_attrVisCtrl;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_useRayTraceShadows
+ * DESCRIPTION		Sets all lights with depth map shadows to reuse from disk
+ * CALLED BY		lightGirlCmd
+ * INPUT		int
+ * RETURN		None
+ */
+
+global proc lG_useRayTraceShadows(int $lG_useRayTraceShadows)
+{
+	global int $g_lG_showLightsInInterface;
+	global string $g_lG_allLights[];
+
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		$lG_currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		$lCBDMGroup = "lCBDMGroup" + $lG_currentLightUI + "_" + $i;
+		$lCBRSGroup = "lCBRSGroup" + $lG_currentLightUI + "_" + $i;
+		if($g_lG_showLightsInInterface) {
+			checkBox -e -v $lG_useRayTraceShadows $lCBRSGroup;
+			//if(`checkBox -exists $lCBDMGroup`) {
+			//	checkBox -e -v (!$lG_useRayTraceShadows) $lCBDMGroup;
+			//}
+		}
+		//setAttr ($g_lG_allLights[$i] + ".useRayTraceShadows") $lG_useRayTraceShadows;
+		lG_shadowUseTypeCheckBoxCommand($g_lG_allLights[$i], 2, $lG_useRayTraceShadows, $lCBDMGroup, $lCBRSGroup);
+	}															
+}
+
+/*
+ * FUNCTION NAME	lG_useDepthMapShadows
+ * DESCRIPTION		Sets all lights to use depth map shadows
+ * CALLED BY		lightGirlCmd
+ * INPUT		int
+ * RETURN		None
+ */
+
+global proc lG_useDepthMapShadows(int $lG_useDepthMapShadows)
+{
+	global int $g_lG_showLightsInInterface;
+	global string $g_lG_allLights[];
+
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		$lG_currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		$lCBDMGroup = "lCBDMGroup" + $lG_currentLightUI + "_" + $i;
+		$lCBRSGroup = "lCBRSGroup" + $lG_currentLightUI + "_" + $i;
+		if (`nodeType($g_lG_allLights[$i])` != "ambientLight") {
+			if($g_lG_showLightsInInterface) {
+				checkBox -e -v $lG_useDepthMapShadows $lCBDMGroup;
+				//checkBox -e -v (!$lG_useDepthMapShadows) $lCBRSGroup;
+			}
+		}
+		lG_shadowUseTypeCheckBoxCommand($g_lG_allLights[$i], 1, $lG_useDepthMapShadows, $lCBDMGroup, $lCBRSGroup);
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_setDepthMapResolution
+ * DESCRIPTION		Sets the specified depth map resolution to all lights with depth map shadows
+ * CALLED BY		lightGirlCmd
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_setDepthMapResolution(int $lGRes)
+{
+	global string $g_lG_allLights[];
+	
+	if ($lGRes == 0) {
+		// Prompt the user for a new character name
+		string $lGResolutionResult = `promptDialog 
+			-title "Custom Resolution Size"
+			-message "Enter Resolution Size:" 
+			-text "512"
+			-button "OK" 
+			-button "Cancel" 
+			-defaultButton "OK" 
+			-cancelButton "Cancel" 
+			-dismissString "Cancel"`;
+
+		// If the result was "OK", then proceed
+		if ( $lGResolutionResult == "OK" ) {
+			$lGRes = `promptDialog -q`;
+		}
+	}
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		if (`nodeType($g_lG_allLights[$i])` != "ambientLight") {
+			setAttr ($g_lG_allLights[$i] + ".dmapResolution") $lGRes;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_setDepthMapFilterSize
+ * DESCRIPTION		Sets the specified depth map filter size to all lights with depth map shadows
+ * CALLED BY		lightGirlCmd
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_setDepthMapFilterSize(int $lGFilterSz)
+{
+	global string $g_lG_allLights[];
+
+	if ($lGFilterSz == 0) {
+		// Prompt the user for a new character name
+		string $lGFilterSzResult = `promptDialog 
+			-title "Custom Filter Size"
+			-message "Enter Filter Size:" 
+			-text "1"
+			-button "OK" 
+			-button "Cancel" 
+			-defaultButton "OK" 
+			-cancelButton "Cancel" 
+			-dismissString "Cancel"`;
+
+		// If the result was "OK", then proceed
+		if ( $lGFilterSzResult == "OK" ) {
+			$lGFilterSz = `promptDialog -q`;
+		}
+	}
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		if (`nodeType($g_lG_allLights[$i])` != "ambientLight") {
+			setAttr ($g_lG_allLights[$i] + ".dmapFilterSize") $lGFilterSz;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_useDiskBasedDmap
+ * DESCRIPTION		Sets all lights with depth map shadows to reuse/overwrite of off
+ * CALLED BY		lightGirlCmd
+ * INPUT		int $lG_useDiskBasedDmap - 0, 1 or 2
+ * RETURN		None
+ */
+
+global proc lG_useDiskBasedDmap(int $lG_useDiskBasedDmap)
+{
+	global string $g_lG_allLights[];
+	
+	int $lGReuseDmap, $lGWriteDmap;
+	
+	switch ($lG_useDiskBasedDmap)
+	{
+		// 0: Off...
+		case 0:
+			$lGReuseDmap = 0;
+			$lGWriteDmap = 0;
+			break;
+		// 1: Overwrite...
+		case 1:
+			$lGReuseDmap = 0;
+			$lGWriteDmap = 1;
+			break;
+		// 2: Reuse...
+		case 2:
+			$lGReuseDmap = 1;
+			$lGWriteDmap = 0;
+			break;
+		default:
+			return;
+	}
+
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		if (`nodeType($g_lG_allLights[$i])` != "ambientLight") {
+			if (`getAttr($g_lG_allLights[$i] + ".useDepthMapShadows")` == 1) {
+				setAttr ($g_lG_allLights[$i] + ".reuseDmap") $lGReuseDmap;
+				setAttr ($g_lG_allLights[$i] + ".writeDmap") $lGWriteDmap;
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_menuGlobalDecayCommand
+ * DESCRIPTION		Changes the Decay value for all active lights 
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_menuGlobalDecayCommand(int $lGlobalDecayValue)
+{
+	global int $g_lG_showLightsInInterface;
+	global string $g_lG_allLights[];
+
+	int $lGlobalDecayCorrectValue = 0;
+
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		string $lG_currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		if(`objExists($g_lG_allLights[$i] + ".decayRate")`) {
+			setAttr($g_lG_allLights[$i] + ".decayRate") $lGlobalDecayValue;
+			if($g_lG_showLightsInInterface) {
+				if(`optionMenuGrp -exists ("lDecayGroup" + $lG_currentLightUI)`) {
+					string $lDecayGroup = "lDecayGroup" + $lG_currentLightUI;
+					$lGlobalDecayCorrectValue = $lGlobalDecayValue+1;
+					optionMenuGrp -edit -select $lGlobalDecayCorrectValue $lDecayGroup;
+				}
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_getTransform
+ * DESCRIPTION		Returns the transform of any node 
+ * CALLED BY		lightGirl
+ * INPUT		string
+ * RETURN		string
+ */
+
+global proc string lG_getTransform( string $shape )
+{
+   string $transform = "";
+
+   if ( "transform" != `nodeType $shape` )
+   {
+      string $parents[] = `listRelatives -fullPath -parent $shape`;
+      $transform = $parents[0];
+   }
+
+   return $transform;
+}
+
+/*
+ * FUNCTION NAME	lG_getShape
+ * DESCRIPTION		Returns the shape of any node 
+ * CALLED BY		lightGirl
+ * INPUT		string
+ * RETURN		string
+ */
+
+global proc string lG_getShape( string $xform )
+{
+	string $shapes[];
+	$shapes[0] = $xform;
+  
+	if ( "transform" == `nodeType $xform` )
+	{
+		$shapes = `listRelatives -fullPath -shapes $xform`;
+	}
+	if ($shapes[0] != "") {
+		return $shapes[0];
+	} else {
+		return $xform;
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_performSelectAllLights
+ * DESCRIPTION		Selects All Lights
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_performSelectAllLights(int $method)
+{
+	string $allLights[];
+	if(!$method) {
+		$allLights = `ls -long -type light`;
+	} else {
+		$allLights = `ls -long -type light`;
+		for($i=0;$i<size($allLights);$i++) {
+			$allLights[$i] = `lG_getTransform($allLights[$i])`;
+		}	
+	}
+	select -r $allLights;
+}
+
+/*
+ * FUNCTION NAME	lG_performSelectActiveLights
+ * DESCRIPTION		Selects Active Lights
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_performSelectActiveLights(int $method)
+{
+	global string $g_lG_allLights[];
+	string $allLights[];
+	if(!$method) {
+		select -r $g_lG_allLights;
+	} else {
+		for($i=0;$i<size($g_lG_allLights);$i++) {
+			$allLights[$i] = `lG_getTransform($g_lG_allLights[$i])`;
+		}	
+		select -r $allLights;
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_makeAllLightsLikeCurrent
+ * DESCRIPTION		Copies ALL attributes from a single source light to ALL lights in lightGirls active light list 
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_makeAllLightsLikeCurrent(string $currentLight)
+{
+	global string $g_lG_allLights[];
+	
+	string $listAttr[] = `listAttr -k $currentLight`;
+	for ($i=0; $i<size($g_lG_allLights); $i++) {
+		if ($g_lG_allLights[$i] != $currentLight) {
+			for ($j=0; $j<size($listAttr); $j++) {
+				if ($listAttr[$j] != "message") {
+					if (`objExists ($g_lG_allLights[$i] + "." + $listAttr[$j])`) {
+						setAttr ($g_lG_allLights[$i] + "." + $listAttr[$j]) `getAttr($currentLight + "." + $listAttr[$j])`;
+					}
+				}
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_toggleLightVisibilityCommand
+ * DESCRIPTION		Toggles light visibility 
+ * CALLED BY		lightGirl
+ * INPUT			$currentLight
+ * RETURN		None
+ */
+
+global proc lG_toggleLightVisibilityCommand(string $currentLight)
+{
+	setAttr($currentLight + ".visibility") (!`getAttr ($currentLight + ".visibility")`);
+}
+
+/*
+ * FUNCTION NAME	lG_toggleLightDiffuseCommand
+ * DESCRIPTION		Toggles light diffuse emission 
+ * CALLED BY		lightGirl
+ * INPUT		$currentLight
+ * RETURN		None
+ */
+
+global proc lG_toggleLightDiffuseCommand(string $currentLight)
+{
+	setAttr($currentLight + ".emitDiffuse") (!`getAttr ($currentLight + ".emitDiffuse")`);
+}
+
+/*
+ * FUNCTION NAME	lG_toggleLightSpecularCommand
+ * DESCRIPTION		Toggles light specular emission 
+ * CALLED BY		lightGirl
+ * INPUT		$currentLight
+ * RETURN		None
+ */
+
+global proc lG_toggleLightSpecularCommand(string $currentLight)
+{
+	setAttr($currentLight + ".emitSpecular") (!`getAttr ($currentLight + ".emitSpecular")`);
+}
+
+/*
+ * FUNCTION NAME	lG_globalEmitDiffuseCommand
+ * DESCRIPTION		Globally sets lights diffuse emission attribute 
+ * CALLED BY		lightGirl
+ * INPUT		$lGVal : integer 0 or 1
+ * RETURN		None
+ */
+
+global proc lG_globalEmitDiffuseCommand( int $lGVal )
+{
+	global int $g_lG_showLightsInInterface;
+	global string $g_lG_allLights[];
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		string $currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		string $diffChkBox = "diffChkBox" + $currentLightUI;
+		if (`objExists ($g_lG_allLights[$i] + ".emitDiffuse")`) {
+			setAttr($g_lG_allLights[$i] + ".emitDiffuse") $lGVal;
+			if($g_lG_showLightsInInterface) {
+				checkBox -e -v $lGVal $diffChkBox;
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_globalEmitSpecularCommand
+ * DESCRIPTION		Globally sets lights specular emission attribute 
+ * CALLED BY		lightGirl
+ * INPUT		$lGVal : integer 0 or 1
+ * RETURN		None
+ */
+
+global proc lG_globalEmitSpecularCommand( int $lGVal )
+{
+	global int $g_lG_showLightsInInterface;
+	global string $g_lG_allLights[];
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		string $currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		string $specChkBox = "specChkBox" + $currentLightUI;
+		if (`objExists ($g_lG_allLights[$i] + ".emitSpecular")`) {
+			setAttr($g_lG_allLights[$i] + ".emitSpecular") $lGVal;
+			if($g_lG_showLightsInInterface) {
+				checkBox -e -v $lGVal $specChkBox;
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_globalVisibilityCommand
+ * DESCRIPTION		Globally sets lights visibility attribute 
+ * CALLED BY		lightGirl
+ * INPUT		$lGVal : integer 0 or 1
+ * RETURN		None
+ */
+
+global proc lG_globalVisibilityCommand( int $lGVal )
+{
+	global int $g_lG_showLightsInInterface;
+	global string $g_lG_allLights[];
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		string $currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+		string $visChkBox = "visChkBox" + $currentLightUI;
+		if (`objExists ($g_lG_allLights[$i] + ".visibility")`) {
+			setAttr($g_lG_allLights[$i] + ".visibility") $lGVal;
+			if($g_lG_showLightsInInterface) {
+				checkBox -e -v $lGVal $visChkBox;
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_globalIlluminateCommand
+ * DESCRIPTION		Globally sets lights illumination attribute 
+ * CALLED BY		lightGirl
+ * INPUT		$lGVal : integer 0 or 1
+ * RETURN		None
+ */
+
+global proc lG_globalIlluminateCommand( int $lGVal )
+{
+	global string $g_lG_allLights[];
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		string $curLight = `lG_getTransform $g_lG_allLights[$i]`;
+		
+		if($lGVal) {
+			// on
+			string $source = ($curLight + ".instObjGroups[0]");  
+			if(!`connectionInfo -is $source`) {
+				connectAttr -nextAvailable ($curLight + ".instObjGroups") defaultLightSet.dagSetMembers;
+			}
+		} else {
+			// off
+			string $source = ($curLight + ".instObjGroups[0]");  
+			if(`connectionInfo -is $source`) {
+				string $destination[] =  `connectionInfo -dfs $source`;   
+				if(`isConnected $source $destination[0]`) {
+					disconnectAttr $source $destination[0];
+				}
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_globalLightRadiusCommand
+ * DESCRIPTION		Globally sets lights lightRadius attribute 
+ * CALLED BY		lightGirl
+ * INPUT		$lGVal : float
+ * RETURN		None
+ */
+
+global proc lG_globalLightRadiusCommand( float $lGVal )
+{
+	global string $g_lG_allLights[];
+	
+	if ($lGVal == 0) {
+		// Prompt the user for a new character name
+		string $lG_promptResult = `promptDialog 
+			-title "Custom Light Radius"
+			-message "Enter Light Radius Amount:" 
+			-text "1"
+			-button "OK" 
+			-button "Cancel" 
+			-defaultButton "OK" 
+			-cancelButton "Cancel" 
+			-dismissString "Cancel"`;
+
+		// If the result was "OK", then proceed
+		if ( $lG_promptResult == "OK" ) {
+			$lGVal= `promptDialog -q`;
+		}
+	}
+	
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		if (`objExists ($g_lG_allLights[$i] + ".lightRadius")`) {
+			setAttr($g_lG_allLights[$i] + ".lightRadius") $lGVal;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_globalShadowRaysCommand
+ * DESCRIPTION		Globally sets lights shadowRays attribute 
+ * CALLED BY		lightGirl
+ * INPUT		$lGVal : float
+ * RETURN		None
+ */
+
+global proc lG_globalShadowRaysCommand( float $lGVal )
+{
+	global string $g_lG_allLights[];
+	
+	if ($lGVal == 0) {
+		// Prompt the user for a new character name
+		string $lG_promptResult = `promptDialog 
+			-title "Custom Light Radius"
+			-message "Enter Light Radius Amount:" 
+			-text "1"
+			-button "OK" 
+			-button "Cancel" 
+			-defaultButton "OK" 
+			-cancelButton "Cancel" 
+			-dismissString "Cancel"`;
+
+		// If the result was "OK", then proceed
+		if ( $lG_promptResult == "OK" ) {
+			$lGVal= `promptDialog -q`;
+		}
+	}
+	
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		if (`objExists ($g_lG_allLights[$i] + ".shadowRays")`) {
+			setAttr($g_lG_allLights[$i] + ".shadowRays") $lGVal;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_globalRayDepthLimitCommand
+ * DESCRIPTION		Globally sets lights rayDepthLimit attribute 
+ * CALLED BY		lightGirl
+ * INPUT		$lGVal : float
+ * RETURN		None
+ */
+
+global proc lG_globalRayDepthLimitCommand( float $lGVal )
+{
+	global string $g_lG_allLights[];
+	
+	if ($lGVal == 0) {
+		// Prompt the user for a new character name
+		string $lG_promptResult = `promptDialog 
+			-title "Custom Light Radius"
+			-message "Enter Light Radius Amount:" 
+			-text "1"
+			-button "OK" 
+			-button "Cancel" 
+			-defaultButton "OK" 
+			-cancelButton "Cancel" 
+			-dismissString "Cancel"`;
+
+		// If the result was "OK", then proceed
+		if ( $lG_promptResult == "OK" ) {
+			$lGVal= `promptDialog -q`;
+		}
+	}
+	
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		if (`objExists ($g_lG_allLights[$i] + ".rayDepthLimit")`) {
+			setAttr($g_lG_allLights[$i] + ".rayDepthLimit") $lGVal;
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_chainAttrCommand
+ * DESCRIPTION		Controls attribute chaining as defined in main interface
+ * CALLED BY		lightGirl
+ * INPUT		$lGChainString - string, $lGChainAttr - string (attr.)
+ * RETURN		None
+ */
+
+global proc lG_chainAttrCommand( string $lGAttrString, string $lGChainString, string $lGChainAttr, string $currentLight )
+{	
+	//print("Chain -> Cmd...\n");
+	//print("This: " + $lGAttrString + "\n");
+	
+	//$lG_currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+	
+	if(`checkBox -q -v $lGChainString`)
+	{
+		//print("AFG: " + $lGAttrString + "\n");
+		catch(`attrFieldSliderGrp -e -cc ("lG_chainAttrCommandCalc " + $lGAttrString + " " + $lGChainString + " " + $lGChainAttr + " " + $currentLight) $lGAttrString`);
+	} else {
+		catch(`attrFieldSliderGrp -e -cc "" $lGAttrString`);
+	}
+	//print("AFG (post): " + $lGAttrString + "\n");
+}
+
+/*
+ * FUNCTION NAME	lG_chainAttrCommandCalc
+ * DESCRIPTION		Calculates chained attribute values
+ * CALLED BY		lightGirl
+ * INPUT		$lGChainString - string, $lGChainAttr - string (attr.), $lGChainAttr - string, $currentLight - string
+ * RETURN		None
+ */
+ 
+global proc lG_chainAttrCommandCalc( string $lGAttrString, string $lGChainString, string $lGChainAttr, string $currentLight )
+{
+	//print("Chain -> Calc...\n");
+	
+	global string $g_lG_allLights[];
+	
+	float $lGAttrVal;
+	
+	string $lGChainString = $currentLight + $lGChainAttr + "Chain";
+	
+	if(`objExists ($currentLight + "." + $lGChainAttr)`)
+	{
+		$lGAttrVal = `getAttr($currentLight + "." + $lGChainAttr)`;
+	}
+	
+	//print("Master Light: '" + $currentLight + "' Attribute: '" + $lGChainAttr + "' Value: '" + $lGAttrVal + "'\n");
+	
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		//print("Light: '" + $g_lG_allLights[$i] + "'\n");
+		if(`objExists ($g_lG_allLights[$i] + "." + $lGChainAttr)`)
+		{
+			string $currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+			if(`checkBox -ex ($currentLightUI + $lGChainAttr + "Chain")`) {
+				if(`checkBox -q -v ($currentLightUI + $lGChainAttr + "Chain")`)
+				{	
+					if (`objExists ($g_lG_allLights[$i] + "." + $lGChainAttr)`) {
+						setAttr($g_lG_allLights[$i] + "." + $lGChainAttr) $lGAttrVal;
+						//print("Attr. exists\n");
+					}
+				}
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_chainAllAttrOfTypeCommand
+ * DESCRIPTION		Chains all existing identical attributes on loaded lights
+ * CALLED BY		lightGirl
+ * INPUT		$lGChainAttr - string, used to define attribute to globally chain, $lGChainVal - int (on/off)
+ * RETURN		None
+ */
+
+global proc lG_chainAllAttrOfTypeCommand( string $lGChainAttr, int $lGChainVal)
+{
+	//print("Chain -> All...\n");
+	
+	global string $g_lG_allLights[];
+	
+	for($i=0;$i<size($g_lG_allLights);$i++)
+	{
+		if(`objExists ($g_lG_allLights[$i] + "." + $lGChainAttr)`)
+		{
+			string $currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+			if(`checkBox -ex ($currentLightUI + $lGChainAttr + "Chain")`)
+			{
+				checkBox -e -v $lGChainVal ($currentLightUI + $lGChainAttr + "Chain");
+				string $lGChainEval = "lG_chainAttrCommand " + $currentLightUI + $lGChainAttr + "Attr" + " " + $currentLightUI + $lGChainAttr + "Chain " + $lGChainAttr + " " + $g_lG_allLights[$i];
+				//print($lGChainEval + "\n");
+				eval($lGChainEval);
+			}
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_updateLightListCountCommand
+ * DESCRIPTION		Updates the bottom menuItem of the 'View' menu (and some other stuff)
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+ 
+global proc lG_updateLightListCountCommand()
+{
+	//print("## lG_updateLightListCountCommand() ##\n");
+	
+	global string $g_lG_allLights[];
+	global int $g_lG_showLightsInInterface;
+	global int $g_lG_autoLoadLights;
+	
+	int $curSize = `size($g_lG_allLights)`;
+	int $allSize = size(`ls -lights`);
+	
+	string $mode="";
+	if($g_lG_showLightsInInterface) {
+		$mode = "Attribute Editor";
+	} else {
+		$mode = "Discrete";
+	}
+	
+	if(`text -exists lG_shamelessText`) {
+		text 
+			-e
+			-label ($curSize + " of " + $allSize + " lights loaded [" + $mode + "]")
+			lG_shamelessText;
+	}
+	
+	// auto-load...
+	if($g_lG_autoLoadLights) {
+		if($curSize != $allSize) {
+			//print("Current lights: " + $curSize + "\n");
+			//print("All lights: " + $allSize + "\n");
+			//print("Refreshing lightGirl (auto-load)\n");
+			
+			// load ALL lights...
+			//catch(lG_lightGirlLoadLights(6, "lightGirlCmd", "", "", 0));
+		}
+	}
+}
+
+/*
+ * FUNCTION NAME	lG_showLightsInInterface
+ * DESCRIPTION		Sets whether lights are shown in an attribute editor style in lightGirl's interface
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lG_showLightsInInterface()
+{
+	global string $g_lG_allLights[];
+	
+	global int $g_lG_showLightsInInterface;
+	$g_lG_showLightsInInterface = !$g_lG_showLightsInInterface;
+	
+	if(`size($g_lG_allLights)`)
+		lG_lightGirlCmd();
+}

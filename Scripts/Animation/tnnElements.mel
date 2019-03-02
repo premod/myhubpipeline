@@ -1,0 +1,173 @@
+global proc tnnElements()
+{
+	if( (`window -exists addEpiElements`) == true ){deleteUI addEpiElements;}
+	window -widthHeight 313 450 -t "TNN Elements                    Sanraa Media..." -s 0 -mb true addEpiElements;
+
+	menu -l " Item List ";
+	menuItem -l " Sets  "  -c commonFindSets forComSets;
+	menuItem -l " Chars " -c commonFindChars forComChars;
+	menuItem -l " Props " -c commonFindProps forComProps;
+	
+	string $form = `formLayout`;
+	string $tabs = `tabLayout -innerMarginWidth 5 -innerMarginHeight 5 epiTab`;
+	formLayout -edit
+	     -attachForm $tabs "top"    0
+	     -attachForm $tabs "left"   0
+	     -attachForm $tabs "bottom" 0
+	     -attachForm $tabs "right"  0
+	     $form;
+
+     	string $child = `columnLayout -bgc 0 0 0 -adj true`;
+		textScrollList -ams true -fn "fixedWidthFont" -h 313 propslist;
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c getSelectedpropCommon;
+		button  -h 25 -l "Refresh List";
+       setParent ..;
+
+     	string $child5 = `columnLayout -bgc 0 0 0 -adj true`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslist5;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c getSelectedpropEpisodic5;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	string $child6 = `columnLayout -bgc 0 0 0 -adj true`;
+		textScrollList -ams true  -fn "fixedWidthFont" -h 313 propslist6;	
+		button -h 25 -bgc 0.6 0.6 0.6 -l "Add Asset To Scene" -c getSelectedpropEpisodic6;
+		button  -h 25 -l "Refresh List";
+      	setParent ..;
+
+	tabLayout -edit -tabLabel $child " COMMON " -tabLabel $child5 " EPISODE 05 " -tabLabel $child6 " EPISODE 06 "$tabs ;
+	
+ showWindow;
+}
+
+global proc commonFindSets()
+{
+	textScrollList -e -ra propslist;
+	string $setsDirectory= "Q:/TNN/04_PRODUCTION/REFERENCES/COMMON/SETS/";
+	string $files[] = `getFileList -folder $setsDirectory -filespec "*.ma"`;
+	string $listOfFiles[] = `sort $files`;
+	int $propsize=`size($listOfFiles)`;
+	for ($getPropnames in $listOfFiles)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames propslist;
+	}
+
+	textScrollList -e -ra propslist5;
+	string $epispdes[] = {"Episode05"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/TNN/04_PRODUCTION/REFERENCES/"+$epi+"/SETS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			textScrollList -e -append $getPropnames1 propslist5 ;
+		}
+	}
+
+	textScrollList -e -ra propslist6;
+	string $epispdes[] = {"Episode06"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/TNN/04_PRODUCTION/REFERENCES/"+$epi+"/SETS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			textScrollList -e -append $getPropnames1 propslist6 ;
+		}
+	}
+}
+
+global proc commonFindChars()
+{
+	textScrollList -e -ra propslist;
+	string $charsDirectory="Q:/TNN/04_PRODUCTION/REFERENCES/COMMON/CHARACTERS/";
+	string $files[] = `getFileList -folder $charsDirectory -filespec "*.ma"`;
+	string $listOfFiles[] = `sort $files`;
+	int $propsize=`size($listOfFiles)`;
+	for ($getPropnames in $listOfFiles)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames propslist ;
+	}
+
+	textScrollList -e -ra propslist5;
+	string $epispdes[] = {"Episode05"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/TNN/04_PRODUCTION/REFERENCES/"+$epi+"/CHARACTERS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			textScrollList -e -append $getPropnames1 propslist5 ;
+		}
+	}
+
+	textScrollList -e -ra propslist6;
+	string $epispdes[] = {"Episode06"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/TNN/04_PRODUCTION/REFERENCES/"+$epi+"/CHARACTERS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			textScrollList -e -append $getPropnames1 propslist6 ;
+		}
+	}
+
+}
+
+global proc commonFindProps()
+{
+	textScrollList -e -ra propslist;
+	string $propsDirectory="Q:/TNN/04_PRODUCTION/REFERENCES/COMMON/PROPS/";
+	string $files[] = `getFileList -folder $propsDirectory -filespec "*.ma"`;
+	string $listOfFiles[] = `sort $files`;
+	int $propsize=`size($listOfFiles)`;
+	for ($getPropnames in $listOfFiles)
+	for ($i=$propsize; $i<=$propsize; $i++)
+	{
+		textScrollList -e -append $getPropnames propslist ;
+	}
+
+	textScrollList -e -ra propslist5;
+	string $epispdes[] = {"Episode05"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/TNN/04_PRODUCTION/REFERENCES/"+$epi+"/PROPS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			textScrollList -e -append $getPropnames1 propslist5 ;
+		}
+	}
+	textScrollList -e -ra propslist6;
+	string $epispdes[] = {"Episode06"};
+	for($epi in $epispdes)
+	{
+		string $charsDirectory1="Q:/TNN/04_PRODUCTION/REFERENCES/"+$epi+"/PROPS/";
+		string $files1[] = `getFileList -folder $charsDirectory1 -filespec "*.ma"`;
+		string $listOfFiles1[] = `sort $files1`;
+		int $propsize1=`size($listOfFiles1)`;
+		for ($getPropnames1 in $listOfFiles1)
+		for ($i=$propsize1; $i<=$propsize1; $i++)
+		{
+			textScrollList -e -append $getPropnames1 propslist6 ;
+		}
+	}
+}

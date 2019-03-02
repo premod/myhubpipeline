@@ -1,0 +1,603 @@
+
+// This file replaces some of the default procedures that come built into Maya, so that fmSkinClusters can be paintable.
+// (This file may be dependent on the current version of Maya.  Right now though it's compatible with Maya 7 - Maya 2008)
+
+
+/////////////////////////////////////////////////////////////////////////
+// From artAttrSkinCallback.mel /////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+
+global proc artSkinSelectInfluence(
+	string 	$artCommand,
+	string	$influence,
+	string	$shortName
+)
+// 
+//	Description:
+//		Find all the selected skinCluster (not just the active one)
+//		nodes that are influenced by $influence and connect the message
+//		attribute from the $influence transform to the .ptt attribute of the
+//		skinCluster node. 
+//
+{
+	global string $artSkinCurrentInfluence;
+	if (`textScrollList -q -ex skinClusterInflList`) {
+		if ($shortName == "") {
+			string $sel[] = `textScrollList -q -si skinClusterInflList`;
+			$shortName = $sel[0];
+			$influence = artSkinInflNameFromShortName($shortName);
+		} else {
+			textScrollList -e -si $shortName skinClusterInflList;
+			int $index[] = `textScrollList -q -sii skinClusterInflList`;
+			textScrollList -e -shi $index[0] skinClusterInflList;
+		}
+	}
+
+	// Make the proper connection.
+	string $connections[];
+	string $connection;
+
+	$artSkinCurrentInfluence = $influence;
+
+	// Get all the paintable nodes.
+	string $cmd = ($artCommand + " -q -objattrArray `currentCtx`");
+	string $paintClusters = `eval $cmd`;
+	
+	//print ("$cmd = '" + $cmd + "'\n");
+	//print ("$paintClusters = '" + $paintClusters + "'\n");
+	// geometryFilter.geometryFilter1.paintWeights.1 geometryFilter.geometryFilter1.weightList.1 mesh.|pPlane1|pPlaneShape1.vertexColorRGB.1 mesh.|pPlane1|pPlaneShape1.vertexFaceColorRGB.1
+	
+	string $buffer[];
+	tokenize( $paintClusters, " ", $buffer );
+
+	// Find the skin cluster is connected to the influence node.
+	string	$item;
+	for ( $item in $buffer ) {
+		string $itemElems[];
+		tokenize( $item, ".", $itemElems );
+		int $nbElem = size($itemElems);
+		if ( ( $nbElem < 3 ) || ( $itemElems[2] != "paintWeights") ) {
+			continue;
+		}
+		
+		// We have the skinCluster node.
+		string $skinCluster = $itemElems[1];
+		string $skinAttr 	= $itemElems[0] + "." + $itemElems[1] + "." + $itemElems[2];
+		
+		// Changed to work with both skinClusters and fmSkinClusters:
+		int $foundConnection = false;
+		if (`nodeType $skinCluster` != "fmSkinCluster")
+			$connections = `listConnections ($skinCluster + ".matrix")`;
+		else
+			$connections = `listConnections ($skinCluster + ".influences")`;
+		
+		
+		for ( $connection in $connections ) {
+			if ($connection == $influence) {
+				$foundConnection = true;
+				break;
+			}
+		}
+		
+		// Delete any existing connection to the 
+		// .ptt attribute of the skinCluster.
+		$connections = `listConnections $skinCluster`;
+		for( $connection in $connections ) {
+			if ($connection != "") {
+				if (isConnected(($connection + ".message"),($skinCluster + ".ptt"))) {
+					disconnectAttr(($connection + ".message"), ($skinCluster + ".ptt"));
+					hilite -u $connection;
+				}
+			}
+		}
+			
+		// Now make the connection to the new influence node.
+		if ($foundConnection && size($influence) != 0) {
+			connectAttr ($influence + ".message") ($skinCluster + ".ptt");
+			hilite $influence;
+
+			// Notify the context about the change.
+			string $cmd = ($artCommand + " -e -pas \"" + $skinAttr + "\" `currentCtx`");
+			eval( $cmd );
+		}
+	}
+	
+	$cmd = ($artCommand + " -e -inf \"" + $influence + "\" `currentCtx`");
+	eval( $cmd );
+}
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////
+// From artAttrSkinJointMenu.mel ////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+proc string artSkinHoldSubstring(string $infl)
+//
+// Return the influence name with the " (Hold)" removed.
+//
+{
+	string	$subInf = $infl;		
+	int 	$sizeInf = size($infl);	
+	if ( $sizeInf > 7 ) {
+		string $hasHold = substring( $infl, ($sizeInf-6), $sizeInf );
+		if ($hasHold == (" (Hold)")) {
+			$subInf = substring( $infl, 1, $sizeInf-7 );
+		}
+	}
+	return $subInf;
+}
+
+
+global proc string [] artSkinFindSkinClusterNodes()
+//
+// Return an array with currently active skin cluster nodes.
+//
+{
+	string $cmd = "artAttrSkinPaintCtx -q -objattrArray " + `currentCtx`;
+	string $paintClusters = `eval $cmd`;
+	
+	string $buffer[];
+	tokenize( $paintClusters, " ", $buffer );	
+
+	string $skinClusters[];
+	int    $skinIdx = 0;
+	for ( $item in $buffer ) {
+		string $itemElems[];
+		tokenize( $item, ".", $itemElems );
+		int $nbElem = size($itemElems);
+		if ( ( $nbElem < 3 ) || ( $itemElems[2] != "paintWeights") ) 
+			continue; 
+
+		// We have the skinCluster node.
+		$skinClusters[$skinIdx] = $itemElems[1];
+		$skinIdx ++;
+	}
+
+	return $skinClusters;
+}
+
+global proc string[] artGetSkinInfluenceObjects(string $inSkinClusterName)
+//
+// Return array of influence objects of a skinCluster-alike node
+// Handles skinClusterDq nodes as well.
+//
+{
+	// For normal skinCluster nodes, do old behavior
+	string $nodeType = nodeType($inSkinClusterName);
+	if ($nodeType == "skinCluster") {
+		return `skinCluster -q -inf $inSkinClusterName`;
+		
+	} else if ($nodeType == "fmSkinCluster") {
+		string $infs[];
+		int $arrayCount = `getAttr -s ($inSkinClusterName + ".influences")`;
+		int $infCount = 0;
+		string $strings[];
+		
+		for($i = 0; $i < $arrayCount; ++$i) {
+			$strings = `listConnections ($inSkinClusterName + ".influences[" + $i + "].curveData")`;
+			if (size($strings) > 0) {
+				$infs[$infCount] = $strings[0];
+				++$infCount;
+				continue;
+			}
+			$strings = `listConnections ($inSkinClusterName + ".influences[" + $i + "].surfaceData")`;
+			if (size($strings) > 0) {
+				$infs[$infCount] = $strings[0];
+				++$infCount;
+				continue;
+			}
+			$strings = `listConnections ($inSkinClusterName + ".influences[" + $i + "].otherData")`;
+			if (size($strings) > 0) {
+				$infs[$infCount] = $strings[0];
+				++$infCount;
+				continue;
+			}
+		}
+		return $infs;
+		//return `listConnections ($inSkinClusterName + ".influences")`;
+	} else {
+		return `listConnections ($inSkinClusterName + ".matrix")`;
+	}
+}
+
+
+global proc string artSkinInflNameFromShortName(
+	string $shortName 
+)
+// 
+// Returns a long name of the influence object.
+{
+	string $hasHold = "";
+	int $sizeInf = size($shortName);
+	if ($sizeInf > 7) {
+		string $hasHold = substring($shortName,($sizeInf-6),$sizeInf);
+		if ($hasHold == (" (Hold)")) {
+			$shortName = substring($shortName,1,$sizeInf-7);
+		} else {
+			$hasHold = "";
+		}
+	}
+
+	string $buffer[];
+	int $numTokens = tokenize($shortName,"|",$buffer);
+	if ($numTokens == 1) {
+		string $endName = $buffer[$numTokens-1];
+
+		string $clusters[] = artSkinFindSkinClusterNodes();
+		for ($cluster in $clusters) {
+			
+			string $infs[] = artGetSkinInfluenceObjects($cluster);
+			string $inf;
+			for ($inf in $infs) {
+				if ($inf == $shortName) {
+					return ($inf+$hasHold);
+				}
+			}
+			for ($inf in $infs) {
+				clear($buffer);
+				$numTokens = tokenize($inf,"|",$buffer);
+				if ($buffer[$numTokens-1] == $endName) {
+					return ($inf+$hasHold);
+				}
+			}
+		}
+	}
+
+	$shortName += $hasHold;
+	return $shortName;
+}
+
+
+global proc string [] artSkinFindInfluenceNodes(
+	string 	$skinCluster,
+	string	$inflList[]
+)
+//
+// Return an array with all influence nodes 
+// connected to the passed skin cluster node.
+//
+{
+	// Get all the influence objects.
+	string $connections[] = artGetSkinInfluenceObjects($skinCluster);;
+
+	string	$infl, $conn;
+	int 	$numInfls = 0;
+	for ( $conn in $connections ) {
+		// Check and see if the influence is 
+		// already in the current list.
+		int $found = 0;
+		for( $infl in $inflList ) {
+			if ( $conn == $infl ) {
+				$found = 1;		
+				break;
+			}
+		}
+
+		if ( 0 == $found ) {
+			$inflList[$numInfls++] = $conn;
+		}
+	}
+
+	// Now try to make a short name to make the 
+	// names easier for the user to read.
+	string	$buffer[];
+	string	$inflListShortName[];
+	int 	$usingShortNames = 0;
+	for ($ii = 0; $ii < $numInfls; $ii++) {
+		clear($buffer);
+		int $numTokens = tokenize($inflList[$ii],"|",$buffer);
+		if (0 == $numTokens ) continue;
+
+		$inflListShortName[$ii] = $buffer[$numTokens-1];
+		$usingShortNames++;
+	}
+
+	// Deal with names which are now duplicated 
+	// because they got shortened - basically copy
+	// the long name to resolve it.
+	int $badIndexList[];
+	int $badIndexCount = 0;
+	for ($ii = 0; $ii < $numInfls; $ii++) {
+		for ($jj=0;$jj<$numInfls;$jj++) {
+			if ($ii == $jj) continue;
+			
+			// Check if they are the same.
+			if ($inflListShortName[$ii] == $inflListShortName[$jj]) {
+				$badIndexList[$badIndexCount++] = $ii;
+				break;	
+			}
+		}
+	}
+
+	int $badIndex;
+	for ($badIndex in $badIndexList) {
+		$inflListShortName[$badIndex] = $inflList[$badIndex];
+		$usingShortNames--;
+	}
+	
+	// Append the word "Hold" to the influence 
+	// nodes which are in LockWeights mode.
+	for ($ii = 0; $ii < $numInfls; $ii++) {
+		if (`attributeQuery -n $inflList[$ii] -ex liw`) {
+			if (`getAttr ($inflList[$ii]+".liw")`) {
+				string $holdString = (" (Hold)");
+				$inflList[$ii] = ($inflList[$ii] + $holdString);
+				$inflListShortName[$ii] = ($inflListShortName[$ii] + $holdString);
+			}
+		}
+	}
+
+	// Sort the list of influences if the  
+	// optionVar 'sortSkinPaintList' is true.
+	int $sortList = `optionVar -q sortSkinPaintList`;
+	if ( 1 == $sortList ) {
+		string $sortedL[]  = sort($inflListShortName);
+		$inflListShortName = $sortedL;
+		if ( $usingShortNames ) {
+			for ($ii = 0; $ii < $numInfls; $ii++) {
+				$inflList[$ii] = artSkinInflNameFromShortName($sortedL[$ii]);
+			}
+		}
+	}
+
+	return $inflListShortName;
+}
+
+global proc artAttrSkinJointMenu(
+	string 	$parent,
+	string 	$artCommand
+)
+//
+//	Description:
+// 		Creates a menu that shows all the paintable joints.
+// 
+{
+	global string $artSkinCurrentInfluence;
+	
+	//print "running NEW artAttrSkinJointMenu\n";
+	
+	// Find all the skin cluster nodes.
+	string $skinClusters[] = artSkinFindSkinClusterNodes();
+	if ( size($skinClusters) <= 0 ) {
+		//cleanup the list if it exists.
+		if ( `textScrollList -q -ex skinClusterInflList` )
+			textScrollList -e -ra skinClusterInflList;
+
+		return;
+	}
+	/*
+	print "**SkinClusters:**\n";
+	print $skinClusters;
+	print "\n";
+	*/
+	if (! `textScrollList -q -ex skinClusterInflList`) {
+		// If the influence list does not exist, there is no menu to build
+		// but we'll still set the current influence if we can find one to
+		// set.
+		//
+		if (size($skinClusters) > 0) {
+			string $infToSet;
+			int $currentExists = 0;
+
+			// See if the current influence is valid for this skinCluster.
+			// If it is, we'll use that. Otherwise, we'll use the first
+			// influence of the first skin.
+			//
+			for ($sc in $skinClusters) {
+				string $infs[] = artGetSkinInfluenceObjects($sc);
+				for ($inf in $infs) {
+					if (size($infToSet) == 0) {
+						// if the former influence is not found, we'll
+						// default to use the first one
+						//
+						$infToSet = $inf;
+					}
+					if (size($artSkinCurrentInfluence) == 0) {
+						// there is no current influence so just use
+						// the first one
+						//
+						//source artAttrSkinCallback;
+						break;
+					}
+					if ($inf == $artSkinCurrentInfluence) {
+						$currentExists = 1;
+						$infToSet = $artSkinCurrentInfluence;
+						break;
+					}
+				}
+				if ($currentExists) 
+					break;
+			}
+
+			// We found an influence to set.
+			//
+			if (size($infToSet) != 0) {
+				artSkinSelectInfluence($artCommand,$infToSet,$infToSet);
+			}
+		}
+		return;
+	}
+
+	// Clean up the existing list
+	textScrollList -e -ra skinClusterInflList;
+	
+	// Create a list of all influence objects names.
+	string	$inflList[], $inflListShortNames[];
+	int		$inflIdx = 0;
+	for ( $sCluster in $skinClusters ) {
+		if ( $sCluster == " ")
+			continue;
+
+		// Find the influence objects (joins) connected
+		// to the current skin cluster node.
+		string	$tmpInflList[];
+		string	$tmpListShortNames[] = artSkinFindInfluenceNodes($sCluster,$tmpInflList);
+		int		$nbTmpList = size($tmpInflList);
+		if ( $nbTmpList <= 0 )
+			continue;
+
+		// Copy the temp lists.
+		int $i;
+		for ( $i = 0; $i < $nbTmpList; $i++ ) {
+			$inflList[$inflIdx] 		  = $tmpInflList[$i];
+			$inflListShortNames[$inflIdx] = $tmpListShortNames[$i];
+			$inflIdx ++;	
+		} 
+	}
+
+
+	// =================================
+	// Create a popup menu now.
+	// =================================
+	int $numInfls = size($inflList);
+	int $ii;
+	for ($ii = 0; $ii < $numInfls; $ii++) {
+		string $infl = artSkinHoldSubstring($inflList[$ii]);
+		string $inflShortName = $inflListShortNames[$ii];
+
+		textScrollList -e -append $inflShortName
+			skinClusterInflList;
+	}
+
+	textScrollList -e -sc ("artSkinSelectInfluence "+$artCommand+" \"\" \"\"") skinClusterInflList;
+
+	
+	
+	// =================================
+	// Set the selection 
+	// =================================
+
+	// First check if the previously selected influence 
+	// object is valid for the selected surfaces and 
+	// if that's the case, select it again. Otherwise 
+	// use the influence that was last used for the 
+	// first of the surfaces.
+	for ($ii = 0; $ii < $numInfls; $ii++) {
+		string	$infl 	 = artSkinHoldSubstring($inflList[$ii]);
+		if ( ( $infl == $artSkinCurrentInfluence ) ||
+			 ( $inflList[$ii] == $artSkinCurrentInfluence ) )
+		{
+			// Make the connection bewteen the influence 
+			// object and the corresponding skin cluster.
+			artSkinSelectInfluence( $artCommand, $infl, $inflListShortNames[$ii] );
+			return;
+		}
+	}
+
+	// Since the selected influence has not been found
+	// Find what influence object is currently used 
+	// for the first surface and make it the current 
+	// object for all the other surfaces too.
+
+	string $skinCluster = $skinClusters[0];
+	if( $skinCluster != "" && $skinCluster != " " ) {
+		string $skinClusterPlug = $skinCluster + ".ptt";
+		string $connections[]   = `listConnections $skinClusterPlug`;
+		string $inf;
+		if ((size($connections) != 0) && ($connections[0] != "")) {
+			$inf = $connections[0];
+		} else {
+			// If no influence was found, just use the first one.
+			//
+			if ($numInfls > 0) {
+				$inf = $inflList[0];
+			}
+		}
+
+		if (size($inf) > 0) {
+			if (`attributeQuery -n $inf -ex liw`) {
+				if (`getAttr ($inf+".liw")`) {
+					string $holdString = (" (Hold)");
+					$inf = ($inf + $holdString);
+				}
+			}
+
+			// Set the selection in the list to that one.
+			string $shortName = "";
+			for ($ii = 0; $ii < $numInfls; $ii++) {
+				if ($inf == $inflList[$ii]) {
+					$shortName = $inflListShortNames[$ii];
+					break;
+				}
+			}
+
+			// Make the connection bewteen the influence 
+			// object and the corresponding skin cluster.
+			artSkinSelectInfluence( $artCommand, $inf, $shortName );
+			return;
+		}
+	}
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+// From artAttrSkinToolScript.mel ///////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+
+global proc string artAttrFmSkinToolScript( 
+	int $setToTool
+)
+//
+//	Description :
+//		4 ==> enter the tool
+{
+	// Deformer Paint Weight Tool.
+	string $tool = "artAttrSkinContext";
+
+	makePaintable -activateAll false;
+	//makePaintable -activate true "skinCluster" "*";
+	//makePaintable -activate true "fmSkinCluster" "*";
+	makePaintable -attrType "doubleArray" "fmSkinCluster" "paintWeights";
+	
+	
+	if( ! `artAttrSkinPaintCtx -exists $tool` ) {
+		rememberCtxSettings 
+		  `artAttrSkinPaintCtx -i1 "paintSkinWeights.xpm" -whichTool "skinWeights" $tool`;
+	}
+	setToolTo $tool;
+
+	if( 3 == $setToTool ) {
+		toolPropertyWindow;
+	}
+	else if( 4 != $setToTool ) {
+		warning( "Wrong input for artAttrSkinToolScript" );
+	}
+	
+	return $tool;
+	
+}
+
+
+
+global proc string artAttrSkinToolScript( 
+	int $setToTool
+)
+//
+//	Description :
+//		4 ==> enter the tool
+{
+	// Deformer Paint Weight Tool.
+	string $tool = "artAttrSkinContext";
+
+	makePaintable -activateAll false;
+	makePaintable -activate true "skinCluster" "*";
+
+	if( ! `artAttrSkinPaintCtx -exists $tool` ) {
+		rememberCtxSettings 
+		  `artAttrSkinPaintCtx -i1 "paintSkinWeights.xpm" -whichTool "skinWeights" $tool`;
+	}
+	setToolTo $tool;
+
+	if( 3 == $setToTool ) {
+		toolPropertyWindow;
+	}
+	else if( 4 != $setToTool ) {
+		warning( "Wrong input for artAttrSkinToolScript" );
+	}
+	return $tool;
+}

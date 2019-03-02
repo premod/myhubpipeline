@@ -1,0 +1,1807 @@
+/* This file downloaded from Highend3d.com
+''  
+''  Highend3d.com File Information:
+''  
+''    Script Name: lightGirl
+''    Author:  
+''    Last Updated: Apr 13, 2007
+''    Update/Change this file at:
+''    http://Highend3d.com/maya/downloads/mel_scripts/lighting/1071.html
+''  
+''  Please do not alter any information above this line
+''  it is generated dynamically by Highend3d.com and will
+''  be changed automatically on any updates.
+*/
+// lightGirl -->
+//
+// Ben Wronsky
+// bwronsky@gmail.com
+// www.benwronsky.com
+//
+
+/*
+ * GLOBAL VARS
+ */
+
+// version and date
+global string $g_lG_versionDate[];
+
+global string $g_lG_allLights[];
+
+global int $g_lG_showSwatches = 0;
+global int $g_lG_showColor = 1;
+global int $g_lG_showIntensity = 1;
+global int $g_lG_showAmbientShade = 0;
+global int $g_lG_showConeAngle = 1;
+global int $g_lG_showPenumbraAngle = 0;
+global int $g_lG_showDropoff = 0;
+global int $g_lG_showIlluminates = 0;
+global int $g_lG_showEmitDiffuse = 0;
+global int $g_lG_showEmitSpecular = 0;
+global int $g_lG_showVisibility = 0;
+global int $g_lG_showDecayRate = 0;
+global int $g_lG_showDepthMap = 1;
+global int $g_lG_showRayTrace = 1;
+global int $g_lG_showShadowColorDM = 1;
+global int $g_lG_showDmapResolution = 1;
+global int $g_lG_showDmapFilterSize = 1;
+global int $g_lG_showShadowColorRT = 1;
+global int $g_lG_showLightRadius = 1;
+global int $g_lG_showShadowRays = 1;
+global int $g_lG_showRayDepthLimit = 1;
+
+global int $g_lG_linkSheetToLightGirl = 1;
+global int $g_lG_linkManagerToLightGirl = 1;
+global int $g_lG_showLightsInInterface = 0;
+global int $g_lG_maxActiveLightsInUI = 31;
+global int $g_lG_enableLightConnections = 1;
+global int $g_lG_autoLoadLights = 0;
+global int $g_lG_nameAsShape = 0;
+global int $g_lG_buttonCheck = 0;
+global int $g_lG_autoUpdate = 1;
+
+clear $g_lG_allLights;
+
+/*
+ * FUNCTION NAME	lightGirl
+ * DESCRIPTION		Clears active light list
+ * CALLED BY		User
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lightGirl()
+{
+	lG_createLightGirlScriptNode(1); // lock node? 0 or 1...
+	
+	source lG_commands;
+	source lG_lightSets;
+	source lG_loadLights;
+	source lG_aboutWin;
+	source lG_chooserWin;
+	source lG_colorIntensityWin;
+	source lG_customAttributeWin;
+	source lG_sheetWin;
+	source lG_managerWin;
+	source lG_setup;
+	
+	//source lG_slimBitch;
+	
+	global string $g_lG_allLights[];
+	clear $g_lG_allLights;
+	
+	lightGirlCmd(); // start it up!
+	
+	lG_startScriptJobs();
+	
+	lG_updateLightConnections();
+}
+
+/*
+ * FUNCTION NAME	lightGirlCmd
+ * DESCRIPTION		Creates main UI for lightGirl
+ * CALLED BY		lightGirl
+ * INPUT		None
+ * RETURN		None
+ */
+
+global proc lightGirlCmd()
+{
+	//("## lightGirlCmd() ##\n");
+	
+	// create UI layout - vars for global sizing
+	int $uiLabelWidth = 150;
+	int $uiInputWidth = 130;
+	int $uiWidth = $uiLabelWidth + $uiInputWidth + 120;
+	
+	global string $g_lG_allLights[];
+	global int $g_lG_nameAsShape;
+	global int $g_lG_showSwatches;
+	global int $g_lG_buttonCheck;
+
+	// chooser variables...
+	global int $g_lG_showColor;
+	global int $g_lG_showIntensity;
+	global int $g_lG_showConeAngle;
+	global int $g_lG_showPenumbraAngle;
+	global int $g_lG_showDropoff;
+	global int $g_lG_showIlluminates;
+	global int $g_lG_showEmitDiffuse;
+	global int $g_lG_showEmitSpecular;
+	global int $g_lG_showVisibility;
+	global int $g_lG_showDecayRate;
+	global int $g_lG_showDepthMap;
+	global int $g_lG_showRayTrace;
+	global int $g_lG_showShadowColorDM;
+	global int $g_lG_showDmapResolution;
+	global int $g_lG_showDmapFilterSize;
+	global int $g_lG_showShadowColorRT;
+	global int $g_lG_showLightRadius;
+	global int $g_lG_showShadowRays;
+	global int $g_lG_showRayDepthLimit;
+	global int $g_lG_showAmbientShade;
+	
+	global int $g_lG_showLightsInInterface;
+	global int $g_lG_maxActiveLightsInUI;
+	global int $g_lG_autoLoadLights;
+
+	string $lG_currentLight;
+	string $lG_currentLightUI;
+	string $lString;
+	string $lG_attrVisCtrl;
+	string $lGAttrString;
+	string $lGChainString;
+	string $lFrame = "";
+	string $lCBDMGroup;
+	string $lCBRSGroup;
+	string $lGCurrentLightName[];
+	
+	// vars for which menu items are active by default...
+	int $lGViewMenuTgl = 1;
+	int $lGToolsMenuTgl = 0;
+	int $lGGlobalMenuTgl = 0;
+	int $lGCreateMenuTgl = 1;
+	
+	if(`size($g_lG_allLights)`) {
+		$lGViewMenuTgl = 1;
+		$lGToolsMenuTgl = 1;
+		$lGGlobalMenuTgl = 1;
+	}
+	
+	// delete UI function on close/open
+	if ( `window -exists lightGirl` == true )
+		deleteUI lightGirl;
+	window 
+		-title "lightGirl" 
+		-iconName "lightGirl"
+		-maximizeButton false 
+		-minimizeButton true
+		-sizeable true
+		-resizeToFitChildren false
+		-menuBar true
+		-menuBarVisible true 
+		-wh 476 572
+		lightGirl;
+
+	// HELP MENU -->
+	////////////////
+	menu
+		-label "Help"
+		-tearOff false;
+	/*
+	menuItem
+    		-label "Using lightGirl"
+		-command ("lG_lightGirlHelp")
+		-ann "Help using Light Girl"
+		-en 0;
+	*/
+	menuItem
+    		-label "About lightGirl"
+		-command ("lG_aboutWin")
+		-ann "About lightGirl";
+	menuItem 
+		-divider 1;
+	menuItem
+    		-label "Install Shelf Button"
+		-command ("lG_setup")
+		-ann "Install lightGirl shelf button to the current shelf";
+	
+		
+	// LOAD MENU -->
+	////////////////
+	menu
+		-label "Load"
+		-tearOff true;
+	menuItem
+    		-label "Ambient Lights"
+		-command ("lG_lightGirlLoadLights 3 lightGirlCmd \"\" \"\" 0")
+		-ann "Load ambient lights";
+	menuItem
+    		-label "Directional Lights"
+		-command ("lG_lightGirlLoadLights 4 lightGirlCmd \"\" \"\" 0")
+		-ann "Load directional lights";
+	menuItem
+    		-label "Point Lights"
+		-command ("lG_lightGirlLoadLights 1 lightGirlCmd \"\" \"\" 0")
+		-ann "Load point lights";
+	menuItem
+    		-label "Spot Lights"
+		-command ("lG_lightGirlLoadLights 0 lightGirlCmd \"\" \"\" 0")
+		-ann "Load spot lights";
+	menuItem
+    		-label "Area Lights"
+		-command ("lG_lightGirlLoadLights 2 lightGirlCmd \"\" \"\" 0")
+		-ann "Load area lights";
+	menuItem
+    		-label "Volume Lights"
+		-command ("lG_lightGirlLoadLights 9 lightGirlCmd \"\" \"\" 0")
+		-ann "Load volume lights";
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "All Lights"
+		-command ("lG_lightGirlLoadLights 6 lightGirlCmd \"\" \"\" 0")
+		-ann "Load all lights";
+	menuItem
+    		-label "Selected Lights"
+		-command ("lG_lightGirlLoadLights 5 lightGirlCmd \"\" \"\" 0")
+		-ann "Load selected lights";
+	menuItem
+    		-label "Visible Lights"
+		-command ("lG_lightGirlLoadLights 7 lightGirlCmd \"\" \"\" 0")
+		-ann "Load visible lights";
+			
+	menuItem
+		-divider 1;
+	menuItem
+		-sm 1
+    		-label "Shadow Casting Lights"
+		-ann "Load shadow casting lights (by shadow type)";
+		menuItem
+			-label "Depth Map Shadows"
+			-command ("lG_lightGirlLoadLights 8 lightGirlCmd \"DM\" \"\" 0")
+			-ann "Load lights casting depth map shadows";
+		menuItem
+			-label "Ray Trace Shadows"
+			-command ("lG_lightGirlLoadLights 8 lightGirlCmd \"RT\" \"\" 0")
+			-ann "Load lights casting ray trace shadows";
+		menuItem
+			-label "All Shadow Types"
+			-command ("lG_lightGirlLoadLights 8 lightGirlCmd \"both\" \"\" 0")
+			-ann "Load lights casting both depth map and ray trace shadows";
+		setParent -m ..;
+	
+	menuItem
+    		-label "Non Shadow Casting Lights"
+		-ann "Load non-shadow casting lights"
+		-command ("lG_lightGirlLoadLights 8 lightGirlCmd \"none\" \"\" 0");
+	
+	menuItem
+		-divider 1;
+		
+	menuItem
+    		-label "By Attribute"
+		-command ("lG_customAttributeWin \"lG_loadLightsAttributeFilter\" \"Load\"")
+		-ann "Load lights that meet a given attribute criteria";
+
+		
+	// light sets...
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Light Sets"
+		-pmc "lG_populateSetsMenu lG_loadLightSet lMenuLoadLightSets_lightGirlCmd lightGirlCmd"
+		-ann "Load a specific light set"
+		-sm 1
+		lMenuLoadLightSets_lightGirlCmd;
+		setParent -m ..;
+		
+		/*
+		menuItem
+		-divider 1;
+		
+		menuItem
+			-label "Unload All Lights"
+			-command ("lG_lightGirlLoadLights lightGirlCmd \"\" \"\" 0")
+			-ann "Unload all lights";
+			*/	
+	
+	// VIEW MENU -->
+	////////////////
+	menu
+		-label "View"
+		-enable $lGViewMenuTgl
+		-pmc ("lG_updateLightListCountCommand")
+		-tearOff true;
+	menuItem
+		-label "Chooser"
+		-command ("lG_chooserWin")
+		-ann "Choose which attributes to display (affects all lights)"
+		//-en $g_lG_showLightsInInterface
+		-en 1;
+	menuItem
+    		-label "Show Lights in Interface"
+		-command ("lG_showLightsInInterface")
+		-ann "Sets whether lights are shown in an attribute editor style in lightGirl's interface"
+		-cb $g_lG_showLightsInInterface
+		lG_showLightsInInterfaceMenuItem;
+	
+	/*
+	menuItem
+    		-label "Auto-load lights"
+		-command ("$g_lG_autoLoadLights = !$g_lG_autoLoadLights")
+		-ann "Auto-load lights added to the scene to lightGirl"
+		-cb $g_lG_autoLoadLights;
+	*/
+	
+	menuItem
+		-divider 1;
+	menuItem
+		-checkBox $g_lG_nameAsShape
+		-label "Use Long Names"
+		-command ("lG_menuToggleNameDisplayCommand")
+		-ann "Toggles the displayed light name (long or short)"
+		-en $g_lG_showLightsInInterface;
+	menuItem
+		-checkBox $g_lG_showSwatches
+		-label "Show Swatches"
+		-command ("lG_menuSwatchCommand")
+		-ann "Toggles swatch display for each light"
+		-en $g_lG_showLightsInInterface;
+	menuItem
+		-checkBox $g_lG_buttonCheck
+		-label "Show Buttons"
+		-command ("lG_menuToggleButtonCommand")
+		-ann "Add buttons to each light layout for additional control"
+		-en $g_lG_showLightsInInterface;
+	
+	menuItem 
+		-divider 1;
+	menuItem
+    		-label "Collapse All"
+		-command ("lG_menuCollapseCommand 1")
+		-ann "Collapse all light layouts"
+		-en $g_lG_showLightsInInterface;
+	menuItem
+    		-label "Expand All"
+		-command ("lG_menuCollapseCommand 2")
+		-ann "Expand all light layouts"
+		-en $g_lG_showLightsInInterface;
+		
+	/*
+	menuItem
+		-divider 1;
+		
+	menuItem
+		-en 1
+		-label "Enable Slim Support"
+		-command ("lG_enableSlimSupport")
+		-ann "Add Slim (Renderman) Appearance properties ability to lightGirl"
+		lMenuSlim;
+	*/
+		
+	/*
+	menuItem
+		-divider 1;
+		
+	menuItem
+		-label ""
+		-command ("")
+		-ann ""
+		lMenuLLNumber;
+	*/
+	
+	
+	// Create MENU -->
+	///////////////////
+	menu
+		-label "Create"
+		-enable $lGCreateMenuTgl
+		-tearOff true;
+		
+	// lights...
+	menuItem
+    		-label "Lights"
+		-ann "Create lights"
+		-sm 1
+		-to 1
+		-aob 1;
+		menuItem
+	    		-label "Ambient Light"
+			-command "defaultAmbientLight(1, 0.45, 1,1,1, \"0\", 0,0,0, \"1\")"
+			-ann "Create an ambient light on the grid or live surface";
+			menuItem
+				-command "CreateAmbientLightOptions"
+				-ann "Ambient light options"
+				-ob 1;
+		menuItem
+	    		-label "Directional Light"
+			-command "defaultDirectionalLight(1, 1,1,1, \"0\", 0,0,0, 0)"
+			-ann "Create a directional light on the grid or live surface";
+			menuItem
+				-command "CreateDirectionalLightOptions"
+				-ann "Directional light options"
+				-ob 1;
+		menuItem
+	    		-label "Point Light"
+			-command "defaultPointLight(1, 1,1,1, 0, 0, 0,0,0, 1)"
+			-ann "Create a point light on the grid or live surface";
+			menuItem
+				-command "CreatePointLightOptions"
+				-ann "Point light options"
+				-ob 1;
+		menuItem
+	    		-label "Spot Light"
+			-command "defaultSpotLight(1, 1,1,1, 0, 40, 0, 0, 0, 0,0,0, 1, 0)"
+			-ann "Create a spot light on the grid or live surface";
+			menuItem
+				-command "CreateSpotLightOptions"
+				-ann "Spot light options"
+				-ob 1;
+		menuItem
+	    		-label "Area Light"
+			-command "defaultAreaLight(1, 1,1,1, 0, 0, 0,0,0, 1, 0)"
+			-ann "Create an area light on the grid or live surface";
+			menuItem
+				-command "CreateAreaLightOptions"
+				-ann "Area light options"
+				-ob 1;
+		menuItem
+	    		-label "Volume Light"
+			-command "defaultVolumeLight(1, 1,1,1, 0, 0, 0,0,0, 1)"
+			-ann "Create a volume light on the grid or live surface";
+			menuItem
+				-command "CreateVolumeLightOptions"
+				-ann "Volume light options"
+				-ob 1;
+		setParent -m ..;
+		
+	// light sets...
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Light Sets"
+		-to 1
+		-sm 1
+		-ann "Manage light sets";
+		
+		menuItem
+			-label "New"
+			-command ("lG_createLightSet")
+			-ann "Create a new light set using lights loaded in interface";
+		
+		/*
+		menuItem
+			-label "Add Light Set"
+			-command ("lG_addLightSet lMenuAddLightSets_lightGirlCmd")
+			-sm 1
+			-pmc "lG_populateSetsMenu lG_addLightSet lMenuAddLightSets_lightGirlCmd lightGirlCmd"
+			-ann "Add a specific light set to the existing loaded sets"
+			lMenuAddLightSets_lightGirlCmd;
+			setParent -m ..;
+		*/
+			
+		menuItem
+			-label "Remove"
+			-command ("lG_removeLightSet lMenuRemoveLightSets_lightGirlCmd")
+			-pmc "lG_populateSetsMenu lG_removeLightSet lMenuRemoveLightSets_lightGirlCmd lightGirlCmd"
+			-ann "Remove an existing light set"
+			-sm 1
+			lMenuRemoveLightSets_lightGirlCmd;
+			setParent -m ..;
+		setParent -m ..;
+		
+		
+	// TOOLS MENU -->
+	///////////////////
+	menu
+		-label "Tools"
+		-enable $lGToolsMenuTgl
+		-tearOff true;
+	//menuItem
+    		//-label "Slave"
+		//-command showSlaveWin
+		//-ann "Create master/slave relationships between lights"
+		//lMenuTheSlave;
+	menuItem
+    		-label "Manager"
+		-command lG_managerWin
+		-ann "A floating window listing all lights for easy selection";
+	menuItem
+    		-label "Sheet"
+		-command lG_sheetWin
+		-ann "An attribute spreadsheet with a permanent connection to any light(s) in a scene";
+	menuItem
+		-divider 1;
+	
+	menuItem
+    		-label "Select Active Lights"
+		-ann "'Active Lights' are lights currently loaded into lightGirls main interface"
+		//-command "lG_performSelectActiveLights"
+		-sm 1;
+		menuItem
+	    		-label "Transform"
+			-command "lG_performSelectActiveLights 1"
+			-ann "Selects active lights [Transforms]";
+		menuItem
+	    		-label "Shape"
+			-command "lG_performSelectActiveLights 0"
+			-ann "Selects active lights [Shapes]";
+		setParent -m ..;
+			
+	menuItem
+    		-label "Select All Lights"
+		-ann "Selects all lights in the scene"
+		-sm 1;
+		menuItem
+	    		-label "Transform"
+			-command "lG_performSelectAllLights 1"
+			-ann "Selects all lights in the scene [Transforms]";
+		menuItem
+	    		-label "Shape"
+			-command "lG_performSelectAllLights 0"
+			-ann "Selects all lights in the scene [Shapes]";
+		setParent -m ..;
+	
+	/*
+	menuItem
+    		-label "Clear Selection"
+		-command "select -cl"
+		-ann "Clears the current selection"
+		lMenuSelNone;
+	*/	
+		
+	// GLOBAL MENU -->
+	//////////////////
+	menu
+		-label "Attribute Control"
+		-enable $lGGlobalMenuTgl
+		-tearOff true;
+	menuItem
+    		-label "Global Color && Intensity"
+		-command lG_colorIntensityWin
+		-ann "Globally control the color & intensity of the currently loaded lights";
+
+	menuItem
+		-divider 1;
+
+	menuItem
+    		-label "Decay Rate"
+		-sm 1
+		-ann "Globally set the decay rate";
+		menuItem
+			-label "No Decay"
+			-command "lG_menuGlobalDecayCommand 0"
+			-ann "No Decay";
+		menuItem
+			-label "Linear"
+			-command "lG_menuGlobalDecayCommand 1"
+			-ann "Linear Decay";
+		menuItem
+			-label "Quadratic"
+			-command "lG_menuGlobalDecayCommand 2"
+			-ann "Quadratic Decay";
+		menuItem
+			-label "Cubic"
+			-command "lG_menuGlobalDecayCommand 3"
+			-ann "Cubic Decay";
+			setParent -m ..;
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Use Depth Map Shadows"
+    		-sm 1
+		-ann "Use depth map shadows";
+		menuItem
+			-label "On"
+			-command "lG_useDepthMapShadows 1"
+			-ann "Turn on depth map shadows";
+		menuItem
+			-label "Off"
+			-command "lG_useDepthMapShadows 0"
+			-ann "Turn off depth map shadows";
+			setParent -m ..;
+	menuItem
+    		-label "Depth Map Resolution"
+		-sm 1
+		-ann "Depth Map Resolution (affects loaded depth map shadow enabled lights)";
+		menuItem
+			-label "256"
+			-command "lG_setDepthMapResolution 256";
+		menuItem
+			-label "512"
+			-command "lG_setDepthMapResolution 512";
+		menuItem
+			-label "1024"
+			-command "lG_setDepthMapResolution 1024";
+		menuItem
+			-label "2048"
+			-command "lG_setDepthMapResolution 2048";
+		menuItem
+			-label "4096"
+			-command "lG_setDepthMapResolution 4096";
+		menuItem
+			-label "Custom"
+			-command "lG_setDepthMapResolution 0";
+			setParent -m ..;
+	menuItem
+    		-label "Depth Map Filter Size"
+		-sm 1
+		-ann "Depth Map Filter Size (affects loaded depth map shadow enabled lights)";
+		for ($lGFS=1; $lGFS<=10; $lGFS++) {
+			menuItem
+				-label $lGFS
+				-command ("lG_setDepthMapFilterSize " + $lGFS);
+		}
+			menuItem
+				-label "Custom"
+				-command "lG_setDepthMapFilterSize 0"
+				-enable 1;
+				setParent -m ..;
+	menuItem
+    		-label "Disk Based Depth Maps"
+    		-sm 1
+    		-ann "Disk Based Dmap Settings (affects loaded depth map shadow enabled lights)";
+		menuItem
+	    		-label "Off"
+			-command "lG_useDiskBasedDmap 0"
+			-ann "";
+		menuItem
+	    		-label "Overwrite Existing Dmap(s)"
+			-command "lG_useDiskBasedDmap 1";
+		menuItem
+	    		-label "Reuse Existing Dmap(s)"
+			-command "lG_useDiskBasedDmap 2";
+			setParent -m ..;
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Use Ray Trace Shadows"
+		-ann "Use ray trace shadows"
+    		-sm 1;
+		menuItem
+			-label "On"
+			-command "lG_useRayTraceShadows 1"
+			-ann "Turn on ray trace shadows";
+		menuItem
+			-label "Off"
+			-command "lG_useRayTraceShadows 0"
+			-ann "Turn off ray trace shadows";
+			setParent -m ..;
+	menuItem
+    		-label "Light Radius"
+		-sm 1
+		-ann "Raytrace Shadows: Light Radius";
+		menuItem
+			-label "Custom"
+			-command "lG_globalLightRadiusCommand 0";
+			setParent -m ..;
+	menuItem
+    		-label "Shadow Rays"
+		-sm 1
+		-ann "Raytrace Shadows: Shadow Rays";
+		menuItem
+			-label "Custom"
+			-command "lG_globalShadowRaysCommand 0";
+			setParent -m ..;
+	menuItem
+    		-label "Ray Depth Limit"
+		-sm 1
+		-ann "Raytrace Shadows: Ray Depth Limit";
+		menuItem
+			-label "Custom"
+			-command "lG_globalRayDepthLimitCommand 0";
+			setParent -m ..;
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Illuminates by Default"
+		-ann "Illuminates by default"
+		-sm 1;
+		menuItem
+			-label "On"
+			-command "lG_globalIlluminateCommand 1"
+			-ann "Turn on visiblity for loaded lights";
+		menuItem
+			-label "Off"
+			-command "lG_globalIlluminateCommand 0"
+			-ann "Turn off visiblity for loaded lights";
+		setParent -m ..;
+	menuItem
+    		-label "Emit Diffuse"
+		-sm 1;
+		menuItem
+			-label "On"
+			-command "lG_globalEmitDiffuseCommand 1"
+			-ann "Turn on diffuse emission for loaded lights";
+		menuItem
+			-label "Off"
+			-command "lG_globalEmitDiffuseCommand 0"
+			-ann "Turn off diffuse emission for loaded lights";
+		setParent -m ..;
+	menuItem
+    		-label "Emit Specular"
+		-sm 1;
+		menuItem
+			-label "On"
+			-command "lG_globalEmitSpecularCommand 1"
+			-ann "Turn on specular emission for loaded lights";
+		menuItem
+			-label "Off"
+			-command "lG_globalEmitSpecularCommand 0"
+			-ann "Turn off specular emission for loaded lights";
+		setParent -m ..;
+	menuItem
+    		-label "Visibility"
+		-sm 1;
+		menuItem
+			-label "On"
+			-command "lG_globalVisibilityCommand 1"
+			-ann "Turn on visiblity for loaded lights";
+		menuItem
+			-label "Off"
+			-command "lG_globalVisibilityCommand 0"
+			-ann "Turn off visiblity for loaded lights";
+		setParent -m ..;
+	
+	//
+	// Mental Ray -->
+	//
+	
+	menuItem
+		-divider 1;
+	menuItem
+		-sm 1
+		-tearOff true
+    		-label "Mental Ray"
+		-command "lG_customAttributeWin"
+		-ann "Global control of Mental Ray attributes for loaded lights";
+		
+			// caustic and global illum...
+		menuItem
+			-tearOff true
+			-label "Caustic and Global Illumination"
+			-sm 1;
+				menuItem
+				-label "Emit Photons"
+				-sm 1;
+					menuItem
+						-label "On"
+						-command "lG_setAttr {\"\"} \"NULL\" \"emitPhotons\" 1 0 \"\" \"\" \"\""
+						-ann "Enable photon emission for loaded lights";
+					menuItem
+						-label "Off"
+						-command "lG_setAttr {\"\"} \"NULL\" \"emitPhotons\" 0 0 \"\" \"\" \"\""
+						-ann "Disable photon emission for loaded lights";
+					setParent -m ..;
+				menuItem
+					-label "Photon Intensity"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"photonIntensity\" 0 1 \"Photon Intensity\" \"Photon Intensity\" \"8000\"";
+					setParent -m ..;
+					
+				menuItem
+					-label "Exponent"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"exponent\" 0 1 \"Exponent\" \"Exponent\" \"2.000\"";
+					setParent -m ..;
+				menuItem
+					-label "Caustic Photons"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"causticPhotons\" 0 1 \"Caustic Photons\" \"Caustic Photons\" \"10000\"";
+					setParent -m ..;
+				menuItem
+					-label "Global Illumination Photons"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"globIllPhotons\" 0 1 \"Global Illumination Photons\" \"Global Illumination Photons\" \"10000\"";
+					setParent -m ..;
+				setParent -m ..;
+			
+			// shadow maps...
+			menuItem
+				-tearOff true
+				-label "Shadow Maps"
+				-sm 1;
+				menuItem
+					-label "Shadow Map"
+					-sm 1;
+					menuItem
+						-label "On"
+						-command "lG_setAttr {\"\"} \"NULL\" \"shadowMap\" 1 0 \"\" \"\" \"\""
+						-ann "Enable shadow maps for loaded lights";
+					menuItem
+						-label "Off"
+						-command "lG_setAttr {\"\"} \"NULL\" \"shadowMap\" 0 0 \"\" \"\" \"\""
+						-ann "Disable shadow maps for loaded lights";
+					setParent -m ..;
+				menuItem
+					-label "Resolution"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"smapResolution\" 0 1 \"Resolution\" \"Resolution\" \"256\"";
+					setParent -m ..;
+				menuItem
+					-label "Samples"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"smapSamples\" 0 1 \"Samples\" \"Samples\" \"1\"";
+					setParent -m ..;
+				menuItem
+					-label "Softness"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"smapSoftness\" 0 1 \"Softness\" \"Softness\" \"0.000\"";
+					setParent -m ..;
+				menuItem
+					-label "Bias"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"smapBias\" 0 1 \"Bias\" \"Bias\" \"0.000\"";
+					setParent -m ..;
+				
+				/*
+				menuItem
+					-label "Shadow Map File Name"
+					-sm 1;
+					menuItem
+						-label "Custom"
+						-command "lG_setAttr {\"\"} \"NULL\" \"smapFilename\" 0 1 \"Shadow Map File Name\" \"Shadow Map File Name\" \"\"";
+					setParent -m ..;
+				*/
+				
+				setParent -m ..;
+			
+			// area light...
+			menuItem
+				-tearOff true
+				-label "Area Light"
+				-sm 1;
+				menuItem
+					-label "Area Light"
+					-sm 1;
+					menuItem
+						-label "On"
+						-command "lG_setAttr {\"\"} \"NULL\" \"areaLight\" 1 0 \"\" \"\" \"\""
+						-ann "Enable Area Light for loaded lights";
+					menuItem
+						-label "Off"
+						-command "lG_setAttr {\"\"} \"NULL\" \"areaLight\" 0 0 \"\" \"\" \"\""
+						-ann "Disable Area Light for loaded lights";
+					setParent -m ..;
+				menuItem
+					-label "Type"
+					-sm 1;
+					menuItem
+						-label "Rectangle"
+						-command "lG_setAttr {\"\"} \"NULL\" \"areaType\" 0 0 \"\" \"\" \"\"";
+					menuItem
+						-label "Disc"
+						-command "lG_setAttr {\"\"} \"NULL\" \"areaType\" 1 0 \"\" \"\" \"\"";
+					menuItem
+						-label "Sphere"
+						-command "lG_setAttr {\"\"} \"NULL\" \"areaType\" 2 0 \"\" \"\" \"\"";
+					menuItem
+						-label "Cylinder"
+						-command "lG_setAttr {\"\"} \"NULL\" \"areaType\" 3 0 \"\" \"\" \"\"";
+					menuItem
+						-label "User"
+						-command "lG_setAttr {\"\"} \"NULL\" \"areaType\" 4 0 \"\" \"\" \"\"";
+					setParent -m ..;
+				setParent -m ..;
+			
+			menuItem
+				-divider 1;
+		
+			// light profile...
+			
+			menuItem
+				-tearOff true
+				-label "Light Profile"
+				-sm 1;
+				menuItem
+					-label "Create"
+					-command "lG_createMRLightProfile"
+					-ann "Create a light profile node for each active pointLight";
+					
+				menuItem
+					-divider 1;
+				
+				menuItem
+					-label "Format"
+					-sm 1;
+					
+					menuItem
+						-label "IES"
+						-command "lG_setAttr {\"\"} \"mentalrayLightProfile\" \"format\" 0 0 \"\" \"\" \"\"";
+					menuItem
+						-label "Eulumdat"
+						-command "lG_setAttr {\"\"} \"mentalrayLightProfile\" \"format\" 1 0 \"\" \"\" \"\"";
+					setParent -m ..;
+						
+				menuItem
+					-label "Interpolation"
+					-sm 1;
+					
+					menuItem
+						-label "Hermite Linear"
+						-command "lG_setAttr {\"\"} \"mentalrayLightProfile\" \"interpolation\" 1 0 \"\" \"\" \"\"";
+					menuItem
+						-label "Hermite Cubic"
+						-command "lG_setAttr {\"\"} \"mentalrayLightProfile\" \"interpolation\" 3 0 \"\" \"\" \"\"";
+					setParent -m ..;
+				menuItem
+					-label "Eulumdat/IES File Name"
+					-sm 1;
+					
+					menuItem
+						-label "Choose"
+						-command "lG_fileBrowserDialog \"Choose IES File\" \"Open\" \"*.ies\" 0 \"lG_setMRLightProfileFileName\"";
+					setParent -m ..;
+				/*		
+				menuItem
+					-label "Resolution"
+					-sm 1;
+					
+					menuItem
+						-label ""
+						-command "";
+					setParent -m ..;
+				*/		
+				menuItem
+					-label "Counter Clockwise"
+					-sm 1;
+					
+					menuItem
+						-label "On"
+						-command "lG_setAttr {\"\"} \"mentalrayLightProfile\" \"iesBClockwise\" 1 0 \"\" \"\" \"\"";
+					menuItem
+						-label "Off"
+						-command "lG_setAttr {\"\"} \"mentalrayLightProfile\" \"iesBClockwise\" 0 0 \"\" \"\" \"\"";
+			
+				setParent -m ..;
+			setParent -m ..;
+		setParent -m ..;
+		
+	menuItem
+		-divider 1;
+	menuItem
+    		-label "Custom Attribute"
+		-command "lG_customAttributeWin \"lG_setGlobalCustomAttributeCmd\" \"Apply\""
+		-ann "Global control of custom or user-defined attributes for loaded lights";
+	setParent -m ..;
+	
+
+	// begin actual form content
+	string $lForm = `formLayout -numberOfDivisions 100`;
+	string $lColumn;
+	string $lScroll;
+	
+	if (size($g_lG_allLights) < 1) {					
+		text 
+			-l "Load lights from the 'Load' menu." 
+			-align "left" 
+			nothingSelectedText;
+		formLayout -edit
+			-af nothingSelectedText left 10
+			-af nothingSelectedText top 10
+			-af nothingSelectedText right 10
+			-af nothingSelectedText bottom 30
+
+			$lForm;
+	} else {
+		if(!$g_lG_showLightsInInterface || `size($g_lG_allLights)` > $g_lG_maxActiveLightsInUI) {	
+			string $text = "Loaded " + `size($g_lG_allLights)` + " Lights.\nLights are active but hidden from the interface.\n\nColor/Intensity and Attribute Control operations can still be applied.\n\nEnable \"Show Lights in Interface\" under  the \"View\" menu to display active lights.\nThere is currently a maximum of " + $g_lG_maxActiveLightsInUI + " lights allowed in the interface.\n\nComments and questions to Ben Wronsky | bwronsky@gmail.com";
+			text 
+				-l $text
+				-align "left" 
+				loadedLightsText;
+			formLayout -edit
+				-af loadedLightsText left 10
+				-af loadedLightsText top 10
+				-af loadedLightsText right 10
+				-af loadedLightsText bottom 30
+	
+				$lForm;
+				
+			//menuItem -e -en 0 lG_globalAttrCtrlMenu;
+		} else {
+			$lScroll = `scrollLayout -hst 16 -vst 16 -childResizable true -minChildWidth $uiWidth`;
+				columnLayout -adjustableColumn true -rowSpacing 0;
+					// main editable area (collapsable)
+					for ($i=0; $i<size($g_lG_allLights); $i++) {
+						$lG_currentLight = $g_lG_allLights[$i];
+						$lG_currentLightUI = substituteAllString($g_lG_allLights[$i], "|", "");
+						$lFrame = "lFrame" + $lG_currentLightUI + "_" + $i;
+	
+						//print("Current Light: " + $lG_currentLight + "\n");
+	
+						if ($g_lG_nameAsShape == 0) {
+							$lGCurrentLightName = `listRelatives -parent $lG_currentLight`;
+						} else {
+							$lGCurrentLightName[0] = $lG_currentLight;
+						}
+					
+						int $lGFrameWidth = (`size($lGCurrentLightName[0])` * 8);
+		
+						frameLayout
+							-label $lGCurrentLightName[0]
+							-labelAlign "bottom"
+							-cll true
+							-mh 3
+							-bs "etchedIn"
+							-bv true
+							//-lw $lGFrameWidth
+							$lFrame;
+		
+							popupMenu;
+								menuItem
+		    							-label "Attribute Editor"
+									-command ("select " + $lG_currentLight + "; " + "showEditor " + $lG_currentLight);
+								menuItem
+		    							-label "Select"
+									-command ("select " + $lG_currentLight + ";" + "pickWalk -d up;");
+								menuItem
+									-label "Look Through"
+									-command ("lookThru " + $lG_currentLight);
+								menuItem
+		    							-label "Rename"
+									-command ("lG_renameCurrentLight " + $lG_currentLight + " " + $i + " " + $lFrame);
+								menuItem
+		    							-label "Duplicate"
+									-command ("lG_duplicateCurrentLight " + $lG_currentLight);
+								menuItem
+		    							-label "Create New Light of this Type"
+									-command ("lG_createNewLightOfType " + $lG_currentLight);
+								menuItem
+		    							-label "Make All Like Me"
+									-command ("lG_makeAllLightsLikeCurrent " + $lG_currentLight);
+								
+								/*
+								string $lGNeedBreak[] = `listConnections -s 1 -d 0 -type light $lG_currentLight`;
+								if (size($lGNeedBreak) > 0) {
+									menuItem
+		    								-label "Break Connections"
+										-command ("lG_breakAllLightConnections " + $lG_currentLight)
+										lGLightPopMenu6;
+								}
+								*/
+								
+							columnLayout -adjustableColumn true -rowSpacing 2;
+								// Swatches
+								//if ($g_lG_showSwatches == true) {
+									//string $lG_currentLightSwatch = substituteAllString($lG_currentLight, "|", "");
+									$lG_attrVisCtrl = $lG_currentLightUI + "swatchVisCtrl";
+									//print("Swatch: " + $lG_attrVisCtrl + "\n");
+									rowLayout
+										-numberOfColumns 4
+										-cat 1 "right" 6
+										-columnWidth 1 140
+										-columnWidth 2 100
+										-columnWidth 3 66
+										-columnWidth 4 80
+										-vis $g_lG_showSwatches
+										$lG_attrVisCtrl;
+										text -l "Intensity Sample" -align "left";
+										swatchDisplayPort -wh 64 64 -sn $lG_currentLight;
+										if (`nodeType($lG_currentLight)` == "spotLight")
+										{
+											text -l "Light Shape" -align "left";
+											spotLightPreviewPort -wh 64 64 -sl $lG_currentLight;
+										}
+										setParent ..;
+								//if ($g_lG_showSwatches == true) {
+									$lG_curSwatchSeparator = $lG_currentLightUI + "swatchSeparator";
+									separator -st "out" -vis $g_lG_showSwatches $lG_curSwatchSeparator;
+								//}
+								//}
+								//Color
+								//if($g_lG_showColor == 1) {
+									$lG_attrVisCtrl = $lG_currentLightUI + "colorVisCtrl";
+									rowLayout
+										-numberOfColumns 1
+										-columnWidth 1 $uiLabelWidth
+										-vis $g_lG_showColor
+										$lG_attrVisCtrl;
+										$lString = $lG_currentLight + ".color";
+										attrColorSliderGrp -at $lString -l "Color" -cal 1 "right" -cw 2 68 -cw 4 28;
+										setParent ..;
+								//}
+								// Intensity
+								//if($g_lG_showIntensity == 1) {
+									$lG_attrVisCtrl = $lG_currentLightUI + "intensityVisCtrl";
+									rowLayout
+										-numberOfColumns 2
+										-columnWidth 1 400
+										-vis $g_lG_showIntensity
+										$lG_attrVisCtrl;
+										$lString = $lG_currentLight + ".intensity";
+										$lGAttrString = $lG_currentLightUI + "intensityAttr";
+										//print("AFG: " + $lGAttrString + "\n");
+										attrFieldSliderGrp -fmn -100 -fmx 9999999 -min 0 -max 10 -at $lString -l "Intensity" -cw 2 68 -cw 4 28 $lGAttrString;
+										
+									if (`nodeType($lG_currentLight)` == "spotLight")
+									{
+										// chain -->
+											$lGChainString = $lG_currentLightUI + "intensityChain";
+											checkBox 
+												-ann "Chain Attribute" 
+												-l "C" 
+												-enable 1 
+												-v 0 
+												-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " intensity" + " " + $lG_currentLight)
+												$lGChainString;
+											setParent ..;
+										popupMenu;
+										menuItem
+				    							-label "Chain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand intensity 1");
+										menuItem
+				    							-label "Unchain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand intensity 0");
+									} else {
+										setParent ..;
+									}
+								//}
+								if (`nodeType($lG_currentLight)` == "spotLight")
+								{
+									// Cone Angle
+									//if($g_lG_showConeAngle == 1) {
+										$lG_attrVisCtrl = $lG_currentLightUI + "coneAngleVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-columnWidth 1 400
+											-vis $g_lG_showConeAngle
+											$lG_attrVisCtrl;
+											$lString = $lG_currentLight + ".coneAngle";
+											$lGAttrString = $lG_currentLightUI + "coneAngleAttr";
+											attrFieldSliderGrp -fmn 0 -fmx 255 -min 0 -max 255 -at $lString -l "Cone Angle" -cw 2 68 -cw 4 28 $lGAttrString;
+											
+										// chain -->
+											$lGChainString = $lG_currentLightUI + "coneAngleChain";
+											checkBox
+												-ann "Chain Attribute" 
+												-l "C" 
+												-enable 1 
+												-v 0 
+												-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " coneAngle" + " " + $lG_currentLight) 
+												$lGChainString;
+											setParent ..;
+										popupMenu;
+										menuItem
+				    							-label "Chain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand coneAngle 1");
+										menuItem
+				    							-label "Unchain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand coneAngle 0");
+									//}
+									// Penumbra Angle
+									//if($g_lG_showPenumbraAngle == 1) {
+										$lG_attrVisCtrl = $lG_currentLightUI + "penumbraAngleVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-columnWidth 1 400
+											-vis $g_lG_showPenumbraAngle
+											$lG_attrVisCtrl;
+											$lString = $lG_currentLight + ".penumbraAngle";
+											$lGAttrString = $lG_currentLightUI + "penumbraAngleAttr";
+											attrFieldSliderGrp -fmn -10 -fmx 10 -min -10 -max 10 -at $lString -l "Penumbra Angle" -cw 2 68 -cw 4 28 $lGAttrString;
+											
+										// chain -->
+											$lGChainString = $lG_currentLightUI + "penumbraAngleChain";
+											checkBox
+												-ann "Chain Attribute" 
+												-l "C" 
+												-enable 1 
+												-v 0 
+												-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " penumbraAngle" + " " + $lG_currentLight) 
+												$lGChainString;
+											setParent ..;
+										popupMenu;
+										menuItem
+				    							-label "Chain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand penumbraAngle 1");
+										menuItem
+				    							-label "Unchain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand penumbraAngle 0");
+									//}
+									// Dropoff
+									//if($g_lG_showDropoff == 1) {
+										$lG_attrVisCtrl = $lG_currentLightUI + "dropoffVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-columnWidth 1 400
+											-vis $g_lG_showDropoff
+											$lG_attrVisCtrl;
+											$lString = $lG_currentLight + ".dropoff";
+											$lGAttrString = $lG_currentLightUI + "dropoffAttr";
+											attrFieldSliderGrp -fmn 0 -fmx 255 -min 0 -max 255 -at $lString -l "Drop Off" -cw 2 68 -cw 4 28 $lGAttrString;
+										/*
+										// chain -->
+											$lGChainString = $lG_currentLight + "dropoffChain";
+											checkBox 
+												-ann "Chain Attribute" 
+												-l "C" 
+												-enable 1 
+												-v 0 
+												-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " dropoff" + " " + $lG_currentLight) 
+												$lGChainString;
+											setParent ..;
+										popupMenu;
+										menuItem
+				    							-label "Chain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand dropoff 1");
+										menuItem
+				    							-label "Unchain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand dropoff 0");
+										*/
+										setParent ..;
+									//}
+								}
+								if (`nodeType($lG_currentLight)` == "ambientLight")
+								{
+									// Ambient Shade
+									//if($g_lG_showAmbientShade == 1) {
+										$lG_attrVisCtrl = $lG_currentLightUI + "ambientShadeVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-columnWidth 1 400
+											-vis $g_lG_showAmbientShade
+											$lG_attrVisCtrl;
+											$lString = $lG_currentLight + ".ambientShade";
+											$lGAttrString = $lG_currentLightUI + "ambientShadeAttr";
+											attrFieldSliderGrp -min 0 -max 1 -at $lString -l "Ambient Shade" -cw 2 68 -cw 4 28 $lGAttrString;
+											
+										// chain -->
+											$lGChainString = $lG_currentLightUI + "ambientShadeChain";
+											checkBox 
+												-ann "Chain Attribute" 
+												-l "C" 
+												-enable 1 
+												-v 0 
+												-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " ambientShade" + " " + $lG_currentLight)
+												$lGChainString;
+											setParent ..;
+										popupMenu;
+										menuItem
+				    							-label "Chain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand ambientShade 1");
+										menuItem
+				    							-label "Unchain all attributes of this type"
+											-command ("lG_chainAllAttrOfTypeCommand ambientShade 0");
+									//}
+								}
+									// Illuminates by Default
+									//if($g_lG_showIlluminates == 1) {
+									$lG_attrVisCtrl = $lG_currentLightUI + "illuminatesVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-cat 2 "left" 10
+											-columnWidth 1 $uiInputWidth
+											-vis $g_lG_showIlluminates
+											$lG_attrVisCtrl;
+											text -l "";
+											exclusiveLightCheckBox -light $lG_currentLight -l "Illuminates by Default" -w 200;
+											setParent ..;
+									//}
+									// Emit Diffuse
+									if (`objExists ($lG_currentLight + ".emitDiffuse")`)
+									{
+										//if($g_lG_showEmitDiffuse == 1) {
+											$lG_attrVisCtrl = $lG_currentLightUI + "emitDiffuseVisCtrl";
+											rowLayout
+												-numberOfColumns 2
+												-cat 2 "left" 10
+												-columnWidth 1 $uiInputWidth
+												-vis $g_lG_showEmitDiffuse
+												$lG_attrVisCtrl;
+												text -l "";
+												string $diffChkBox = "diffChkBox" + $lG_currentLightUI;
+												checkBox 
+													-cc ("lG_toggleLightDiffuseCommand " + $lG_currentLight)
+													-label "Emit Diffuse" 
+													-value `getAttr($lG_currentLight + ".emitDiffuse")`
+													$diffChkBox;
+												setParent ..;
+										//}
+									}
+									// Emit Specular
+									if (`objExists ($lG_currentLight + ".emitSpecular")`)
+									{
+										//if($g_lG_showEmitSpecular == 1) {
+											$lG_attrVisCtrl = $lG_currentLightUI + "emitSpecularVisCtrl";
+											rowLayout
+												-numberOfColumns 2
+												-cat 2 "left" 10
+												-columnWidth 1 $uiInputWidth
+												-vis $g_lG_showEmitSpecular
+												$lG_attrVisCtrl;
+												text -l "";
+												string $specChkBox = "specChkBox" + $lG_currentLightUI;
+												checkBox 
+													-cc ("lG_toggleLightSpecularCommand " + $lG_currentLight)
+													-label "Emit Specular" 
+													-value `getAttr($lG_currentLight + ".emitSpecular")`
+													$specChkBox;
+												setParent ..;
+										//}
+									}
+									// Visibility
+									//if($g_lG_showVisibility == 1) {
+										$lG_attrVisCtrl = $lG_currentLightUI + "visibilityVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-cat 2 "left" 10
+											-columnWidth 1 $uiInputWidth
+											-vis $g_lG_showVisibility
+											$lG_attrVisCtrl;
+											text -l "";
+											string $visChkBox = "visChkBox" + $lG_currentLightUI;
+											checkBox
+												-cc ("lG_toggleLightVisibilityCommand " + $lG_currentLight)
+												-label "Visibility"
+												-value `getAttr($lG_currentLight + ".visibility")`
+												$visChkBox;
+											setParent ..;
+									//}
+								// Decay Rate
+								//if($g_lG_showDecayRate == 1) {
+									$lDecayGroup = "lDecayGroup" + $lG_currentLightUI;
+									if (`nodeType($lG_currentLight)` != "ambientLight")
+									{
+										if (`nodeType($lG_currentLight)` != "directionalLight")
+										{
+											int $lDecayMenuValue = `getAttr($lG_currentLight + ".decayRate")`;
+											$lDecayMenuValue++;
+											$lG_attrVisCtrl = $lG_currentLightUI + "decayRateVisCtrl";
+											rowLayout
+												-numberOfColumns 1
+												-columnWidth 1 $uiLabelWidth
+												-vis $g_lG_showDecayRate
+												$lG_attrVisCtrl;
+												string $lDecayGroupCtrl = `optionMenuGrp 
+													-label "Decay Rate" 
+													-cal 1 "right"
+													$lDecayGroup`;
+												menuItem -label "No Decay" lDecay0;
+												menuItem -label "Linear" lDecay1;	
+												menuItem -label "Quadratic" lDecay2;
+												menuItem -label "Cubic" lDecay3;
+												setParent ..;
+											optionMenuGrp -edit -select $lDecayMenuValue -cc ("lMenuDecayCommand " + $lG_currentLight /*+ " " + $lDecayValue*/ + " " + $lDecayGroup) $lDecayGroupCtrl;	
+										}
+									}
+								//}
+								$lCBDMGroup = "lCBDMGroup" + $lG_currentLightUI + "_" + $i;
+								$lCBRSGroup = "lCBRSGroup" + $lG_currentLightUI + "_" + $i;
+								
+								if (`nodeType($lG_currentLight)` != "ambientLight")
+								{
+									// Use Depth Map Shadows
+									//if($g_lG_showDepthMap == 1) {
+										$lG_attrVisCtrl = $lG_currentLightUI + "depthMapVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-cat 2 "left" 10
+											-columnWidth 1 $uiInputWidth
+											-vis $g_lG_showDepthMap
+											$lG_attrVisCtrl;
+											text -l "";
+											checkBox
+												-cc ("lG_shadowUseTypeCheckBoxCommand " + $lG_currentLight + " 1 1 " + $lCBDMGroup + " " + $lCBRSGroup)
+												-label "Use Depth Map Shadows"
+												-value `getAttr($lG_currentLight + ".useDepthMapShadows ")`
+												$lCBDMGroup;
+												setParent ..;
+									//}
+								}
+									// Use Raytrace Shadows
+									//if($g_lG_showRayTrace == 1) {
+										$lG_attrVisCtrl = $lG_currentLightUI + "rayTraceVisCtrl";
+										rowLayout
+											-numberOfColumns 2
+											-cat 2 "left" 10
+											-columnWidth 1 $uiInputWidth
+											-vis $g_lG_showRayTrace
+											$lG_attrVisCtrl;
+											text -l "";
+											checkBox
+												-cc ("lG_shadowUseTypeCheckBoxCommand " + $lG_currentLight + " 2 1 " + $lCBDMGroup + " " + $lCBRSGroup)
+												-label "Use Ray Trace Shadows"
+												-value `getAttr($lG_currentLight + ".useRayTraceShadows")`
+												$lCBRSGroup;
+												setParent ..;
+									//}
+								if (`nodeType($lG_currentLight)` != "ambientLight")
+								{
+									// Use Depth Map Shadows - second check for sub-attrs
+									//if(`getAttr($lG_currentLight + ".useDepthMapShadows")`) {
+									int $dmShadowColorVisCtrl = 0;
+									if(`getAttr($lG_currentLight + ".useDepthMapShadows")` && $g_lG_showShadowColorDM == 1) {
+										$dmShadowColorVisCtrl = 1;
+									}
+									int $dmResolutionVisCtrl = 0;
+									if(`getAttr($lG_currentLight + ".useDepthMapShadows")` && $g_lG_showDmapResolution == 1) {
+										$dmResolutionVisCtrl = 1;
+									}
+									int $dmFilterSizeVisCtrl = 0;
+									if(`getAttr($lG_currentLight + ".useDepthMapShadows")` && $g_lG_showDmapFilterSize == 1) {
+										$dmFilterSizeVisCtrl = 1;
+									}
+									//if($g_lG_showDepthMap == 1) {
+										//if (`checkBox -q -value $lCBDMGroup`) {
+											// Shadow Color
+											//if($g_lG_showShadowColorDM == 1) {
+												$lG_attrVisCtrl = $lG_currentLightUI + "shadowColorDMVisCtrl";
+												rowLayout
+													-numberOfColumns 2
+													-columnWidth 1 400
+													-vis $dmShadowColorVisCtrl
+													$lG_attrVisCtrl;
+													$lString = $lG_currentLight + ".shadowColor";
+													attrColorSliderGrp -at $lString -l "Shadow Color" -cal 1 "right" -cw 2 68 -cw 4 28 $lGAttrString;
+													setParent ..;
+												
+												//update vis per light for DM attr.
+												//rowLayout -e -vis $dmShadowVisCtrl $lG_attrVisCtrl;
+											//}
+											// Dmap Resolution
+											//if($g_lG_showDmapResolution == 1) {
+												$lG_attrVisCtrl = $lG_currentLightUI + "dmapResolutionVisCtrl";
+												rowLayout
+													-numberOfColumns 2
+													-columnWidth 1 400
+													-vis $dmResolutionVisCtrl
+													$lG_attrVisCtrl;
+													$lString = $lG_currentLight + ".dmapResolution";
+													$lGAttrString = $lG_currentLightUI + "dmapResolutionAttr";
+													attrFieldSliderGrp -at $lString -l "Dmap Resolution" -cal 1 "right" -cw 2 68 -cw 4 28 $lGAttrString;
+													//setParent ..;
+													
+												// chain -->
+													$lGChainString = $lG_currentLightUI + "dmapResolutionChain";
+													checkBox 
+														-ann "Chain Attribute" 
+														-l "C" 
+														-enable 1 
+														-v 0 
+														-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " dmapResolution" + " " + $lG_currentLight)
+														$lGChainString;
+													setParent ..;
+													
+													popupMenu;
+													menuItem
+							    							-label "Chain all attributes of this type"
+														-command ("lG_chainAllAttrOfTypeCommand dmapResolution 1");
+													menuItem
+							    							-label "Unchain all attributes of this type"
+														-command ("lG_chainAllAttrOfTypeCommand dmapResolution 0");
+													
+												//update vis per light for DM attr.
+												//rowLayout -e -vis $dmShadowVisCtrl $lG_attrVisCtrl;
+											//}
+											// Dmap Filter Size
+											//if($g_lG_showDmapFilterSize == 1) {
+												$lG_attrVisCtrl = $lG_currentLightUI + "dmapFilterSizeVisCtrl";
+												rowLayout
+													-numberOfColumns 2
+													-columnWidth 1 400
+													-vis $dmFilterSizeVisCtrl
+													$lG_attrVisCtrl;
+													$lString = $lG_currentLight + ".dmapFilterSize";
+													$lGAttrString = $lG_currentLightUI + "dmapFilterSizeAttr";
+													attrFieldSliderGrp -at $lString -l "Dmap Filter Size" -cal 1 "right" -cw 2 68 -cw 4 28 $lGAttrString;
+													//setParent ..;	
+												
+												// chain -->
+													$lGChainString = $lG_currentLightUI + "dmapFilterSizeChain";
+													checkBox 
+														-ann "Chain Attribute" 
+														-l "C" 
+														-enable 1 
+														-v 0 
+														-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " dmapFilterSize" + " " + $lG_currentLight)
+														$lGChainString;
+													setParent ..;
+													
+													popupMenu;
+													menuItem
+							    							-label "Chain all attributes of this type"
+														-command ("lG_chainAllAttrOfTypeCommand dmapFilterSize 1");
+													menuItem
+							    							-label "Unchain all attributes of this type"
+														-command ("lG_chainAllAttrOfTypeCommand dmapFilterSize 0");
+												
+												//update vis per light for DM attr.
+												//rowLayout -e -vis $dmShadowVisCtrl $lG_attrVisCtrl;
+											//}
+										//}
+									//}
+									//}
+								}
+								// Use Raytrace Shadows - second check for sub-attrs
+								//if(`getAttr($lG_currentLight + ".useRayTraceShadows")`) {
+								int $rtShadowColorVisCtrl = 0;
+								if(`getAttr($lG_currentLight + ".useRayTraceShadows")` && $g_lG_showShadowColorRT == 1) {
+									$rtShadowColorVisCtrl = 1;
+								}
+								int $rtLightRadiusVisCtrl = 0;
+								if(`getAttr($lG_currentLight + ".useRayTraceShadows")` && $g_lG_showLightRadius == 1) {
+									$rtLightRadiusVisCtrl = 1;
+								}
+								int $rtShadowRaysVisCtrl = 0;
+								if(`getAttr($lG_currentLight + ".useRayTraceShadows")` && $g_lG_showShadowRays == 1) {
+									$rtShadowRaysVisCtrl = 1;
+								}
+								int $rtRayDepthLimitVisCtrl = 0;
+								if(`getAttr($lG_currentLight + ".useRayTraceShadows")` && $g_lG_showRayDepthLimit == 1) {
+									$rtRayDepthLimitVisCtrl = 1;
+								}
+								//if($g_lG_showRayTrace == 1) {
+									//if (`checkBox -q -value $lCBRSGroup`) {
+										// Shadow Color
+										//if($g_lG_showShadowColorRT == 1) {
+											$lG_attrVisCtrl = $lG_currentLightUI + "shadowColorRTVisCtrl";
+											rowLayout
+												-numberOfColumns 2
+												-columnWidth 1 400
+												-vis $rtShadowColorVisCtrl
+												$lG_attrVisCtrl;
+												$lString = $lG_currentLight + ".shadowColor";
+												attrColorSliderGrp -at $lString -l "Shadow Color" -cal 1 "right" -cw 2 68 -cw 4 28;
+												setParent ..;
+											
+											//update vis per light for RT attr.
+											//rowLayout -e -vis $rtShadowVisCtrl $lG_attrVisCtrl;
+										//}
+										if (`nodeType($lG_currentLight)` != "ambientLight" && `nodeType($lG_currentLight)` != "areaLight" && `nodeType($lG_currentLight)` != "directionalLight") {
+											// Light Radius
+											//if($g_lG_showLightRadius == 1) {
+												$lG_attrVisCtrl = $lG_currentLightUI + "lightRadiusVisCtrl";
+												rowLayout
+													-numberOfColumns 2
+													-columnWidth 1 400
+													-vis $rtLightRadiusVisCtrl
+													$lG_attrVisCtrl;
+													$lString = $lG_currentLight + ".lightRadius";
+													$lGAttrString = $lG_currentLightUI + "lightRadiusAttr";
+													attrFieldSliderGrp -at $lString -l "Light Radius" -cal 1 "right" -cw 2 68 -cw 4 28 $lGAttrString;
+													//setParent ..;
+													
+												// chain -->
+													$lGChainString = $lG_currentLightUI + "lightRadiusChain";
+													checkBox 
+														-ann "Chain Attribute" 
+														-l "C" 
+														-enable 1 
+														-v 0 
+														-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " lightRadius" + " " + $lG_currentLight)
+														$lGChainString;
+													setParent ..;
+													
+													popupMenu;
+													menuItem
+							    							-label "Chain all attributes of this type"
+														-command ("lG_chainAllAttrOfTypeCommand lightRadius 1");
+													menuItem
+							    							-label "Unchain all attributes of this type"
+														-command ("lG_chainAllAttrOfTypeCommand lightRadius 0");
+														
+												//update vis per light for RT attr.
+												//rowLayout -e -vis $rtShadowVisCtrl $lG_attrVisCtrl;
+											//}
+										}
+										// Shadow Rays
+										//if($g_lG_showShadowRays == 1) {
+											$lG_attrVisCtrl = $lG_currentLightUI + "shadowRaysVisCtrl";
+											rowLayout
+												-numberOfColumns 2
+												-columnWidth 1 400
+												-vis $rtShadowRaysVisCtrl
+												$lG_attrVisCtrl;
+												$lString = $lG_currentLight + ".shadowRays";
+												$lGAttrString = $lG_currentLightUI + "shadowRaysAttr";
+												attrFieldSliderGrp -at $lString -l "Shadow Rays" -cal 1 "right" -cw 2 68 -cw 4 28 $lGAttrString;
+												//setParent ..;	
+												
+											// chain -->
+												$lGChainString = $lG_currentLightUI + "shadowRaysChain";
+												checkBox 
+													-ann "Chain Attribute" 
+													-l "C" 
+													-enable 1 
+													-v 0 
+													-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " shadowRays" + " " + $lG_currentLight)
+													$lGChainString;
+												setParent ..;
+												
+												popupMenu;
+												menuItem
+						    							-label "Chain all attributes of this type"
+													-command ("lG_chainAllAttrOfTypeCommand shadowRays 1");
+												menuItem
+						    							-label "Unchain all attributes of this type"
+													-command ("lG_chainAllAttrOfTypeCommand shadowRays 0");
+													
+											//update vis per light for RT attr.
+											//rowLayout -e -vis $rtShadowVisCtrl $lG_attrVisCtrl;
+										//}
+										// Ray Depth Limit
+										//if($g_lG_showRayDepthLimit == 1) {
+											$lG_attrVisCtrl = $lG_currentLightUI + "rayDepthLimitVisCtrl";
+											rowLayout
+												-numberOfColumns 2
+												-columnWidth 1 400
+												-vis $rtRayDepthLimitVisCtrl
+												$lG_attrVisCtrl;
+												$lString = $lG_currentLight + ".rayDepthLimit";
+												$lGAttrString = $lG_currentLightUI + "rayDepthLimitAttr";
+												attrFieldSliderGrp -at $lString -l "Ray Depth Limit" -cal 1 "right" -cw 2 68 -cw 4 28 $lGAttrString;
+												//setParent ..;	
+												
+											// chain -->
+												$lGChainString = $lG_currentLightUI + "rayDepthLimitChain";
+												checkBox 
+													-ann "Chain Attribute" 
+													-l "C" 
+													-enable 1 
+													-v 0 
+													-cc ("lG_chainAttrCommand " + $lGAttrString + " " + $lGChainString + " rayDepthLimit" + " " + $lG_currentLight)
+													$lGChainString;
+												setParent ..;
+												
+												popupMenu;
+												menuItem
+						    							-label "Chain all attributes of this type"
+													-command ("lG_chainAllAttrOfTypeCommand rayDepthLimit 1");
+												menuItem
+						    							-label "Unchain all attributes of this type"
+													-command ("lG_chainAllAttrOfTypeCommand rayDepthLimit 0");
+													
+											//update vis per light for RT attr.
+											//rowLayout -e -vis $rtShadowVisCtrl $lG_attrVisCtrl;
+										//}
+									//}
+								//}
+								//}
+								//if ($g_lG_buttonCheck == true) {
+									string $lG_currentLightUI = substituteAllString($lG_currentLight, "|", "");
+									$lG_attrVisCtrl = $lG_currentLightUI + "buttonVisCtrl";
+									rowLayout
+										-numberOfColumns 5
+										-columnWidth 1 140
+										-columnWidth 2 44
+										-columnWidth 3 81
+										-columnWidth 4 96
+										-vis $g_lG_buttonCheck
+										$lG_attrVisCtrl;
+										text -l "";
+										string $lSelect = `button
+											-label "Select"
+											-command ("select " + $lG_currentLight + ";" + "pickWalk -d up;")
+											lSelect`;
+										string $lLookSelect = `button
+											-label "Look Through"
+											-command ("lookThru " + $lG_currentLight)
+											lLookSelect`;
+										string $llG_makeAllLightsLikeCurrent = `button
+											-label "Make All Like Me"
+											-command ("lG_makeAllLightsLikeCurrent " + $lG_currentLight)
+											llG_makeAllLightsLikeCurrent`;
+										string $lRenameLight = `button
+											-label "Rename"
+											-command ("lG_renameCurrentLight " + $lG_currentLight + " " + $i + " " + $lFrame)
+											lRenameLight`;
+									
+										/*	
+										string $lGNeedBreak[] = `listConnections -s 1 -d 0 -type light $lG_currentLight`;
+										if (size($lGNeedBreak) > 0) {
+											string $lBreakSlvConnection = `button
+												-label "Break"
+												-command ("lG_breakAllLightConnections " + $lG_currentLight)
+												$lBreakSlvConnection`;
+										}
+										*/
+		
+									setParent ..;
+								//}
+							setParent ..;
+						setParent ..;
+					}
+					setParent ..;
+				setParent ..;
+			}
+		}
+		
+		//setParent ..;
+		
+		// buttonz...
+		string $lButton = `button
+				-label "Update"
+				-command "lG_lightGirlCmd"`;
+		string $lClose = `button
+				-label "Close"
+				-command "deleteUI lightGirl"`;
+				
+		string $lShameless = `text
+				-label "ben wronsky | bwronsky@gmail.com"
+				-al "right"
+				lG_shamelessText`;
+
+	if (size($g_lG_allLights) < 1 || $g_lG_showLightsInInterface == 0 || `size($g_lG_allLights)` > $g_lG_maxActiveLightsInUI-1)
+	{
+		formLayout -edit
+			-attachNone $lButton "top"
+			-attachForm $lButton "left" 2
+			-attachForm $lButton "bottom" 2
+			-attachPosition $lButton "right" 2 50
+
+			-attachNone $lClose "top"
+			-attachPosition $lClose "left" 2 50
+			-attachForm $lClose "bottom" 2
+			-attachForm $lClose "right" 2
+			
+			-attachNone $lShameless "top"
+	                -attachControl $lShameless "bottom" 1 $lButton 
+	                -attachForm $lShameless "left" 1
+	                -attachForm $lShameless "right" 4
+
+			$lForm;
+	}
+	else
+	{
+		// set form layouts
+		formLayout -edit
+			-attachForm $lScroll "top" 2
+			-attachForm $lScroll "left" 2
+			-attachControl $lScroll "bottom" 2 $lShameless
+			-attachForm $lScroll "right" 2
+
+			-attachNone $lButton "top"
+			-attachForm $lButton "left" 2
+			-attachForm $lButton "bottom" 2
+			-attachPosition $lButton "right" 2 50
+
+			-attachNone $lClose "top"
+			-attachPosition $lClose "left" 2 50
+			-attachForm $lClose "bottom" 2
+			-attachForm $lClose "right" 2
+			
+			-attachNone $lShameless "top"
+	                -attachControl $lShameless "bottom" 1 $lButton 
+	                -attachForm $lShameless "left" 1
+	                -attachForm $lShameless "right" 4
+
+			$lForm;
+	}
+	showWindow lightGirl;
+	
+	// spew warn...
+	if($g_lG_showLightsInInterface) {
+		if(`size($g_lG_allLights)` > $g_lG_maxActiveLightsInUI) {
+			warning("Too many lights (" + `size($g_lG_allLights)` + ") for interface to handle! Please selectively load " + $g_lG_maxActiveLightsInUI + " lights or fewer to regain interface functionality.");
+			$g_lG_showLightsInInterface=0;
+			menuItem -e -cb $g_lG_showLightsInInterface lG_showLightsInInterfaceMenuItem;
+		}
+	}
+	
+	// update light totals...
+	lG_updateLightListCountCommand();
+	
+	lG_startScriptJobs();
+	
+	lG_updateLightConnections();
+	
+	lG_updateSatelliteUI();
+}

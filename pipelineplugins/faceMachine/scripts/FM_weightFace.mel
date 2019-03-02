@@ -1,0 +1,884 @@
+
+
+// I wish this function existed already but for some reason it doesn't:
+proc vector normalizeVector(vector $v)
+{
+	float $d[];
+	$d[0] = ($v.x);
+	$d[1] = ($v.y);
+	$d[2] = ($v.z);
+	normalize($d);
+	$v = << $d[0], $d[1], $d[2] >>;
+	return $v;
+}
+
+// Inputs:
+// $mesh - the mesh we want to fix the weights on
+// $skinCluster - skinCluster attached to $mesh
+// $upperCurves - list of all the influences that shouldn't have weights on the bottom part of the mouth or eye
+// $lowerCurves - list of all the influences that shouldn't have weights on the top part of the mouth or eye
+// $$mouthBagCenterCV - upperMouthBag1_curve.cv[2], or nearest equilvalent for the eyes
+// $leftCV - CV that falls on the left corner of the mouth / eye
+// $rightCV - CV that falls on the right corner of the mouth / eye
+// $middleCV - In order to find the corner of the mouth / eye, we restrict our search to all vertices within a certain
+//				radius of the $leftCV or $rightCV.  To calculate that radius, we take the distance between this $middleCV
+//				and the $leftCV and multiply it by 0.55.  These numbers are pretty arbitrary and can be changed if we find
+//				out that different numbers work better.  It's important to make this big enough, though, otherwise the
+//				function might find the wrong corner and ruin all of our hopes and dreams.
+global proc fixLipsOrEyelids(string $mesh, string $skinCluster, string $upperCurves[], string $lowerCurves[], string $mouthBagCenterCV, string $leftCV, string $rightCV, string $middleCV)
+{
+
+	float $floats[];
+	float $floats2[];
+	float $backwardsDistance;
+	float $boundingBox[];
+	vector $leftCorner, $rightCorner, $midPoint, $leftMidPoint, $rightMidPoint, $bbCenter, $mouthBagCenter;
+	float $radius, $dx, $dy, $dz;
+	vector $lipsUpVector, $lipsAlongLeft, $lipsAlongRight, $lipsForwardVector;
+	string $curves[] = stringArrayCatenate($upperCurves, $lowerCurves);
+	
+	// It's important to convert all of this to Maya's internal unit (centimeters) before passing it into the main function
+	float $unitScale = `convertUnit -fromUnit "cm" "1"`;
+	float $toInternal = 1.0 / $unitScale;
+	
+	// Find the corners:
+	$floats = `xform -q -ws -t $rightCV`;
+	$rightCorner = <<$floats[0] * $toInternal, $floats[1] * $toInternal, $floats[2] * $toInternal>>;
+	
+	$floats = `xform -q -ws -t $leftCV`;
+	$leftCorner = <<$floats[0] * $toInternal, $floats[1] * $toInternal, $floats[2] * $toInternal>>;
+	
+	$floats = `xform -q -ws -t $middleCV`;
+	$floats[0] *= $toInternal;
+	$floats[1] *= $toInternal;
+	$floats[2] *= $toInternal;
+	$midPoint = << $floats[0], $floats[1], $floats[2] >>;
+	
+	// The radius will be 55% of the way from the corner CV to the middle CV
+	$dx = $floats[0] - ($leftCorner.x);
+	$dy = $floats[1] - ($leftCorner.y);
+	$dz = $floats[2] - ($leftCorner.z);
+	$radius = sqrt($dx*$dx + $dy*$dy + $dz*$dz) * 0.55;
+	
+	
+	// Find the bounding box encasing all of the relevant curves:
+	$boundingBox[0] = 999999999;
+	$boundingBox[1] = 999999999;
+	$boundingBox[2] = 999999999;
+	$boundingBox[3] = -999999999;
+	$boundingBox[4] = -999999999;
+	$boundingBox[5] = -999999999;
+	for($curve in $curves) {
+		$floats = `xform -q -ws -boundingBox $curve`;
+		if ($floats[0] < $boundingBox[0])
+			$boundingBox[0] = $floats[0];
+		if ($floats[1] < $boundingBox[1])
+			$boundingBox[1] = $floats[1];
+		if ($floats[2] < $boundingBox[2])
+			$boundingBox[2] = $floats[2];
+			
+		if ($floats[3] > $boundingBox[3])
+			$boundingBox[3] = $floats[3];
+		if ($floats[4] > $boundingBox[4])
+			$boundingBox[4] = $floats[4];
+		if ($floats[5] > $boundingBox[5])
+			$boundingBox[5] = $floats[5];
+	}
+	
+	// Expand the bounding box by a little bit to give us some extra leeway:
+	
+	$bbCenter = << (($boundingBox[3] + $boundingBox[0]) * 0.5), (($boundingBox[4] + $boundingBox[1]) * 0.5), (($boundingBox[5] + $boundingBox[2]) * 0.5) >>;
+	$dx = $boundingBox[3] - $boundingBox[0];
+	$dy = $boundingBox[4] - $boundingBox[1];
+	$dz = $boundingBox[5] - $boundingBox[2];
+	$dx *= 1.1 * 0.5; // Expand the bounding box by 1.1 times
+	$dy *= 1.1 * 0.5;
+	$dz *= 1.1 * 0.5;
+	//if ($expandBBWidth)
+	//	$dx *= 20.0; // Expand the width of the bounding box by a lot
+	$boundingBox[0] = ($bbCenter.x)-$dx;
+	$boundingBox[1] = ($bbCenter.y)-$dy;
+	$boundingBox[2] = ($bbCenter.z)-$dz;
+	$boundingBox[3] = ($bbCenter.x)+$dx;
+	$boundingBox[4] = ($bbCenter.y)+$dy;
+	$boundingBox[5] = ($bbCenter.z)+$dz;
+	
+	$boundingBox[0] *= $toInternal;
+	$boundingBox[1] *= $toInternal;
+	$boundingBox[2] *= $toInternal;
+	$boundingBox[3] *= $toInternal;
+	$boundingBox[4] *= $toInternal;
+	$boundingBox[5] *= $toInternal;
+	
+	// Find the orientation vectors
+	// We use the Face_Machine_WC object to do this, because it's convenient.  But really any way of getting
+	// these vectors is fine. $lipsUpVector is the up vector, $lipsForwardVector is the direction the face is facing,
+	// $lipsAlongRight is the vector orthogonal to the first two vectors going to the right (stage right), and
+	// $lipsAlongLeft is the opposite of $lipsAlongRight.
+	float $center[] = `xform -q -ws -t Face_Machine_WC`;
+	$floats = `xform -q -ws -t Face_Machine_WC.cv[1]`;
+	$lipsUpVector = << $floats[0] - $center[0], $floats[1] - $center[1], $floats[2] - $center[2] >>;
+	$lipsUpVector = normalizeVector($lipsUpVector);
+	
+	$floats = `xform -q -ws -t Face_Machine_WC.cv[3]`;
+	$lipsAlongRight = << $floats[0] - $center[0], $floats[1] - $center[1], $floats[2] - $center[2] >>;
+	$lipsAlongRight = normalizeVector($lipsAlongRight);
+	
+	$floats = `xform -q -ws -t Face_Machine_WC.cv[7]`;
+	$lipsAlongLeft = << $floats[0] - $center[0], $floats[1] - $center[1], $floats[2] - $center[2] >>;
+	$lipsAlongLeft = normalizeVector($lipsAlongLeft);
+	
+	$lipsForwardVector = `cross $lipsUpVector $lipsAlongRight`;
+	$lipsForwardVector = normalizeVector($lipsForwardVector);
+	
+	
+	// Now we need to find the 'mouth bag center', which is really just the center of the eye / mouth cavity
+	$floats = `xform -q -ws -t $mouthBagCenterCV`;
+	$mouthBagCenter = <<$floats[0] * $toInternal, $floats[1] * $toInternal, $floats[2] * $toInternal>>;
+	
+	$leftMidPoint = ($leftCorner + $midPoint) / 2;
+	$rightMidPoint = ($rightCorner + $midPoint) / 2;
+	
+	
+	// Backwards distance: we don't want points too far back into the head to be considered for a contour, because then we might get
+	// a contour that loops around the back of the head.  So any point that is behind the plane defined by
+	// (mouthBagCenter - lipsFacing*backwardsDistance) are excluded.  ('behind' is defined by on the side of the plane that is not
+	// in the lipsFacing direction)
+	
+	// We're going to use the location of skullMask_WCShape.cv[0] for this, because it should always tell us where the back of the head
+	// begins, and more importantly always be behind any mouth or eye bags
+	
+	
+	// Find the distance in the direction of $lipsForwardVector between skullMask_WC.cv[0] and $mouthBagCenter
+	$floats = `xform -q -ws -t skullMask_WC.cv[0]`;
+	$floats[0] *= $toInternal;
+	$floats[1] *= $toInternal;
+	$floats[2] *= $toInternal;
+	vector $v = << ($floats[0] - $mouthBagCenter.x), ($floats[1] - $mouthBagCenter.y), ($floats[2] - $mouthBagCenter.z)>>;
+	$backwardsDistance = `dot $v $lipsForwardVector`;
+	if ($backwardsDistance < 0)
+		$backwardsDistance *= -1;
+	$backwardsDistance *= $toInternal;
+	
+	
+	// Here we go.....
+	$result = fmWeightLid($mesh, $leftCorner, $rightCorner, $radius, $boundingBox,
+							$lipsUpVector, $lipsForwardVector, $lipsAlongLeft, $lipsAlongRight,
+							$mouthBagCenter, $leftMidPoint, $rightMidPoint, $backwardsDistance,
+							$skinCluster, $upperCurves, $lowerCurves);
+	
+	
+}
+
+/*
+// Ignore the follow MEL functions... you didn't see nothin' here...
+
+global proc debugSelectNextInList(string $mesh, string $list, string $staticList)
+{
+	if (`objExists debugSelectNext` == 0)
+		createNode transform -n "debugSelectNext"; 
+	
+	int $n = `getAttr debugSelectNext.tx`;
+	
+	selectVertexList($mesh, $staticList);
+	
+	
+	string $strings[];
+	tokenize $list " \t\r\n" $strings;
+	
+	
+	select -add `polyListComponentConversion -fv -tuv ($mesh + ".vtx[" + $strings[$n] + "]")`;
+	
+	$n = $n + 1;
+	
+	
+	setAttr debugSelectNext.tx $n;
+	
+	
+}
+
+global proc selectVertexList(string $mesh, string $list)
+{
+	string $strings[];
+	
+	select -cl;
+	
+	tokenize $list " \t\r\n" $strings;
+	for($id in $strings) {
+		select -add ($mesh + ".vtx[" + $id + "]");
+	}
+}
+
+global proc doWeightTest()
+{
+	string $sl[] = `ls -sl`;
+	global string $gLeftWidget;
+	global string $gRightWidget;
+	global string $gBoundingBox;
+	global string $gMesh;
+	string $leftWidget;
+	string $rightWidget;
+	string $boundingBoxWidget;
+	string $mesh;
+	
+	print $gLeftWidget;
+	print "\n";
+	
+	if (size($sl) < 4 || nodeType($sl[0]) != "transform") {
+		
+		$leftWidget = $gLeftWidget;
+		$rightWidget = $gRightWidget;
+		$boundingBoxWidget = $gBoundingBox;
+		$mesh = $gMesh;
+		
+	} else {
+		$leftWidget = $sl[0];
+		$rightWidget = $sl[1];
+		$boundingBoxWidget = $sl[2];
+		$mesh = $sl[3];
+	}
+	
+	print $gLeftWidget;
+	print "\n";
+	
+	$gLeftWidget = $leftWidget;
+	$gRightWidget = $rightWidget;
+	$gBoundingBox = $boundingBoxWidget;
+	$gMesh = $mesh;
+	
+	
+	print $gLeftWidget;
+	print "\n";
+	
+	
+	select -cl;
+	refresh;
+	
+	float $floats[];
+	float $floats2[];
+	float $boundingBox[];
+	vector $leftCorner, $rightCorner, $midPoint, $leftMidPoint, $rightMidPoint, $bbCenter, $mouthBagCenter;
+	float $radius, $dx, $dy, $dz, $backwardsDistance;
+	vector $lipsUpVector, $lipsAlongLeft, $lipsAlongRight, $lipsForwardVector;
+	
+	$lipsUpVector = <<0,1,0>>;
+	$lipsAlongLeft = <<1, 0, 0>>;
+	$lipsAlongRight = <<-1, 0, 0>>;
+	$lipsForwardVector = <<0,0,1>>;
+	
+	$floats = `xform -q -ws -t $leftWidget`;
+	$leftCorner = << $floats[0], $floats[1], $floats[2] >>;
+	$floats = `xform -q -ws -t $rightWidget`;
+	$rightCorner = << $floats[0], $floats[1], $floats[2] >>;
+	
+	string $strings[] = `listRelatives -fullPath $leftWidget`;
+	$radius = `getAttr ($strings[0] + ".sx")`;
+	
+	$boundingBox = `xform -q -ws -bb $boundingBoxWidget`;
+	
+	$floats = `xform -q -ws -t $boundingBoxWidget`;
+	$floats2 = `xform -q -ws -t $leftWidget`;
+	$backwardsDistance = $floats[2] - $floats2[2];
+	
+	$floats = `xform -q -ws -t $rightWidget`;
+	$floats2 = `xform -q -ws -t $leftWidget`;
+	$mouthBagCenter = << (($floats[0] + $floats2[0]) / 2.0),  (($floats[1] + $floats2[1]) / 2.0),  ((($floats[2] + $floats2[2]) / 2.0) - $backwardsDistance) >>;
+	
+	$backwardsDistance *= 2.0;
+	
+	$midPoint = ($leftCorner + $rightCorner) / 2.0;
+	$leftMidPoint = ($leftCorner + $midPoint) / 2.0;
+	$rightMidPoint = ($rightCorner + $midPoint) / 2.0;
+	
+	string $upperCurves[];
+	string $lowerCurves[];
+	
+	$result = fmWeightLid($mesh, $leftCorner, $rightCorner, $radius, $boundingBox,
+							$lipsUpVector, $lipsForwardVector, $lipsAlongLeft, $lipsAlongRight,
+							$mouthBagCenter, $leftMidPoint, $rightMidPoint, $backwardsDistance,
+							"fff", $upperCurves, $lowerCurves);
+}
+
+*/
+
+
+global proc string weightFace(string $defMesh, string $headSurface, float $dropOff, int $useSmartWeighting)
+{
+	
+	
+	//select all the influence curves
+	select -r "influenceCurves|*";
+	string $curveList[] = `ls -selection`;
+	select -d "underChin_curve";
+	
+	//find out which skinCluster it's using:
+	string $skinCluster = `findRelatedSkinCluster($defMesh)`;
+	
+	//set "use components" to on
+	setAttr ($skinCluster + ".useComponents") 0;
+	
+	
+	//check to see if the base node exists
+	if (`objExists influenceBases` != 1)
+	{
+		CreateEmptyGroup;
+		rename "influenceBases";
+		parent influenceBases deformation_buffer;
+	}
+	
+	// Add in the curves as influences using the default weighting:
+	string $curve, $baseCurve;
+	for ($curve in $curveList)
+	{
+		// Exclude lip and lid curves because we're going to make a nurbs surface for them
+		if (startsWith($curve, "lowerLip"))
+			continue;
+		if (startsWith($curve, "L_upperLip") || startsWith($curve, "R_upperLip"))
+			continue;
+		if (startsWith($curve, "L_upperLid") || startsWith($curve, "R_upperLid"))
+			continue;
+		if (startsWith($curve, "L_lowerLid") || startsWith($curve, "R_lowerLid"))
+			continue;
+		
+		$base = $curve + "Base";
+		$baseExists = `objExists $base`;
+		skinCluster -e -ug -dr $dropOff -ns 12 -ai $curve $skinCluster;
+		if (!$baseExists)
+			parent ($curve + "Base") influenceBases;
+		print ("Result: Adding influence curve " + $curve + " to FM_headMesh at a dropOff rate of " + $dropOff + ".\n");
+		fmRiggingIncreaseProgress;
+		refresh;
+	}
+	
+	string $strings[], $targetRebuild;
+	
+	//nurbsToPolygonsPref -f 2 -m 0 -mrt 0 -pt 1 -pc 200 -chr 0.1 -ft 0.01 -mel 0.001 -d 0.1 -ut 1 -un 12 -vt 1 -vn 12 -uch 0 -ucr 0 -cht 0.2 -es 0;
+	
+	// Create lofted nurbs surface for lower lip:
+	print ("Result: Adding influence surface lowerLip_surface to FM_headMesh.\n");
+	if (!`objExists "lowerLip_surface"`) {
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "lowerLip1_curve_rebuilt" "lowerLip1_curve"`;
+		$targetRebuild = $strings[1];
+		//expression -s "string $orgCurve = \"lowerLip1_curve\";\r\nint $itsAllright = 0;\r\n\r\nfor($i = 0; $i < 5; ++$i) {\r\n\tfloat $cv[] = `getAttr ($orgCurve + \".cv[\" + $i + \"]\")`;\r\n\tif ($cv[0] != 0 || $cv[1] != 0 || $cv[2] != 0) {\r\n\t\t$itsAllright = 1;\r\n\t\tbreak;\r\n\t}\r\n}\r\n\r\nif ($itsAllright == 1)\r\n\tnodeState = 0;\r\nelse {\r\n\tnodeState = 1;\r\n\tsetAttr loft1.nodeState 2;\r\n}" 
+		//				-o $strings[1] -ae 1 -uc all ;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "lowerLip2_curve_rebuilt" "lowerLip2_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "lowerLip3_curve_rebuilt" "lowerLip3_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "lowerLip4_curve_rebuilt" "lowerLip4_curve"`;
+		parent "lowerLip1_curve_rebuilt" "influenceCurves";
+		parent "lowerLip2_curve_rebuilt" "influenceCurves";
+		parent "lowerLip3_curve_rebuilt" "influenceCurves";
+		parent "lowerLip4_curve_rebuilt" "influenceCurves";
+		$strings = `loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true -n "lowerLip_surface" "lowerLip1_curve_rebuilt" "lowerLip2_curve_rebuilt" "lowerLip3_curve_rebuilt" "lowerLip4_curve_rebuilt"`;
+		parent $strings[0] "influenceCurves";
+	} else
+		$strings[0] = "lowerLip_surface";
+	$base = $strings[0] + "Base";
+	$baseExists = `objExists $base`;
+	skinCluster -e -ug -dr $dropOff -ns 12 -ai $strings[0] $skinCluster;
+	if (!$baseExists)
+		parent $base influenceBases;
+	fmRiggingIncreaseProgress;
+	
+
+	// Right upper lip:
+	print ("Result: Adding influence surface R_upperLip_surface to FM_headMesh.\n");
+	if (!`objExists "R_upperLip_surface"`) {
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_upperLip1_curve_rebuilt" "R_upperLip1_curve"`;
+		$targetRebuild = $strings[1];
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_upperLip2_curve_rebuilt" "R_upperLip2_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_upperLip3_curve_rebuilt" "R_upperLip3_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_upperLip4_curve_rebuilt" "R_upperLip4_curve"`;
+		parent "R_upperLip1_curve_rebuilt" "influenceCurves";
+		parent "R_upperLip2_curve_rebuilt" "influenceCurves";
+		parent "R_upperLip3_curve_rebuilt" "influenceCurves";
+		parent "R_upperLip4_curve_rebuilt" "influenceCurves";
+		$strings = `loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true -n "R_upperLip_surface"
+				"R_upperLip1_curve_rebuilt" "R_upperLip2_curve_rebuilt" "R_upperLip3_curve_rebuilt" "R_upperLip4_curve_rebuilt"`;
+		parent $strings[0] "influenceCurves";
+	} else
+		$strings[0] = "R_upperLip_surface";
+	$base = $strings[0] + "Base";
+	$baseExists = `objExists $base`;
+	skinCluster -e -ug -dr $dropOff -ns 12 -ai $strings[0] $skinCluster;
+	if (!$baseExists)
+		parent $base influenceBases;
+	fmRiggingIncreaseProgress;
+	
+	// Left upper lip:
+	print ("Result: Adding influence surface L_upperLip_surface to FM_headMesh.\n");
+	if (!`objExists "L_upperLip_surface"`) {
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_upperLip1_curve_rebuilt" "L_upperLip1_curve"`;
+		$targetRebuild = $strings[1];
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_upperLip2_curve_rebuilt" "L_upperLip2_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_upperLip3_curve_rebuilt" "L_upperLip3_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_upperLip4_curve_rebuilt" "L_upperLip4_curve"`;
+		parent "L_upperLip1_curve_rebuilt" "influenceCurves";
+		parent "L_upperLip2_curve_rebuilt" "influenceCurves";
+		parent "L_upperLip3_curve_rebuilt" "influenceCurves";
+		parent "L_upperLip4_curve_rebuilt" "influenceCurves";
+		$strings = `loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true -n "L_upperLip_surface"
+				"L_upperLip1_curve_rebuilt" "L_upperLip2_curve_rebuilt" "L_upperLip3_curve_rebuilt" "L_upperLip4_curve_rebuilt"`;
+		parent $strings[0] "influenceCurves";
+	} else
+		$strings[0] = "L_upperLip_surface";
+	$base = $strings[0] + "Base";
+	$baseExists = `objExists $base`;
+	skinCluster -e -ug -dr $dropOff -ns 12 -ai $strings[0] $skinCluster;
+	if (!$baseExists)
+		parent $base influenceBases;
+	fmRiggingIncreaseProgress;
+	
+	// Left upper eyelid:
+	print ("Result: Adding influence surface L_upperLid_surface to FM_headMesh.\n");
+	if (!`objExists "L_upperLid_surface"`) {
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_upperLid1_curve_rebuilt" "L_upperLid1_curve"`;
+		$targetRebuild = $strings[1];
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_upperLid2_curve_rebuilt" "L_upperLid2_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_upperLid3_curve_rebuilt" "L_upperLid3_curve"`;
+		parent "L_upperLid1_curve_rebuilt" "influenceCurves";
+		parent "L_upperLid2_curve_rebuilt" "influenceCurves";
+		parent "L_upperLid3_curve_rebuilt" "influenceCurves";
+		$strings = `loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true -n "L_upperLid_surface" "L_upperLid1_curve_rebuilt" "L_upperLid2_curve_rebuilt" "L_upperLid3_curve_rebuilt"`;
+		parent $strings[0] "influenceCurves";
+	} else
+		$strings[0] = "L_upperLid_surface";
+	$base = $strings[0] + "Base";
+	$baseExists = `objExists $base`;
+	skinCluster -e -ug -dr $dropOff -ns 12 -ai $strings[0] $skinCluster;
+	if (!$baseExists)
+		parent $base influenceBases;
+	fmRiggingIncreaseProgress;
+	
+	// Left lower eyelid:
+	print ("Result: Adding influence surface L_lowerLid_surface to FM_headMesh.\n");
+	if (!`objExists "L_lowerLid_surface"`) {
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_lowerLid1_curve_rebuilt" "L_lowerLid1_curve"`;
+		$targetRebuild = $strings[1];
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_lowerLid2_curve_rebuilt" "L_lowerLid2_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "L_lowerLid3_curve_rebuilt" "L_lowerLid3_curve"`;
+		parent "L_lowerLid1_curve_rebuilt" "influenceCurves";
+		parent "L_lowerLid2_curve_rebuilt" "influenceCurves";
+		parent "L_lowerLid3_curve_rebuilt" "influenceCurves";
+		$strings = `loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true -n "L_lowerLid_surface" "L_lowerLid1_curve_rebuilt" "L_lowerLid2_curve_rebuilt" "L_lowerLid3_curve_rebuilt"`;
+		parent $strings[0] "influenceCurves";
+	} else
+		$strings[0] = "L_lowerLid_surface";
+	$base = $strings[0] + "Base";
+	$baseExists = `objExists $base`;
+	skinCluster -e -ug -dr $dropOff -ns 12 -ai $strings[0] $skinCluster;
+	if (!$baseExists)
+		parent $base influenceBases;
+	fmRiggingIncreaseProgress;
+	
+	// Right upper eyelid:
+	print ("Result: Adding influence surface R_upperLid_surface to FM_headMesh.\n");
+	if (!`objExists "R_upperLid_surface"`) {
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_upperLid1_curve_rebuilt" "R_upperLid1_curve"`;
+		$targetRebuild = $strings[1];
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_upperLid2_curve_rebuilt" "R_upperLid2_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_upperLid3_curve_rebuilt" "R_upperLid3_curve"`;
+		parent "R_upperLid1_curve_rebuilt" "influenceCurves";
+		parent "R_upperLid2_curve_rebuilt" "influenceCurves";
+		parent "R_upperLid3_curve_rebuilt" "influenceCurves";
+		$strings = `loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true -n "R_upperLid_surface" "R_upperLid1_curve_rebuilt" "R_upperLid2_curve_rebuilt" "R_upperLid3_curve_rebuilt"`;
+		parent $strings[0] "influenceCurves";
+	} else
+		$strings[0] = "R_upperLid_surface";
+	$base = $strings[0] + "Base";
+	$baseExists = `objExists $base`;
+	skinCluster -e -ug -dr $dropOff -ns 12 -ai $strings[0] $skinCluster;
+	if (!$baseExists)
+		parent $base influenceBases;
+	fmRiggingIncreaseProgress;
+	
+	// Right lower eyelid:
+	print ("Result: Adding influence surface R_lowerLid_surface to FM_headMesh.\n");
+	if (!`objExists "R_lowerLid_surface"`) {
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_lowerLid1_curve_rebuilt" "R_lowerLid1_curve"`;
+		$targetRebuild = $strings[1];
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_lowerLid2_curve_rebuilt" "R_lowerLid2_curve"`;
+		$strings = `rebuildCurve -ch 1 -rpo 0 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s 0 -d 3 -tol 0 -n "R_lowerLid3_curve_rebuilt" "R_lowerLid3_curve"`;
+		parent "R_lowerLid1_curve_rebuilt" "influenceCurves";
+		parent "R_lowerLid2_curve_rebuilt" "influenceCurves";
+		parent "R_lowerLid3_curve_rebuilt" "influenceCurves";
+		$strings = `loft -ch 1 -u 1 -c 0 -ar 1 -d 3 -ss 1 -rn 0 -po 0 -rsn true -n "R_lowerLid_surface" "R_lowerLid1_curve_rebuilt" "R_lowerLid2_curve_rebuilt" "R_lowerLid3_curve_rebuilt"`;
+		parent $strings[0] "influenceCurves";
+	} else
+		$strings[0] = "R_lowerLid_surface";
+	$base = $strings[0] + "Base";
+	$baseExists = `objExists $base`;
+	skinCluster -e -ug -dr $dropOff -ns 12 -ai $strings[0] $skinCluster;
+	if (!$baseExists)
+		parent $base influenceBases;
+	fmRiggingIncreaseProgress;
+	
+	// Now we use the plugin commands to remove the weights we don't want:
+	
+	
+	if ($useSmartWeighting) {
+		// Mouth
+		string $triangulateNode[] = `polyTriangulate -ch 1 $defMesh`;
+		
+		
+		print ("Applying smart weighting to the mouth...\n");
+		string $upperMouthCurves[] = {"R_upperLip_surface", "L_upperLip_surface", "upperMouthBag1_curve", "upperMouthBag2_curve"};
+		string $lowerMouthCurves[] = {"lowerLip_surface", "lowerMouthBag1_curve", "lowerMouthBag2_curve"};
+		fixLipsOrEyelids($defMesh, $skinCluster, $upperMouthCurves, $lowerMouthCurves, "upperMouthBag1_curve.cv[2]",
+						"lowerLip2_curve.cv[0]", "lowerLip2_curve.cv[4]", "lowerLip3_curve.cv[2]");
+		print ("...Done!\n");
+		fmRiggingIncreaseProgress;
+		//refresh;
+		
+		// Left eye
+		print ("Applying smart weighting to the left eye...\n");
+		string $upperLEyeCurves[] = {"L_overEye1_curve", "L_overEye2_curve", "L_upperLid_surface"};
+		string $lowerLEyeCurves[] = {"L_underEye1_curve", "L_underEye2_curve", "L_lowerLid_surface"};
+		fixLipsOrEyelids($defMesh, $skinCluster, $upperLEyeCurves, $lowerLEyeCurves, "L_lowerLid1_curve.cv[3]",
+						"L_lowerLid3_curve.cv[5]", "L_lowerLid3_curve.cv[0]", "L_lowerLid3_curve.cv[3]");
+		print ("...Done!\n");
+		fmRiggingIncreaseProgress;
+		//refresh;
+		
+		// Right eye
+		print ("Applying smart weighting to the right eye...\n");
+		string $upperREyeCurves[] = {"R_overEye1_curve", "R_overEye2_curve", "R_upperLid_surface"};
+		string $lowerREyeCurves[] = {"R_underEye1_curve", "R_underEye2_curve", "R_lowerLid_surface"};
+		fixLipsOrEyelids($defMesh, $skinCluster, $upperREyeCurves, $lowerREyeCurves, "R_lowerLid1_curve.cv[3]",
+						"R_lowerLid3_curve.cv[0]", "R_lowerLid3_curve.cv[5]", "R_lowerLid3_curve.cv[3]");
+		print ("...Done!\n");
+		fmRiggingIncreaseProgress;
+		//refresh;
+		
+		delete $triangulateNode[0];
+	}
+	
+	// Fix bad weighting on mesh points too far away from the curves:
+	float $p1[] = `xform -q -ws -t brow3_curve.cv[0]`;
+	float $p2[] = `xform -q -ws -t brow3_curve.cv[4]`;
+	float $dx, $dy, $dz, $radius;
+	
+	$dx = $p1[0]-$p2[0];
+	$dy = $p1[1]-$p2[1];
+	$dz = $p1[2]-$p2[2];
+	
+	$radius = sqrt( $dx*$dx + $dy*$dy + $dz*$dz ) / 6.0;
+	float $unitScale = `convertUnit -fromUnit "cm" "1"`;
+	$radius /= $unitScale;
+	
+	print ("Pruning bad weights...\n");
+	
+	// This function is simple enough.  Pass it the mesh, the skinCluster, and a radius, and it'll prune the weights
+	// of every influence that is a curve outside of $radius.
+	
+	fmPruneDumbWeights($defMesh, $skinCluster, $radius);
+	fmRiggingIncreaseProgress;
+	
+	
+	print ("...Done!\n");
+
+	
+	
+	
+	int $ints[] = `polyEvaluate -v $defMesh`;
+	int $vertexCount = $ints[0];
+	
+	$ints[$vertexCount] = 0;
+	for($i = 0; $i < $vertexCount; ++$i) {
+		if (`skinPercent -t fm_null_influence -q $skinCluster ($defMesh + ".vtx[" + $i + "]")` == 1)
+			$ints[$i] = 0;
+		else
+			$ints[$i] = 1;
+	}
+	
+	/*
+	// Warning: this is disabled because it breaks the skinCluster!  Why?  I have no idea.  It's just another dumb Maya bug.
+	print ("Removing unaffected vertices from skinCluster...\n");
+	
+	string $command = ("sets -rm " + $skinCluster + "Set ");
+	for($i = 0; $i < $vertexCount; ++$i) {
+		if ($ints[$i] == 0)
+			$command += ("FM_headMesh.vtx[" + $i + "] ");
+	}
+	eval($command);
+	
+	print ("...Done!\n");
+	*/
+	
+	/*
+	print ("Removing unaffected vertices from relative blend shape...\n");
+	
+	string $command = ("sets -rm FM_fmRelativeBlendSet ");
+	for($i = 0; $i < $vertexCount; ++$i) {
+		if ($ints[$i] == 0)
+			$command += ($headSurface + ".vtx[" + $i + "] ");
+	}
+	eval($command);
+	*/
+	
+	print ("Copying old skinCluster to fmSkinCluster...\n");
+	
+	$fmSkinCluster = copySkinToFMSkinCluster($headSurface, $skinCluster);
+	
+	print ("...Done!\n");
+	
+	// Delete the extra influence bases that now might exist
+	
+	$strings = `ls -type transform "influenceCurves|*Base*"`;
+	if (size($strings) > 0)
+		delete $strings;
+	
+	$strings = `listRelatives -type transform influenceBases`;
+	for($base in $strings) {
+		
+		string $matches[] = `ls -type transform ($base + "*")`;
+		for($match in $matches) {
+			if ($match != $base)
+				delete $match;
+		}
+	}
+	
+	return $fmSkinCluster;
+}
+
+
+global proc int[] getSamplesForInfluence(string $influence)
+{
+	int $u = 12;
+	int $v = 1;
+	
+	switch($influence) {
+		case "upperMouthBag2_curve":
+			$u = 5;
+			break;
+		case "upperMouthBag1_curve":
+			$u = 5;
+			break;
+		case "lowerMouthBag1_curve":
+			$u = 5;
+			break;
+		case "lowerMouthBag2_curve":
+			$u = 5;
+			break;
+		case "L_cheek2_curve":
+			$u = 10;
+			break;
+		case "L_cheek1_curve":
+			$u = 10;
+			break;
+		case "R_cheek2_curve":
+			$u = 10;
+			break;
+		case "R_cheek1_curve":
+			$u = 10;
+			break;
+		case "R_jaw_curve":
+			$u = 10;
+			break;
+		case "L_jaw_curve":
+			$u = 10;
+			break;
+		case "R_cheekPuff_curve":
+			$u = 3;
+			break;
+		case "L_cheekPuff_curve":
+			$u = 3;
+			break;
+		case "chin_curve":
+			$u = 6;
+			break;
+		case "underChin_curve":
+			$u = 6;
+			break;
+		case "R_underEye1_curve":
+			$u = 8;
+			break;
+		case "R_underEye2_curve":
+			$u = 8;
+			break;
+		case "R_underEye3_curve":
+			$u = 8;
+			break;
+		case "L_underEye1_curve":
+			$u = 8;
+			break;
+		case "L_underEye2_curve":
+			$u = 8;
+			break;
+		case "L_underEye3_curve":
+			$u = 8;
+			break;
+		case "R_overEye2_curve":
+			$u = 8;
+			break;
+		case "R_overEye1_curve":
+			$u = 8;
+			break;
+		case "L_overEye2_curve":
+			$u = 8;
+			break;
+		case "L_overEye1_curve":
+			$u = 8;
+			break;
+		case "R_brow_curve":
+			$u = 10;
+			break;
+		case "L_brow_curve":
+			$u = 10;
+			break;
+		case "brow2_curve":
+			$u = 12;
+			break;
+		case "brow3_curve":
+			$u = 12;
+			break;
+		case "L_nose_curve":
+			$u = 6;
+			break;
+		case "R_nose_curve":
+			$u = 6;
+			break;
+		case "upperNose_curve":
+			$u = 6;
+			break;
+		case "lowerLip_surface":
+			$u = 14;
+			$v = 10;
+			break;
+		case "R_upperLip_surface":
+			$u = 8;
+			$v = 10;
+			break;
+		case "L_upperLip_surface":
+			$u = 8;
+			$v = 10;
+			break;
+		case "L_upperLid_surface":
+			$u = 16;
+			$v = 10;
+			break;
+		case "L_lowerLid_surface":
+			$u = 16;
+			$v = 10;
+			break;
+		case "R_upperLid_surface":
+			$u = 16;
+			$v = 10;
+			break;
+		case "R_lowerLid_surface":
+			$u = 16;
+			$v = 10;
+			break;
+	}
+	
+	//1008 + 372 = 1380
+	//940 + 246 = 1186
+	/*
+	hmm, okay. well, to minimize eyelid problems that were were having
+	(as of 4 months ago, not sure what they're like now) I'd suggest pushing
+	the samples up to 16 for the eyelids, anyway. 12 for the lips is fine. 10
+	or 12 for the eyebrows and the upper/lower "orbitals." maybe 10 for the
+	cheek/nasal-labial folds (maybe 12 though, you'll have to look and see
+	what it does). for the nose and the jaw you can probably get away with
+	8 or lower
+	although keep an eye on the jaw -- it covers such a large area that if
+	the samples aren't high enough any problems will be magnified
+	*/
+	int $ints[];
+	
+	$ints[0] = $u;
+	$ints[1] = $v;
+	
+	return $ints;
+}
+
+
+global proc string copySkinToFMSkinCluster(string $headMesh, string $skinCluster)
+{
+	int $ints[];
+	string $strings[];
+	float $f[];
+	global float $gflv[];
+	
+	string $influences[] = `skinCluster -q -inf $skinCluster`;
+	$ints = `polyEvaluate -v $headMesh`;
+	int $vertexCount = $ints[0];
+	
+	$gflv[$vertexCount] = 0;
+	
+	$strings = `deformer -frontOfChain -type fmSkinCluster $headMesh`;
+	string $fmSkinCluster = $strings[0];
+	
+	$f = `getAttr ($headMesh + ".wm")`;
+	setAttr ($fmSkinCluster + ".offsetMatrix") -type "matrix" $f[0] $f[1] $f[2] $f[3] $f[4] $f[5] $f[6] $f[7] $f[8] $f[9] $f[10] $f[11] $f[12] $f[13] $f[14] $f[15];
+	
+	for($i = 0; $i < size($influences); ++$i) {
+		
+		$strings = `listRelatives -shapes $influences[$i]`;
+		string $shape = $strings[0];
+		string $nodeType = `nodeType $shape`;
+		
+		if ($influences[$i] == "fm_null_influence") {
+			
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].influenceType") 3;
+			connectAttr ($influences[$i] + ".message") ($fmSkinCluster + ".influences[" + $i + "].otherData");
+			
+		} else if ($nodeType == "nurbsCurve") {
+			
+			$ints = getSamplesForInfluence($influences[$i]);
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].influenceType") 1;
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].sampleU") $ints[0];
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].sampleV") 1;
+			
+			connectAttr ($shape + ".local") ($fmSkinCluster + ".influences[" + $i + "].curveData");
+			
+			$strings = `listRelatives -fullPath -shapes ("influenceBases|" + $influences[$i] + "Base")`;
+			connectAttr ($strings[0] + ".local") ($fmSkinCluster + ".influences[" + $i + "].baseCurveData");
+			
+			$f = `getAttr ("influenceBases|" + $influences[$i] + "Base.wim")`;
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].baseInvWorldMatrix") -type "matrix" $f[0] $f[1] $f[2] $f[3] $f[4] $f[5] $f[6] $f[7] $f[8] $f[9] $f[10] $f[11] $f[12] $f[13] $f[14] $f[15];
+			
+		} else if ($nodeType == "nurbsSurface") {
+			
+			$ints = getSamplesForInfluence($influences[$i]);
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].influenceType") 2;
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].sampleU") $ints[0];
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].sampleV") $ints[1];
+			
+			connectAttr ($shape + ".local") ($fmSkinCluster + ".influences[" + $i + "].surfaceData");
+			
+			$strings = `listRelatives -fullPath -shapes ("influenceBases|" + $influences[$i] + "Base")`;
+			connectAttr ($strings[0] + ".local") ($fmSkinCluster + ".influences[" + $i + "].baseSurfaceData");
+			
+			$f = `getAttr ("influenceBases|" + $influences[$i] + "Base.wim")`;
+			setAttr ($fmSkinCluster + ".influences[" + $i + "].baseInvWorldMatrix") -type "matrix" $f[0] $f[1] $f[2] $f[3] $f[4] $f[5] $f[6] $f[7] $f[8] $f[9] $f[10] $f[11] $f[12] $f[13] $f[14] $f[15];
+			
+		}
+		
+		connectAttr ($influences[$i] + ".lockInfluenceWeights") ($fmSkinCluster + ".lockWeights[" + $i + "]");
+		
+		$gflv = `getAttr ($skinCluster + ".weightList[0:" + ($vertexCount-1) + "].weights[" + ($i+1) + "]")`;
+		
+		for($v = 0; $v < $vertexCount; ++$v) {
+			if ($gflv[$v] != 0.0) {
+				setAttr ($fmSkinCluster + ".userWeightList[" + $v + "].userWeights[" + $i + "]") $gflv[$v];
+				setAttr ($fmSkinCluster + ".defaultWeightList[" + $v + "].defaultWeights[" + $i + "]") $gflv[$v];
+			}
+		}
+		
+		
+		fmRiggingIncreaseProgress;
+		
+	}
+	
+	string $connections[] = `listConnections -p true ($skinCluster + ".basePoints")`;
+	for($connection in $connections) {
+		string $strings[] = `listConnections -type skinCluster -p true $connection`;
+		disconnectAttr $connection $strings[0];
+	}
+	delete $skinCluster;
+	
+	setAttr ($fmSkinCluster + ".evaluate") 1;
+	
+	return $fmSkinCluster;
+	
+}

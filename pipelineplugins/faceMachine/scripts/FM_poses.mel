@@ -1,0 +1,217 @@
+
+// Returns the control type of the face machine if $object is a fm control, or 0 if otherwise.
+global proc int fmp_getFMControlType(string $object)
+{
+	string $fmControls[] = {"upperTeeth_FC", "jaw_FC", "tongue_FC", "L_brow1_FC", "L_brow1_directFC", "L_brow2_FC", "L_brow2_directFC", "L_brow3_FC", "L_brow3_directFC", "L_brow4_FC", "L_brow4_directFC", "L_lowerForehead_FC", "L_lowerOrbital_FC", "L_noseWing_FC", "L_noseWing_directFC", "L_outerOrbital_FC", "L_upperForehead_FC", "L_upperMouth_FC", "L_upperMouth_directFC", "R_brow1_FC", "R_brow1_directFC", "R_brow2_FC", "R_brow2_directFC", "R_brow3_FC", "R_brow3_directFC", "R_brow4_FC", "R_brow4_directFC", "R_lowerForehead_FC", "R_lowerOrbital_FC", "R_noseWing_FC", "R_noseWing_directFC", "R_outerOrbital_FC", "R_upperForehead_FC", "R_upperMouth_FC", "R_upperMouth_directFC", "browCrease_FC", "browCrease_directFC", "lowerForehead_FC", "noseControl_FC", "noseControl_directFC", "upperForehead_FC", "upperMouth_FC", "upperMouth_directFC", "upperNose_FC", "R_eye_FC", "R_innerEye_FC", "R_innerEye_directFC", "R_innerLowerLid_FC", "R_innerUpperLid_FC", "R_lowerEye_FC", "R_lowerLid_FC", "R_outerEye_FC", "R_outerEye_directFC", "R_outerLowerLid_FC", "R_outerUpperLid_FC", "R_upperEye_FC", "R_upperLid_FC", "L_eye_FC", "L_innerEye_FC", "L_innerEye_directFC", "L_innerLowerLid_FC", "L_innerUpperLid_FC", "L_lowerEye_FC", "L_lowerLid_FC", "L_outerEye_FC", "L_outerEye_directFC", "L_outerLowerLid_FC", "L_outerUpperLid_FC", "L_upperEye_FC", "L_upperLid_FC", "L_cheek_FC", "L_cheekBone_FC", "L_cheekPocket_FC", "L_jawCorner_FC", "L_mouth_FC", "L_mouth_directFC", "R_cheek_FC", "R_cheekBone_FC", "R_cheekPocket_FC", "R_jawCorner_FC", "R_mouth_FC", "R_mouth_directFC", "lowerTeeth_FC", "L_chin_FC", "L_lowerMouth_FC", "L_lowerMouth_directFC", "R_chin_FC", "R_lowerMouth_FC", "R_lowerMouth_directFC", "chin_FC", "lowerMouth_FC", "lowerMouth_directFC", "IK_eye_FC"};
+	string $fmParents[] = {"FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "FM_controls", "IK_eye_FC_staticBuffer"};
+	int $index = -1;
+	string $strings[], $objectName, $lastParent;
+	
+	$objectName = anzg_getObjectName($object);
+	
+	
+	for($i = 0; $i < size($fmControls); ++$i) {
+		if ($fmControls[$i] == $objectName) {
+			$index = $i;
+			break;
+		}
+	}
+	
+	string $targetParent;
+	if ($index == -1) {
+		if (endsWith($objectName, "_boxControl") != 1)
+			return 0;
+		else
+			$targetParent = "FM_boxControls";
+	} else
+		$targetParent = $fmParents[$index];
+	
+	$strings = `listRelatives -parent $object`;
+	while($strings[0] != "") {
+		if (anzg_getObjectName($strings[0]) == $targetParent)
+			break;
+		$strings = `listRelatives -parent $strings[0]`;
+	}
+	
+	if ($strings[0] == "")
+		return 0;
+	
+	// Face Machine controls are type 2
+	return 2;
+}
+
+global proc fmp_selectControl(string $targetObject)
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	
+	if (`objExists $targetObject`)
+		select -add $targetObject;
+	else if (`objExists ($anzovinInterfaceCurrentCharacterNamespace + $targetObject)`)
+		select -add ($anzovinInterfaceCurrentCharacterNamespace + $targetObject);
+}
+
+// Function called when sourcing a pose file, to set and perhaps keyframe a pose.
+global proc fmp_setPoseFloatAttr(string $targetObject, string $attr, float $value, int $keyframe)
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	string $object;
+	
+	if (`objExists $targetObject`)
+		$object = $targetObject;
+	else if (`objExists ($anzovinInterfaceCurrentCharacterNamespace + $targetObject)`)
+		$object = $anzovinInterfaceCurrentCharacterNamespace + $targetObject;
+	else {
+		warning ("The control '" + $targetObject + "' does not exist on the current character and has been skipped.");
+		return;
+	}
+	
+	if (attributeExists($attr, $object)) {
+		
+		if (`nodeType $object` == "fmTransform") {
+			// This will prevent a constrained face control from going to the wrong place, since
+			// each transform attribute gets set one at a time.
+			// NOTE: If a pose file 
+			if ($attr == "translateX")
+				setAttr ($object + ".constrain") 0;
+			if ($attr == "translateZ")
+				setAttr ($object + ".constrain") 1;
+		}
+		setAttr ($object + "." + $attr) $value;
+		if ($keyframe)
+			setKeyframe ($object + "." + $attr);
+	} else
+		warning ("The saved attribute '" + $attr + "' does not exist on the object '" + $object + "' and has been skipped.");
+}
+
+// Same as above, but for integer attributes.
+global proc fmp_setPoseIntAttr(string $targetObject, string $attr, int $value, int $keyframe)
+{
+	global string $anzovinInterfaceCurrentCharacterNamespace;
+	string $object;
+	
+	if (`objExists $targetObject`)
+		$object = $targetObject;
+	else if (`objExists ($anzovinInterfaceCurrentCharacterNamespace + $targetObject)`)
+		$object = $anzovinInterfaceCurrentCharacterNamespace + $targetObject;
+	else {
+		warning ("The control '" + $targetObject + "' does not exist on the current character and has been skipped.");
+		return;
+	}
+	
+	if (attributeExists($attr, $object)) {
+		setAttr ($object + "." + $attr) $value;
+		setKeyframe ($object + "." + $attr);
+	} else
+		warning ("The saved attribute '" + $attr + "' does not exist on the object '" + $object + "' and has been skipped.");
+}
+
+global proc int fmp_savePose()
+{
+	global string $anz_poseObjects[];
+	global string $anz_poseFileName;
+	int $file;
+	string $attributes[], $type;
+	int $intValue;
+	float $floatValue;
+	string $prefixedObjects[];
+	
+	$file = `fopen $anz_poseFileName "w"`;
+	if ($file == 0)
+		return 1;
+	
+	fprint $file "// Pose generated by the Face Machine\r\n\r\n";
+	
+	fprint $file "string $cn = $anzovinInterfaceCurrentCharacterNamespace;\r\n";
+	fprint $file "string $l = \"L_\";\r\n";
+	fprint $file "string $r = \"R_\";\r\n";
+	fprint $file "float $mirrorScalar = 1.0;\r\n";
+	fprint $file "if ($ap_mirrorPose == 1) {\r\n";
+	fprint $file "    $l = \"R_\";\r\n";
+	fprint $file "    $r = \"L_\";\r\n";
+	fprint $file "    $mirrorScalar = -1.0;\r\n";
+	fprint $file "}\r\n\r\n";
+	fprint $file "if ($ap_applyPoseToAttributes) {\r\n";
+	
+	for($i = 0; $i < size($anz_poseObjects); ++$i) {
+		string $object = anzg_getObjectName($anz_poseObjects[$i]);
+		string $objectSansPrefix;
+		string $prefix;
+		
+		$attributes = `listAttr -keyable -visible $anz_poseObjects[$i]`;
+		
+		if (startsWith($object, "R_")) {
+			$objectSansPrefix = `substring $object 3 (size($object))`;
+			$prefix = "$r + ";
+		} else if (startsWith($object, "L_")) {
+			$objectSansPrefix = `substring $object 3 (size($object))`;
+			$prefix = "$l + ";
+		} else {
+			$objectSansPrefix = $object;
+			$prefix = "";
+		}
+		$prefixedObjects[$i] = $prefix + "\"" + $objectSansPrefix;
+		
+		for($attr in $attributes) {
+			
+			$type = `getAttr -type ($anz_poseObjects[$i] + "." + $attr)`;
+			
+			switch($type) {
+				case "double":
+				case "float":
+				case "doubleLinear":
+				case "doubleAngle":
+					
+					$floatValue = `getAttr ($anz_poseObjects[$i] + "." + $attr)`;
+					/*if ($attr == "translateX" || $attr == "rotateY")
+						$setAttrCommands[$commandCount] = ("    setAttr ($cn + " + $prefixedObjects[$i] + "." + $attr + "\") (" + $floatValue + " * $mirrorScalar);");
+					else
+						$setAttrCommands[$commandCount] = ("    setAttr ($cn + " + $prefixedObjects[$i] + "." + $attr + "\") " + $floatValue + ";");
+					$keyframeCommands[$commandCount] = ("        setKeyframe ($cn + " + $prefixedObjects[$i] + "." + $attr + "\");");
+					++$commandCount;
+					*/
+					if ($attr == "translateX" || $attr == "rotateY")
+						fprint $file ("    fmp_setPoseFloatAttr((" + $prefixedObjects[$i] + "\"), \"" + $attr + "\", (" + $floatValue + " * $mirrorScalar), $ap_alsoSetKeyframes);\r\n");
+					else
+						fprint $file ("    fmp_setPoseFloatAttr((" + $prefixedObjects[$i] + "\"), \"" + $attr + "\", " + $floatValue + ", $ap_alsoSetKeyframes);\r\n");
+					
+					
+					break;
+				case "int":
+				case "short":
+				case "long":
+				case "enum":
+				case "byte":
+				case "char":
+				case "bool":
+					$intValue = `getAttr ($anz_poseObjects[$i] + "." + $attr)`;
+					//$setAttrCommands[$commandCount] = ("    setAttr ($cn + " + $prefixedObjects[$i] + "." + $attr + "\") " + $intValue + ";");
+					//$keyframeCommands[$commandCount] = ("        setKeyframe ($cn + " + $prefixedObjects[$i] + "." + $attr + "\");");
+					//++$commandCount;
+					fprint $file ("    fmp_setPoseIntAttr((" + $prefixedObjects[$i] + "\"), \"" + $attr + "\", " + $intValue + ", $ap_alsoSetKeyframes);\r\n");
+					break;
+				case "double3":
+				case "float3":
+				case "long3":
+				case "short3":
+				case "double2":
+				case "float2":
+				case "long2":
+				case "short2":
+					break;
+				default:
+					warning ("Non-numeric attribute not being saved to pose: " + $anz_poseObjects[$i] + "." + $attr);
+					break;
+			}
+		}
+	}
+	fprint $file "}\r\n\r\n";
+	fprint $file "select -cl;\r\n";
+	
+	for($i = 0; $i < size($anz_poseObjects); ++$i) {
+		fprint $file ("fmp_selectControl(" + $prefixedObjects[$i] + "\");\r\n");
+	}
+	
+	fclose $file;
+	
+	return 0;
+}
