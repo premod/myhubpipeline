@@ -2245,11 +2245,19 @@ global proc creaturerig()
     columnLayout  -adj true;
     button -h 50 -w 150 -label "Link Joint Setup" -command "linkJointSetup" -bgc 1 0 1;
     
-	
-	 
-   
+
+    columnLayout -adj true;
+	text " ";
+	text -fn "boldLabelFont" -l "Create toony for 2Legged";
+	text " ";
+	text "Note: this setup will work only with elbow Twist joints(2 value)";
+    columnLayout  -adj true;
+    button -h 50 -w 150 -label "Toony setup for 2Leg Character" -command "addToonSetup" -bgc 1 0 1;
+
+
+
 }
-   
+
 global proc clampNode2Root()
 
 {
@@ -2292,11 +2300,11 @@ global proc clampNode2Root()
     parent spinePull2_Dis chest_proxy ;
     createNode distanceBetween -n spine_Dis;
     connectAttr -force spinePull2_Dis.worldMatrix[0] spine_Dis.inMatrix1;
-    connectAttr -force spinePull1_Dis.worldMatrix[0] spine_Dis.inMatrix2;    
-    createNode multiplyDivide -n spineIk_MD; 
+    connectAttr -force spinePull1_Dis.worldMatrix[0] spine_Dis.inMatrix2;
+    createNode multiplyDivide -n spineIk_MD;
     setAttr "spineIk_MD.operation" 2;
     connectAttr -force spine_Dis.distance spineIk_MD.input1X;
-    createNode multiplyDivide -n spineIkScale_MD; 
+    createNode multiplyDivide -n spineIkScale_MD;
     setAttr "spineIkScale_MD.operation" 2;
     connectAttr -force worldScaleCon_grp.scaleX spineIkScale_MD.input2X;
     connectAttr -f spineIk_MD.outputX spineIkScale_MD.input1X;
@@ -2308,12 +2316,12 @@ global proc clampNode2Root()
     connectAttr -f spineIk_PBSwitch.outTranslateX spineIk_clmp.inputR;
     connectAttr -f root_ctrl.Clamp spineIk_clmp.maxR;
     connectAttr -f spineIk_clmp.outputR SpinePull1_jnt.scaleZ;
-    
+
     createNode clamp -n spineStIk_clmp;
     connectAttr -f root_ctrl.Clamp spineStIk_clmp.maxR;
     connectAttr -f stretchBlend_bta.output spineStIk_clmp.inputR;
     connectAttr -f spineStIk_clmp.outputR absMulti_md.input1X;
-    
+
     select -r spine4_jnt_parentConstraint1 ;
     doDelete;
     select -r SpinePull2_jnt ;
@@ -2322,15 +2330,15 @@ global proc clampNode2Root()
     select -r chest_proxy ;
     select -add spine4_jnt ;
     orientConstraint -mo -weight 1;
-    
+
     $fa = `getAttr "spine_Dis.distance"`;
     print $fa;
     setAttr "spineIk_MD.input2X" $fa;
-    
+
     setAttr "root_ctrl.Clamp" 1.5;
 
 
-    
+
 }
 
 global proc scapulaAutoScapPri()
@@ -2363,18 +2371,18 @@ parent fk_rtFrt_hip1_jnt ChestFK_ctrl ;
 parent ik_rtFrt_hip1_jnt ChestFK_ctrl ;
 parent rtFrt_legFlex1_jnt ChestFK_ctrl ;
 select -r nurbsCircle1 ;
-doDelete ; 
+doDelete ;
 select -cl  ;
 }
 
 global proc scapulaCreateScap()
 {
     createNode joint -n l_scapula_jnt;
-    createNode joint -n l_scapula_ctrl;     
+    createNode joint -n l_scapula_ctrl;
     parent l_scapula_jnt l_scapula_ctrl ;
-	
+
 	createNode joint -n r_scapula_jnt;
-    createNode joint -n r_scapula_ctrl;     
+    createNode joint -n r_scapula_ctrl;
     parent r_scapula_jnt r_scapula_ctrl ;
 }
 
@@ -2433,7 +2441,7 @@ ikHandle -sol ikRPsolver;
 parent ikHandle1 ltFrt_foot_ctrl ;
 rename "ikHandle1" "l_ScapulaAim1_ikH";
 select -r cube1 ;
-doDelete ; 
+doDelete ;
 
 select -r r_scapula_ctrl ;
 source "wireShape.mel"; wireShape("cube");
@@ -2488,7 +2496,7 @@ ikHandle -sol ikRPsolver;
 parent ikHandle1 rtFrt_foot_ctrl ;
 rename "ikHandle1" "r_ScapulaAim1_ikH";
 select -r cube1 ;
-doDelete ;   
+doDelete ;
 
 
 select -r ltBck_legOffset_ctrl ;
@@ -2503,10 +2511,10 @@ select -r  ltBck_PV_jnt1 ;
 select -add ltBck_PV_jnt2 ;
 ikHandle -sol ikRPsolver;
 parent ikHandle1 ltBck_foot_ctrl ;
-rename "ikHandle1" "ltBck_PV_ikH";  
-parent frzLtBck_knee_grp ltBck_PV_jnt1 ;  
+rename "ikHandle1" "ltBck_PV_ikH";
+parent frzLtBck_knee_grp ltBck_PV_jnt1 ;
 select -r frzLtBck_knee_grp_parentConstraint1 ;
-delete; 
+delete;
 
 
 select -r rtBck_legOffset_ctrl ;
@@ -2521,19 +2529,19 @@ select -r  rtBck_PV_jnt1 ;
 select -add rtBck_PV_jnt2 ;
 ikHandle -sol ikRPsolver;
 parent ikHandle1 rtBck_foot_ctrl ;
-rename "ikHandle1" "rtBck_PV_ikH";  
-parent frzRtBck_knee_grp rtBck_PV_jnt1 ;  
+rename "ikHandle1" "rtBck_PV_ikH";
+parent frzRtBck_knee_grp rtBck_PV_jnt1 ;
 select -r frzRtBck_knee_grp_parentConstraint1 ;
-delete; 
+delete;
 
 setAttr "ltBck_PV_ikH.visibility" 0;
-setAttr -lock true -keyable false -channelBox false "ltBck_PV_ikH.v";  
+setAttr -lock true -keyable false -channelBox false "ltBck_PV_ikH.v";
 setAttr "rtBck_PV_ikH.visibility" 0;
-setAttr -lock true -keyable false -channelBox false "rtBck_PV_ikH.v"; 
+setAttr -lock true -keyable false -channelBox false "rtBck_PV_ikH.v";
 setAttr "ltBck_PV_jnt1.drawStyle" 2;
-setAttr "ltBck_PV_jnt2.drawStyle" 2; 
+setAttr "ltBck_PV_jnt2.drawStyle" 2;
 setAttr "rtBck_PV_jnt1.drawStyle" 2;
-setAttr "rtBck_PV_jnt2.drawStyle" 2; 
+setAttr "rtBck_PV_jnt2.drawStyle" 2;
 
 
 }
@@ -2545,7 +2553,7 @@ global proc scapulaPoleAdj()
     source "wireShape.mel"; wireShape("null");
     rename "grp1" "l_ScapulaAim1_PV";
     parent l_ScapulaAim1_PV spine4_jnt ;
-	
+
 	select -r r_scapula_jnt ;
     source "wireShape.mel"; wireShape("null");
     rename "grp1" "r_ScapulaAim1_PV";
@@ -2556,7 +2564,7 @@ global proc scapulaPoleAdj()
 global proc scapulaLegFinish()
 
 {
-    
+
 select -r l_ScapulaAim1_PV ;
 select -add l_ScapulaAim1_ikH ;
 poleVectorConstraint -weight 1;
@@ -2726,7 +2734,7 @@ global proc linkJointSetup()
 	{
 			string $buffer[];
 			$numTokens = `tokenize $each "XZ" $buffer`;
-			$connectbtwn = $buffer[0] ; 
+			$connectbtwn = $buffer[0] ;
 			print ($connectbtwn + "\n"); ;
 			select $connectbtwn;
 			select -add $each;
@@ -2736,9 +2744,726 @@ global proc linkJointSetup()
 	}
 }
 
+global proc addToonSetup()
+{
+
+
+string $name[]={"lt_UpperArm","lt_LowerArm","rt_UpperArm","rt_LowerArm","lt_UpperLeg","lt_LowerLeg","rt_UpperLeg","rt_LowerLeg"};
+string $nm;
+group -em -n "toonGRP" ;
+
+for($nm in $name)
+
+{
+
+int $num=3,$X=0,$Y=0,$Z=1;
+string $dir,$plan;
+$dir="V";
+//if (`radioButton -q -sl CSS_RIB_VDir`) $dir="V";
+string $tmp,$ttmp[];
+print ("Ready to create Ribbon with "+$num+" sections, on the "+$dir+" direction.\n");
+if ($dir=="V"){
+$ttmp=`nurbsPlane -p 0 0 0 -ax $X $Y $Z -w 1 -lr $num -d 3 -u 1 -v $num -ch 1`;
+$plan=$ttmp[0];
+print ("With : 1 , Hight : "+$num+" , Normal Direction : "+$X+" "+$Y+" "+$Z+"\n");
+rebuildSurface -ch 1 -rpo 1 -rt 0 -end 1 -kr 0 -kcp 0 -kc 0 -su 1 -du 1 -sv $num -dv 3 -fr 0  -dir 0 $plan;
+DeleteHistory;
+createHair 1 $num 10 0 0 0 0 5 0 2 1 1;
+select -r "hairSystem*";
+select -d "*Follicles";
+delete;
+}else{
+float $tmp=100/$num;
+$ttmp=`nurbsPlane -p 0 0 0 -ax $X $Y $Z -w $num -lr ($tmp/100) -d 3 -u $num -v 1 -ch 1`;
+print ("With : "+$num+" , Hight : 1 , Normal Direction : "+$X+" "+$Y+" "+$Z+"\n");
+$plan=$ttmp[0];
+rebuildSurface -ch 1 -rpo 1 -rt 0 -end 1 -kr 0 -kcp 0 -kc 0 -su $num -du 3 -sv 1 -dv 1 -fr 0  -dir 1 $plan;
+DeleteHistory;
+createHair $num 1 10 0 0 0 0 5 0 2 1 1;
+select -r "hairSystem*";
+select -d "*Follicles";
+delete;
+}
+objectMoveCommand;
+select "nurbs*Follicle*";
+string $folcs[];
+$folcs=`ls -sl`;
+select -cl;
+for ($i=0;$i<$num;$i++){
+joint -a -p 0 0 0 -n ($nm+"_"+($i+1)+"_JNT");
+select -cl;
+setAttr ($folcs[$i]+".overrideEnabled") 1;
+setAttr ($folcs[$i]+".overrideDisplayType") 1;
+rename $folcs[$i] ($nm+"_"+($i+1)+"_FLC");
+parent ($nm+"_"+($i+1)+"_JNT") ($nm+"_"+($i+1)+"_FLC");
+setAttr ($nm+"_"+($i+1)+"_JNT.translateZ") 0;
+setAttr ($nm+"_"+($i+1)+"_JNT.translateX") 0;
+setAttr ($nm+"_"+($i+1)+"_JNT.translateY") 0;
+}
+select -cl;
+for ($i=0;$i<5;$i++){
+joint -p 0 0 0 -rad 2 -n ($nm+"_SK_"+($i+1)+"_HND");
+select -cl;
+}
+if (($dir=="U"&&$X)||($dir=="V"&&$Y)){
+setAttr ($nm+"_SK_1_HND.tz") ($num/2+.5);
+setAttr ($nm+"_SK_2_HND.tz") ($num/2);
+setAttr ($nm+"_SK_4_HND.tz") ($num/2*-1);
+setAttr ($nm+"_SK_5_HND.tz") (($num/2+.5)*-1);
+}
+if (($dir=="U"&&$Y)||($dir=="U"&&$Z)){
+setAttr ($nm+"_SK_1_HND.tx") ($num/2+.5);
+setAttr ($nm+"_SK_2_HND.tx") ($num/2);
+setAttr ($nm+"_SK_4_HND.tx") ($num/2*-1);
+setAttr ($nm+"_SK_5_HND.tx") (($num/2+.5)*-1);
+}
+if (($dir=="V"&&$X)||($dir=="V"&&$Z)){
+setAttr ($nm+"_SK_1_HND.ty") ($num/2+.5);
+setAttr ($nm+"_SK_2_HND.ty") ($num/2);
+setAttr ($nm+"_SK_4_HND.ty") ($num/2*-1);
+setAttr ($nm+"_SK_5_HND.ty") (($num/2+.5)*-1);
+}
+parent ($nm+"_SK_2_HND") ($nm+"_SK_1_HND");
+parent ($nm+"_SK_4_HND") ($nm+"_SK_5_HND");
+for ($i=0;$i<10;$i++){
+$ttmp=`spaceLocator`;
+setAttr ($ttmp[0]+".localScaleZ") .2;
+setAttr ($ttmp[0]+".localScaleX") .2;
+setAttr ($ttmp[0]+".localScaleY") .2;
+rename $ttmp[0] ($nm+($i+1)+"_Lc");
+}
+parent ($nm+"2_Lc") ($nm+"3_Lc") ($nm+"1_Lc");
+parent ($nm+"5_Lc") ($nm+"6_Lc") ($nm+"4_Lc");
+parent ($nm+"8_Lc") ($nm+"9_Lc") ($nm+"7_Lc");
+parent ($nm+"10_Lc") ($nm+"8_Lc");
+rename ($nm+"1_Lc") ($nm+"_TOP_POS_Lc");
+rename ($nm+"2_Lc") ($nm+"_TOP_AIM_Lc");
+rename ($nm+"3_Lc") ($nm+"_TOP_UP_Lc");
+rename ($nm+"4_Lc") ($nm+"_BTM_POS_Lc");
+rename ($nm+"5_Lc") ($nm+"_BTM_AIM_Lc");
+rename ($nm+"6_Lc") ($nm+"_BTM_UP_Lc");
+rename ($nm+"7_Lc") ($nm+"_MID_POS_Lc");
+rename ($nm+"8_Lc") ($nm+"_MID_AIM_Lc");
+rename ($nm+"9_Lc") ($nm+"_MID_UP_Lc");
+rename ($nm+"10_Lc") ($nm+"_MID_OFF_Lc");
+float $pos[];
+$pos=`xform -q -ws -rp ($nm+"_SK_1_HND")`;
+move $pos[0] $pos[1] $pos[2] ($nm+"_TOP_POS_Lc");
+$pos=`xform -q -ws -rp ($nm+"_SK_5_HND")`;
+move $pos[0] $pos[1] $pos[2] ($nm+"_BTM_POS_Lc");
+select ($nm+"*_UP_Lc");
+if (($dir=="V"&&$Y)||($dir=="V"&&$Z)) move -r 2 0 0 ;
+if (($dir=="U"&&$X)||($dir=="U"&&$Z)) move -r 0 -2 0 ;
+if (($dir=="U"&&$Y)||($dir=="V"&&$X)) move -r 0 0 2 ;
+pointConstraint ($nm+"_BTM_POS_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_MID_POS_Lc");
+pointConstraint ($nm+"_BTM_UP_Lc") ($nm+"_TOP_UP_Lc") ($nm+"_MID_UP_Lc");
+if (($dir=="U"&&$Y)){
+aimConstraint -mo -weight 1 -aimVector 1 0 0 -upVector 0 0 1 -worldUpType "object" -worldUpObject ($nm+"_BTM_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_BTM_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector -1 0 0 -upVector 0 0 1 -worldUpType "object" -worldUpObject ($nm+"_TOP_UP_Lc") ($nm+"_BTM_POS_Lc") ($nm+"_TOP_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 1 0 0 -upVector 0 0 1 -worldUpType "object" -worldUpObject ($nm+"_MID_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_MID_AIM_Lc");
+}
+if (($dir=="U"&&$X)){
+aimConstraint -mo -weight 1 -aimVector 0 0 1 -upVector 0 -1 0 -worldUpType "object" -worldUpObject ($nm+"_BTM_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_BTM_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 0 -1 -upVector 0 -1 0 -worldUpType "object" -worldUpObject ($nm+"_TOP_UP_Lc") ($nm+"_BTM_POS_Lc") ($nm+"_TOP_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 0 1 -upVector 0 -1 0 -worldUpType "object" -worldUpObject ($nm+"_MID_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_MID_AIM_Lc");
+}
+if (($dir=="U"&&$Z)){
+aimConstraint -mo -weight 1 -aimVector 1 0 0 -upVector 0 -1 0 -worldUpType "object" -worldUpObject ($nm+"_BTM_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_BTM_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector -1 0 0 -upVector 0 -1 0 -worldUpType "object" -worldUpObject ($nm+"_TOP_UP_Lc") ($nm+"_BTM_POS_Lc") ($nm+"_TOP_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 1 0 0 -upVector 0 -1 0 -worldUpType "object" -worldUpObject ($nm+"_MID_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_MID_AIM_Lc");
+}
+if (($dir=="V"&&$X)){
+aimConstraint -mo -weight 1 -aimVector 0 1 0 -upVector 0 0 1 -worldUpType "object" -worldUpObject ($nm+"_BTM_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_BTM_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 -1 0 -upVector 0 0 1 -worldUpType "object" -worldUpObject ($nm+"_TOP_UP_Lc") ($nm+"_BTM_POS_Lc") ($nm+"_TOP_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 1 0 -upVector 0 0 1 -worldUpType "object" -worldUpObject ($nm+"_MID_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_MID_AIM_Lc");
+}
+if (($dir=="V"&&$Y)){
+aimConstraint -mo -weight 1 -aimVector 0 0 1 -upVector 1 0 0 -worldUpType "object" -worldUpObject ($nm+"_BTM_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_BTM_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 0 -1 -upVector 1 0 0 -worldUpType "object" -worldUpObject ($nm+"_TOP_UP_Lc") ($nm+"_BTM_POS_Lc") ($nm+"_TOP_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 0 1 -upVector 1 0 0 -worldUpType "object" -worldUpObject ($nm+"_MID_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_MID_AIM_Lc");
+}
+if (($dir=="V"&&$Z)){
+aimConstraint -mo -weight 1 -aimVector 0 1 0 -upVector 1 0 0 -worldUpType "object" -worldUpObject ($nm+"_BTM_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_BTM_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 -1 0 -upVector 1 0 0 -worldUpType "object" -worldUpObject ($nm+"_TOP_UP_Lc") ($nm+"_BTM_POS_Lc") ($nm+"_TOP_AIM_Lc");
+aimConstraint -mo -weight 1 -aimVector 0 1 0 -upVector 1 0 0 -worldUpType "object" -worldUpObject ($nm+"_MID_UP_Lc") ($nm+"_TOP_POS_Lc") ($nm+"_MID_AIM_Lc");
+}
+parent ($nm+"_SK_1_HND") ($nm+"_TOP_AIM_Lc");
+parent ($nm+"_SK_3_HND") ($nm+"_MID_OFF_Lc");
+parent ($nm+"_SK_5_HND") ($nm+"_BTM_AIM_Lc");
+select -r ($nm+"_SK_1_HND") ;
+select -tgl ($nm+"_SK_3_HND") ;
+select -tgl ($nm+"_SK_5_HND") ;
+select -tgl $plan ;
+skinCluster -tsb -sm 0 -mi 3 -dr 10;
+$tmp=`createNode implicitBox`;
+setAttr ($tmp+".sizeX") 1;
+setAttr ($tmp+".sizeY") 1;
+setAttr ($tmp+".sizeZ") 1;
+rename "box1" ($nm+"_S_HLP");
+$tmp=`createNode implicitBox`;
+setAttr ($tmp+".sizeX") 1;
+setAttr ($tmp+".sizeY") 1;
+setAttr ($tmp+".sizeZ") 1;
+rename "box1" ($nm+"_M_HLP");
+$tmp=`createNode implicitBox`;
+setAttr ($tmp+".sizeX") 1;
+setAttr ($tmp+".sizeY") 1;
+setAttr ($tmp+".sizeZ") 1;
+rename "box1" ($nm+"_E_HLP");
+$pos = `xform -q -ws -rp ($nm+"_TOP_POS_Lc")`;
+move $pos[0] $pos[1] $pos[2] ($nm+"_S_HLP");
+$pos = `xform -q -ws -rp ($nm+"_MID_POS_Lc")`;
+move $pos[0] $pos[1] $pos[2] ($nm+"_M_HLP");
+$pos = `xform -q -ws -rp ($nm+"_BTM_POS_Lc")`;
+move $pos[0] $pos[1] $pos[2] ($nm+"_E_HLP");
+makeIdentity -a 1 -t 1 ($nm+"_*_HLP");
+parent ($nm+"_TOP_POS_Lc") ($nm+"_S_HLP");
+parent ($nm+"_BTM_POS_Lc") ($nm+"_E_HLP");
+group -em -n ($nm+"_M_GRP");
+parent ($nm+"_M_HLP") ($nm+"_M_GRP");
+parentConstraint ($nm+"_MID_AIM_Lc") ($nm+"_M_GRP");
+parentConstraint ($nm+"_M_HLP") ($nm+"_MID_OFF_Lc");
+select -r ($nm+"*_Lc");
+$ttmp=`ls -sl`;
+for ($obj in $ttmp) setAttr ($obj+".visibility") 0;
+rename $plan ($nm+"_GEO");
+rename ("hairSystem*Follicles") ($nm+"_FLC_GRP");
+select -r ($nm+"*_HLP");
+select -d ($nm+"_M_HLP");
+group -n ($nm+"_Move_GRP");
+group -n ($nm+"_GRP");
+select -cl;
+group -em -n ($nm+"_EX_GRP");
+parent ($nm+"_M_GRP") ($nm+"_EX_GRP");
+parent ($nm+"_EX_GRP") ($nm+"_GRP");
+parent ($nm+"_FLC_GRP") ($nm+"_EX_GRP");
+parent ($nm+"_GEO") ($nm+"_EX_GRP");
+parent ($nm+"_MID_POS_Lc") ($nm+"_EX_GRP");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.tx");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.ty");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.tz");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.rx");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.ry");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.rz");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.sx");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.sy");
+setAttr -lock true -keyable false -channelBox false ($nm+"_GRP.sz");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.tx");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.ty");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.tz");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.rx");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.ry");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.rz");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.sx");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.sy");
+setAttr -lock true -keyable false -channelBox false ($nm+"_EX_GRP.sz");
+setAttr -lock true -keyable false -channelBox false ($nm+"_Move_GRP.sx");
+setAttr -lock true -keyable false -channelBox false ($nm+"_Move_GRP.sy");
+setAttr -lock true -keyable false -channelBox false ($nm+"_Move_GRP.sz");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.tx");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.ty");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.tz");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.rx");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.ry");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.rz");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.sx");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.sy");
+setAttr -keyable false -channelBox false ($nm+"_M_GRP.sz");
+setAttr ($nm+"_GEO.overrideEnabled") 1;
+setAttr ($nm+"_GEO.overrideDisplayType") 1;
+setAttr ($nm+"_S_HLP.overrideEnabled") 1;
+setAttr ($nm+"_S_HLP.overrideColor") 17;
+setAttr ($nm+"_M_HLP.overrideEnabled") 1;
+setAttr ($nm+"_M_HLP.overrideColor") 17;
+setAttr ($nm+"_E_HLP.overrideEnabled") 1;
+setAttr ($nm+"_E_HLP.overrideColor") 17;
+select -cl;
+print ("You may need to tweak weights for the "+$nm+"_GEO.\n");
+parent ($nm+"_GRP") toonGRP;
+
+
+}
+
+
+parent toonGRP non_scale_grp;
+
+
+select -r lt_shoulder_jnt ;
+select -tgl lt_UpperArm_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+select -r lt_elbow_jnt ;
+select -tgl lt_UpperArm_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete  lt_UpperArm_S_HLP_parentConstraint1;
+parent lt_UpperArm_S_HLP lt_shoulder_jnt;
+delete lt_UpperArm_S_HLPShape;
+delete  lt_UpperArm_E_HLP_parentConstraint1;
+parent lt_UpperArm_E_HLP lt_elbow_jnt;
+delete lt_UpperArm_E_HLPShape;
+delete lt_UpperArm_Move_GRP ;
+
+
+
+select -r lt_elbow_jnt ;
+select -tgl lt_LowerArm_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete lt_LowerArm_S_HLP_parentConstraint1;
+select -r lt_wrist_jnt ;
+select -tgl lt_LowerArm_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete lt_LowerArm_E_HLP_parentConstraint1;
+parent lt_LowerArm_S_HLP lt_elbow_jnt;
+delete lt_LowerArm_S_HLPShape;
+parent lt_LowerArm_E_HLP lt_elbow_jnt_seg_2_joint;
+delete lt_LowerArm_E_HLPShape;
+
+
+select -r rt_shoulder_jnt ;
+select -tgl rt_UpperArm_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+select -r rt_elbow_jnt ;
+select -tgl rt_UpperArm_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete  rt_UpperArm_S_HLP_parentConstraint1;
+parent rt_UpperArm_S_HLP rt_shoulder_jnt;
+delete rt_UpperArm_S_HLPShape;
+delete  rt_UpperArm_E_HLP_parentConstraint1;
+parent rt_UpperArm_E_HLP rt_elbow_jnt;
+delete rt_UpperArm_E_HLPShape;
+delete rt_UpperArm_Move_GRP ;
+
+
+
+select -r rt_elbow_jnt ;
+select -tgl rt_LowerArm_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete rt_LowerArm_S_HLP_parentConstraint1;
+select -r rt_wrist_jnt ;
+select -tgl rt_LowerArm_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete rt_LowerArm_E_HLP_parentConstraint1;
+parent rt_LowerArm_S_HLP rt_elbow_jnt;
+delete rt_LowerArm_S_HLPShape;
+parent rt_LowerArm_E_HLP rt_elbow_jnt_seg_2_joint;
+delete rt_LowerArm_E_HLPShape;
+
+
+select -r lt_hip_jnt ;
+select -add lt_UpperLeg_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete lt_UpperLeg_S_HLP_parentConstraint1;
+select -r lt_knee_jnt ;
+select -tgl lt_UpperLeg_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete lt_UpperLeg_E_HLP_parentConstraint1;
+parent lt_UpperLeg_S_HLP lt_hip_jnt;
+delete lt_UpperLeg_S_HLPShape;
+parent lt_UpperLeg_E_HLP lt_knee_jnt;
+delete lt_UpperLeg_E_HLPShape;
+
+
+select -r lt_knee_jnt ;
+select -tgl lt_LowerLeg_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete lt_LowerLeg_S_HLP_parentConstraint1;
+select -r lt_ankle_jnt ;
+select -tgl lt_LowerLeg_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete lt_LowerLeg_E_HLP_parentConstraint1;
+parent lt_LowerLeg_S_HLP lt_knee_jnt;
+delete lt_LowerLeg_S_HLPShape;
+parent lt_LowerLeg_E_HLP lt_knee_jnt_seg_2_joint;
+delete lt_LowerLeg_E_HLPShape;
+
+select -r rt_hip_jnt ;
+select -add rt_UpperLeg_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete rt_UpperLeg_S_HLP_parentConstraint1;
+select -r rt_knee_jnt ;
+select -tgl rt_UpperLeg_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete rt_UpperLeg_E_HLP_parentConstraint1;
+parent rt_UpperLeg_S_HLP rt_hip_jnt;
+delete rt_UpperLeg_S_HLPShape;
+parent rt_UpperLeg_E_HLP rt_knee_jnt;
+delete rt_UpperLeg_E_HLPShape;
+
+
+select -r rt_knee_jnt ;
+select -tgl rt_LowerLeg_S_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete rt_LowerLeg_S_HLP_parentConstraint1;
+select -r rt_ankle_jnt ;
+select -tgl rt_LowerLeg_E_HLP ;
+doCreateParentConstraintArgList 1 { "0","0","0","0","1","1","1","1","","1" };
+parentConstraint -skipRotate x -skipRotate y -skipRotate z -weight 1;
+delete rt_LowerLeg_E_HLP_parentConstraint1;
+parent rt_LowerLeg_S_HLP rt_knee_jnt;
+delete rt_LowerLeg_S_HLPShape;
+parent rt_LowerLeg_E_HLP rt_knee_jnt_seg_2_joint;
+delete rt_LowerLeg_E_HLPShape;
+
+
+shadingNode -asUtility reverse -n lt_armSwitches_ctrl_IK_FK_Rev ;
+connectAttr -f lt_armSwitches_ctrl.FK_IK lt_armSwitches_ctrl_IK_FK_Rev.inputX;
+
+select -r lt_fk_lt_elbow_jnt_ctrl ;
+select -add lt_elbow_jnt ;
+doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+pointConstraint -mo -weight 1;
+connectAttr -f lt_armSwitches_ctrl_IK_FK_Rev.outputX lt_elbow_jnt_pointConstraint1.lt_fk_lt_elbow_jnt_ctrlW0;
+setAttr -k on lt_fk_lt_elbow_jnt_ctrl.translateX;
+setAttr -k on lt_fk_lt_elbow_jnt_ctrl.translateY;
+setAttr -k on lt_fk_lt_elbow_jnt_ctrl.translateZ;
+CBunlockAttr "lt_fk_lt_elbow_jnt_ctrl.tx";
+CBunlockAttr "lt_fk_lt_elbow_jnt_ctrl.ty";
+CBunlockAttr "lt_fk_lt_elbow_jnt_ctrl.tz";
+
+select -r lt_fk_lt_wrist_jnt_ctrl ;
+select -add lt_wrist_jnt ;
+doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+pointConstraint -mo -weight 1;
+connectAttr -f lt_armSwitches_ctrl_IK_FK_Rev.outputX lt_wrist_jnt_pointConstraint1.lt_fk_lt_wrist_jnt_ctrlW0;
+setAttr -k on lt_fk_lt_wrist_jnt_ctrl.translateX;
+setAttr -k on lt_fk_lt_wrist_jnt_ctrl.translateY;
+setAttr -k on lt_fk_lt_wrist_jnt_ctrl.translateZ;
+CBunlockAttr "lt_fk_lt_wrist_jnt_ctrl.tx";
+CBunlockAttr "lt_fk_lt_wrist_jnt_ctrl.ty";
+CBunlockAttr "lt_fk_lt_wrist_jnt_ctrl.tz";
+
+shadingNode -asUtility reverse -n rt_armSwitches_ctrl_IK_FK_Rev ;
+connectAttr -f rt_armSwitches_ctrl.FK_IK rt_armSwitches_ctrl_IK_FK_Rev.inputX;
+
+select -r rt_fk_rt_elbow_jnt_ctrl ;
+select -add rt_elbow_jnt ;
+doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+pointConstraint -mo -weight 1;
+connectAttr -f rt_armSwitches_ctrl_IK_FK_Rev.outputX rt_elbow_jnt_pointConstraint1.rt_fk_rt_elbow_jnt_ctrlW0;
+setAttr -k on rt_fk_rt_elbow_jnt_ctrl.translateX;
+setAttr -k on rt_fk_rt_elbow_jnt_ctrl.translateY;
+setAttr -k on rt_fk_rt_elbow_jnt_ctrl.translateZ;
+CBunlockAttr "rt_fk_rt_elbow_jnt_ctrl.tx";
+CBunlockAttr "rt_fk_rt_elbow_jnt_ctrl.ty";
+CBunlockAttr "rt_fk_rt_elbow_jnt_ctrl.tz";
+
+select -r rt_fk_rt_wrist_jnt_ctrl ;
+select -add rt_wrist_jnt ;
+doCreatePointConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+pointConstraint -mo -weight 1;
+connectAttr -f rt_armSwitches_ctrl_IK_FK_Rev.outputX rt_wrist_jnt_pointConstraint1.rt_fk_rt_wrist_jnt_ctrlW0;
+setAttr -k on rt_fk_rt_wrist_jnt_ctrl.translateX;
+setAttr -k on rt_fk_rt_wrist_jnt_ctrl.translateY;
+setAttr -k on rt_fk_rt_wrist_jnt_ctrl.translateZ;
+CBunlockAttr "rt_fk_rt_wrist_jnt_ctrl.tx";
+CBunlockAttr "rt_fk_rt_wrist_jnt_ctrl.ty";
+CBunlockAttr "rt_fk_rt_wrist_jnt_ctrl.tz";
+
+
+
+select -r lt_shoulder_jnt_parentConstraint1 lt_shoulder_jnt_seg_1_joint lt_UpperArm_S_HLP ;
+parent -w;
+duplicate lt_shoulder_jnt;
+parent lt_shoulder_jnt_parentConstraint1 lt_shoulder_jnt1 ;
+parent lt_shoulder_jnt_seg_1_joint lt_shoulder_jnt1 ;
+parent lt_UpperArm_S_HLP lt_shoulder_jnt1 ;
+connectAttr -f lt_shoulder_jnt_scale_cb.outputR lt_shoulder_jnt1.scaleX;
+connectAttr -f lt_shoulder_jnt_scalePower.output lt_shoulder_jnt1.scalePower;
+connectAttr -f lt_shoulder_jnt_frameCache.varying lt_shoulder_jnt1.pow;
+connectAttr -f lt_lt_shoulder_jnt_volume_bta.output lt_shoulder_jnt1.scaleZ;
+connectAttr -f lt_lt_shoulder_jnt_volume_bta.output lt_shoulder_jnt1.scaleY;
+
+select -r lt_fk_lt_shoulder_jnt_ctrl ;
+select -add lt_shoulder_jnt1 ;
+doCreatePointConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+pointConstraint -offset 0 0 0 -weight 1;
+connectAttr -f lt_armSwitches_ctrl_IK_FK_Rev.outputX lt_shoulder_jnt1_pointConstraint1.lt_fk_lt_shoulder_jnt_ctrlW0;
+
+connectAttr -f lt_shoulder_jnt_parentConstraint1.constraintRotateY lt_shoulder_jnt1.rotateY;
+connectAttr -f lt_shoulder_jnt_parentConstraint1.constraintRotateZ lt_shoulder_jnt1.rotateZ;
+connectAttr -f unitConversion8.output lt_shoulder_jnt1.rotateX;
+connectAttr -f lt_shoulder_jnt1.inverseScale frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetInverseScale;
+connectAttr -f lt_shoulder_jnt1.inverseScale lt_UpperArm_S_HLP_parentConstraint2.target[0].targetInverseScale;
+connectAttr -f lt_shoulder_jnt1.scalePower lt_shoulder_jnt_frameCache.stream;
+connectAttr -f lt_shoulder_jnt1.scalePower lt_shoulder_jnt_seg_2_joint_frameCache.stream;
+connectAttr -f lt_shoulder_jnt1.scalePower lt_shoulder_jnt_seg_1_joint_frameCache.stream;
+connectAttr -f lt_shoulder_jnt1.rotatePivotTranslate frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotateTranslate;
+connectAttr -f lt_shoulder_jnt1.rotatePivotTranslate lt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotateTranslate;
+connectAttr -f lt_shoulder_jnt1.rotatePivotTranslate lt_shoulder_jnt_parentConstraint1.constraintRotateTranslate;
+connectAttr -f lt_shoulder_jnt1.rotatePivot frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotatePivot;
+connectAttr -f lt_shoulder_jnt1.rotatePivot lt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotatePivot;
+connectAttr -f lt_shoulder_jnt1.rotatePivot lt_shoulder_jnt_parentConstraint1.constraintRotatePivot;
+connectAttr -f lt_shoulder_jnt1.pow lt_lt_shoulder_jnt_revPowOutput_md.input2X;
+connectAttr -f lt_shoulder_jnt1.parentInverseMatrix[0] lt_shoulder_jnt_parentConstraint1.constraintParentInverseMatrix;
+connectAttr -f lt_shoulder_jnt1.parentMatrix[0] frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetParentMatrix;
+connectAttr -f lt_shoulder_jnt1.parentMatrix[0] lt_UpperArm_S_HLP_parentConstraint2.target[0].targetParentMatrix;
+connectAttr -f lt_shoulder_jnt1.jointOrient frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetJointOrient;
+connectAttr -f lt_shoulder_jnt1.jointOrient lt_UpperArm_S_HLP_parentConstraint2.target[0].targetJointOrient;
+connectAttr -f lt_shoulder_jnt1.jointOrient lt_shoulder_jnt_parentConstraint1.constraintJointOrient;
+connectAttr -f lt_shoulder_jnt1.scale frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetScale;
+connectAttr -f lt_shoulder_jnt1.scale lt_UpperArm_S_HLP_parentConstraint2.target[0].targetScale;
+connectAttr -f lt_shoulder_jnt1.scaleX lt_lt_shoulder_jnt_revPowInput_md.input1X;
+connectAttr -f lt_shoulder_jnt1.rotate frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotate;
+connectAttr -f lt_shoulder_jnt1.rotate lt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotate;
+connectAttr -f lt_shoulder_jnt1.translate frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetTranslate;
+connectAttr -f lt_shoulder_jnt1.translate lt_UpperArm_S_HLP_parentConstraint2.target[0].targetTranslate;
+connectAttr -f lt_shoulder_jnt1.instObjGroups[0] SkinJoints_set.dagSetMembers[15];
+connectAttr -f lt_shoulder_jnt1.rotateOrder frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotateOrder;
+connectAttr -f lt_shoulder_jnt1.rotateOrder lt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotateOrder;
+connectAttr -f lt_shoulder_jnt1.rotateOrder lt_shoulder_jnt_parentConstraint1.constraintRotateOrder;
+connectAttr -f lt_shoulder_jnt1.segmentScaleCompensate lt_UpperArm_S_HLP_parentConstraint2.target[0].targetScaleCompensate;
+connectAttr -f lt_shoulder_jnt1.segmentScaleCompensate frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetScaleCompensate;
+
+
+
+select -r rt_shoulder_jnt_parentConstraint1 rt_shoulder_jnt_seg_1_joint rt_UpperArm_S_HLP ;
+parent -w;
+duplicate rt_shoulder_jnt;
+parent rt_shoulder_jnt_parentConstraint1 rt_shoulder_jnt1 ;
+parent rt_shoulder_jnt_seg_1_joint rt_shoulder_jnt1 ;
+parent rt_UpperArm_S_HLP rt_shoulder_jnt1 ;
+connectAttr -f rt_shoulder_jnt_scale_cb.outputR rt_shoulder_jnt1.scaleX;
+connectAttr -f rt_shoulder_jnt_scalePower.output rt_shoulder_jnt1.scalePower;
+connectAttr -f rt_shoulder_jnt_frameCache.varying rt_shoulder_jnt1.pow;
+connectAttr -f rt_rt_shoulder_jnt_volume_bta.output rt_shoulder_jnt1.scaleZ;
+connectAttr -f rt_rt_shoulder_jnt_volume_bta.output rt_shoulder_jnt1.scaleY;
+
+select -r rt_fk_rt_shoulder_jnt_ctrl ;
+select -add rt_shoulder_jnt1 ;
+doCreatePointConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+pointConstraint -offset 0 0 0 -weight 1;
+connectAttr -f rt_armSwitches_ctrl_IK_FK_Rev.outputX rt_shoulder_jnt1_pointConstraint1.rt_fk_rt_shoulder_jnt_ctrlW0;
+
+connectAttr -f rt_shoulder_jnt_parentConstraint1.constraintRotateY rt_shoulder_jnt1.rotateY;
+connectAttr -f rt_shoulder_jnt_parentConstraint1.constraintRotateZ rt_shoulder_jnt1.rotateZ;
+connectAttr -f unitConversion47.output rt_shoulder_jnt1.rotateX;
+connectAttr -f rt_shoulder_jnt1.inverseScale frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetInverseScale;
+connectAttr -f rt_shoulder_jnt1.inverseScale rt_UpperArm_S_HLP_parentConstraint2.target[0].targetInverseScale;
+connectAttr -f rt_shoulder_jnt1.scalePower rt_shoulder_jnt_frameCache.stream;
+connectAttr -f rt_shoulder_jnt1.scalePower rt_shoulder_jnt_seg_2_joint_frameCache.stream;
+connectAttr -f rt_shoulder_jnt1.scalePower rt_shoulder_jnt_seg_1_joint_frameCache.stream;
+connectAttr -f rt_shoulder_jnt1.rotatePivotTranslate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotateTranslate;
+connectAttr -f rt_shoulder_jnt1.rotatePivotTranslate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotateTranslate;
+connectAttr -f rt_shoulder_jnt1.rotatePivotTranslate rt_shoulder_jnt_parentConstraint1.constraintRotateTranslate;
+connectAttr -f rt_shoulder_jnt1.rotatePivot frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotatePivot;
+connectAttr -f rt_shoulder_jnt1.rotatePivot rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotatePivot;
+connectAttr -f rt_shoulder_jnt1.rotatePivot rt_shoulder_jnt_parentConstraint1.constraintRotatePivot;
+connectAttr -f rt_shoulder_jnt1.pow rt_rt_shoulder_jnt_revPowOutput_md.input2X;
+connectAttr -f rt_shoulder_jnt1.parentInverseMatrix[0] rt_shoulder_jnt_parentConstraint1.constraintParentInverseMatrix;
+connectAttr -f rt_shoulder_jnt1.parentMatrix[0] frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetParentMatrix;
+connectAttr -f rt_shoulder_jnt1.parentMatrix[0] rt_UpperArm_S_HLP_parentConstraint2.target[0].targetParentMatrix;
+connectAttr -f rt_shoulder_jnt1.jointOrient frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetJointOrient;
+connectAttr -f rt_shoulder_jnt1.jointOrient rt_UpperArm_S_HLP_parentConstraint2.target[0].targetJointOrient;
+connectAttr -f rt_shoulder_jnt1.jointOrient rt_shoulder_jnt_parentConstraint1.constraintJointOrient;
+connectAttr -f rt_shoulder_jnt1.scale frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetScale;
+connectAttr -f rt_shoulder_jnt1.scale rt_UpperArm_S_HLP_parentConstraint2.target[0].targetScale;
+connectAttr -f rt_shoulder_jnt1.scaleX rt_rt_shoulder_jnt_revPowInput_md.input1X;
+connectAttr -f rt_shoulder_jnt1.rotate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotate;
+connectAttr -f rt_shoulder_jnt1.rotate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotate;
+connectAttr -f rt_shoulder_jnt1.translate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetTranslate;
+connectAttr -f rt_shoulder_jnt1.translate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetTranslate;
+connectAttr -f rt_shoulder_jnt1.instObjGroups[0] SkinJoints_set.dagSetMembers[15];
+connectAttr -f rt_shoulder_jnt1.rotateOrder frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotateOrder;
+connectAttr -f rt_shoulder_jnt1.rotateOrder rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotateOrder;
+connectAttr -f rt_shoulder_jnt1.rotateOrder rt_shoulder_jnt_parentConstraint1.constraintRotateOrder;
+connectAttr -f rt_shoulder_jnt1.segmentScaleCompensate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetScaleCompensate;
+connectAttr -f rt_shoulder_jnt1.segmentScaleCompensate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetScaleCompensate;
+
+
+
+select -r lt_UpperArm_E_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r 0.3 0.3 0.3 ;
+rename sphere1 lt_Arm_Mid_CTRL;
+parent lt_Arm_Mid_CTRL lt_elbow_jnt ;
+delete lt_UpperArm_E_HLP_parentConstraint2 lt_LowerArm_S_HLP_parentConstraint2;
+select -r lt_Arm_Mid_CTRL ;
+source "zeroOut.mel"; zeroOut("");
+rename Lt_Arm_Mid_CTRL_offset lt_Elbow_Toony_grp;
+select -r lt_UpperArm_E_HLP lt_LowerArm_S_HLP ;
+source "zeroOut.mel"; zeroOut("");
+rename "lt_LowerArm_S_HLP" "lt_LowerArm_S_Toony";
+rename "lt_UpperArm_E_HLP" "lt_UpperArm_E_Toony";
+rename "Lt_LowerArm_S_HLP_offset" "Lt_LowerArm_S_HLP_GRP";
+rename "Lt_UpperArm_E_HLP_offset" "Lt_UpperArm_E_HLP_GRP";
+parent Lt_UpperArm_E_HLP_GRP Lt_LowerArm_S_HLP_GRP lt_Arm_Mid_CTRL ;
+setAttr -lock true -keyable false -channelBox false "lt_Arm_Mid_CTRL.sx";
+setAttr -lock true -keyable false -channelBox false "lt_Arm_Mid_CTRL.sy";
+setAttr -lock true -keyable false -channelBox false "lt_Arm_Mid_CTRL.sz";
+setAttr -lock true -keyable false -channelBox false "lt_Arm_Mid_CTRL.v";
+rename lt_Arm_Mid_CTRL lt_Arm_Elbow_Toony;
+select -r lt_UpperArm_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl lt_UpperArm_M_HLP ;
+parent -s -r;
+delete sphere1;
+select -r lt_LowerArm_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl lt_LowerArm_M_HLP ;
+parent -s -r;
+delete sphere1;
+
+
+
+select -r rt_UpperArm_E_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+rename sphere1 rt_Arm_Mid_CTRL;
+parent rt_Arm_Mid_CTRL rt_elbow_jnt ;
+delete rt_UpperArm_E_HLP_parentConstraint2 rt_LowerArm_S_HLP_parentConstraint2;
+select -r rt_Arm_Mid_CTRL ;
+source "zeroOut.mel"; zeroOut("");
+rename Rt_Arm_Mid_CTRL_offset rt_Elbow_Toony_grp;
+select -r rt_UpperArm_E_HLP rt_LowerArm_S_HLP ;
+source "zeroOut.mel"; zeroOut("");
+rename "rt_LowerArm_S_HLP" "rt_LowerArm_S_Toony";
+rename "rt_UpperArm_E_HLP" "rt_UpperArm_E_Toony";
+rename "Rt_LowerArm_S_HLP_offset" "rt_LowerArm_S_HLP_GRP";
+rename "Rt_UpperArm_E_HLP_offset" "rt_UpperArm_E_HLP_GRP";
+parent rt_UpperArm_E_HLP_GRP rt_LowerArm_S_HLP_GRP rt_Arm_Mid_CTRL ;
+setAttr -lock true -keyable false -channelBox false "rt_Arm_Mid_CTRL.sx";
+setAttr -lock true -keyable false -channelBox false "rt_Arm_Mid_CTRL.sy";
+setAttr -lock true -keyable false -channelBox false "rt_Arm_Mid_CTRL.sz";
+setAttr -lock true -keyable false -channelBox false "rt_Arm_Mid_CTRL.v";
+rename rt_Arm_Mid_CTRL rt_Arm_Elbow_Toony;
+select -r rt_UpperArm_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl rt_UpperArm_M_HLP ;
+parent -s -r;
+delete sphere1;
+select -r rt_LowerArm_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl rt_LowerArm_M_HLP ;
+parent -s -r;
+delete sphere1;
+
+
+
+select -r rt_UpperLeg_E_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+rename sphere1 rt_Leg_Mid_CTRL;
+parent rt_Leg_Mid_CTRL rt_knee_jnt ;
+delete rt_UpperLeg_E_HLP_parentConstraint2 rt_LowerLeg_S_HLP_parentConstraint2;
+select -r rt_Leg_Mid_CTRL ;
+source "zeroOut.mel"; zeroOut("");
+rename Rt_Leg_Mid_CTRL_offset rt_Knee_Toony_grp;
+select -r rt_UpperLeg_E_HLP rt_LowerLeg_S_HLP ;
+source "zeroOut.mel"; zeroOut("");
+rename "rt_LowerLeg_S_HLP" "rt_LowerLeg_S_Toony";
+rename "rt_UpperLeg_E_HLP" "rt_UpperLeg_E_Toony";
+rename "Rt_LowerLeg_S_HLP_offset" "rt_LowerLeg_S_HLP_GRP";
+rename "Rt_UpperLeg_E_HLP_offset" "rt_UpperLeg_E_HLP_GRP";
+parent rt_UpperLeg_E_HLP_GRP rt_LowerLeg_S_HLP_GRP rt_Leg_Mid_CTRL ;
+setAttr -lock true -keyable false -channelBox false "rt_Leg_Mid_CTRL.sx";
+setAttr -lock true -keyable false -channelBox false "rt_Leg_Mid_CTRL.sy";
+setAttr -lock true -keyable false -channelBox false "rt_Leg_Mid_CTRL.sz";
+setAttr -lock true -keyable false -channelBox false "rt_Leg_Mid_CTRL.v";
+rename rt_Leg_Mid_CTRL rt_Leg_Elbow_Toony;
+select -r rt_UpperLeg_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl rt_UpperLeg_M_HLP ;
+parent -s -r;
+delete sphere1;
+select -r rt_LowerLeg_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl rt_LowerLeg_M_HLP ;
+parent -s -r;
+delete sphere1;
+
+
+
+select -r lt_UpperLeg_E_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+rename sphere1 lt_Leg_Mid_CTRL;
+parent lt_Leg_Mid_CTRL lt_knee_jnt ;
+delete lt_UpperLeg_E_HLP_parentConstraint2 lt_LowerLeg_S_HLP_parentConstraint2;
+select -r lt_Leg_Mid_CTRL ;
+source "zeroOut.mel"; zeroOut("");
+rename Lt_Leg_Mid_CTRL_offset lt_Knee_Toony_grp;
+select -r lt_UpperLeg_E_HLP lt_LowerLeg_S_HLP ;
+source "zeroOut.mel"; zeroOut("");
+rename "lt_LowerLeg_S_HLP" "lt_LowerLeg_S_Toony";
+rename "lt_UpperLeg_E_HLP" "lt_UpperLeg_E_Toony";
+rename "Lt_LowerLeg_S_HLP_offset" "lt_LowerLeg_S_HLP_GRP";
+rename "Lt_UpperLeg_E_HLP_offset" "lt_UpperLeg_E_HLP_GRP";
+parent lt_UpperLeg_E_HLP_GRP lt_LowerLeg_S_HLP_GRP lt_Leg_Mid_CTRL ;
+setAttr -lock true -keyable false -channelBox false "lt_Leg_Mid_CTRL.sx";
+setAttr -lock true -keyable false -channelBox false "lt_Leg_Mid_CTRL.sy";
+setAttr -lock true -keyable false -channelBox false "lt_Leg_Mid_CTRL.sz";
+setAttr -lock true -keyable false -channelBox false "lt_Leg_Mid_CTRL.v";
+rename lt_Leg_Mid_CTRL lt_Leg_Elbow_Toony;
+select -r lt_UpperLeg_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl lt_UpperLeg_M_HLP ;
+parent -s -r;
+delete sphere1;
+select -r lt_LowerLeg_M_HLP ;
+source "wireShape.mel"; wireShape("sphere");
+select -r sphere1.cv[0:16] ;
+scale -r  0.3 0.3 0.3 ;
+select -r sphere1 ;
+pickWalk -d down;
+select -tgl lt_LowerLeg_M_HLP ;
+parent -s -r;
+delete sphere1;
+
+
+}
+
+
+
 
 
 studio56RigTools;
+
 
 
 
