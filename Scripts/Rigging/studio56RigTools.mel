@@ -3455,7 +3455,7 @@ select -tgl lt_LowerLeg_M_HLP ;
 parent -s -r;
 delete sphere1;
 
-rename lt_fingersParts_grp1 lt_fingersParts_grp;
+rename "lt_fingersParts_grp1" "lt_fingersParts_grp";
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateX;
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateY;
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateZ;
@@ -3473,7 +3473,7 @@ select -add lt_fingersParts_grp ;
 doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
 parentConstraint -mo -weight 1;
 
-rename rt_fingersParts_grp1 rt_fingersParts_grp;
+rename "rt_fingersParts_grp1" "rt_fingersParts_grp";
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateX;
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateY;
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateZ;
