@@ -3456,6 +3456,41 @@ parent -s -r;
 delete sphere1;
 
 
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateX;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateY;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateZ;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.translateX;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.translateY;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.translateZ;
+CBunlockAttr "lt_fingersParts_grp.tx";
+CBunlockAttr "lt_fingersParts_grp.ty";
+CBunlockAttr "lt_fingersParts_grp.tz";
+CBunlockAttr "lt_fingersParts_grp.rx";
+CBunlockAttr "lt_fingersParts_grp.ry";
+CBunlockAttr "lt_fingersParts_grp.rz";
+select -r lt_wristEnd_jnt ;
+select -add lt_fingersParts_grp ;
+doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+parentConstraint -mo -weight 1;
+
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateX;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateY;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateZ;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.translateX;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.translateY;
+setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.translateZ;
+CBunlockAttr "rt_fingersParts_grp.tx";
+CBunlockAttr "rt_fingersParts_grp.ty";
+CBunlockAttr "rt_fingersParts_grp.tz";
+CBunlockAttr "rt_fingersParts_grp.rx";
+CBunlockAttr "rt_fingersParts_grp.ry";
+CBunlockAttr "rt_fingersParts_grp.rz";
+select -r rt_wristEnd_jnt ;
+select -add rt_fingersParts_grp ;
+doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+parentConstraint -mo -weight 1;
+
+
 }
 
 
