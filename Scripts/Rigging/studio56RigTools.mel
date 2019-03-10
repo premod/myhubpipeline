@@ -2747,6 +2747,7 @@ global proc linkJointSetup()
 global proc addToonSetup()
 {
 
+//toon setup for 2 legged character
 
 string $name[]={"lt_UpperArm","lt_LowerArm","rt_UpperArm","rt_LowerArm","lt_UpperLeg","lt_LowerLeg","rt_UpperLeg","rt_LowerLeg"};
 string $nm;
@@ -2984,9 +2985,9 @@ parent ($nm+"_GRP") toonGRP;
 
 }
 
+//connect toony to the rig
 
 parent toonGRP non_scale_grp;
-
 
 select -r lt_shoulder_jnt ;
 select -tgl lt_UpperArm_S_HLP ;
@@ -3470,6 +3471,8 @@ select -tgl lt_LowerLeg_M_HLP ;
 parent -s -r;
 delete sphere1;
 
+//left side finger orientation with the wrist
+
 rename "lt_fingersParts_grp1" "lt_fingersParts_grp";
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateX;
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|lt_fingersParts_grp.rotateY;
@@ -3488,6 +3491,7 @@ select -add lt_fingersParts_grp ;
 doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
 parentConstraint -mo -weight 1;
 
+//right side finger orientation with the wrist
 rename "rt_fingersParts_grp1" "rt_fingersParts_grp";
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateX;
 setAttr -k on |rig|worldA_ctrl|worldB_ctrl|controls_grp|rt_fingersParts_grp.rotateY;
@@ -3508,8 +3512,66 @@ parentConstraint -mo -weight 1;
 
 
 
+//set the nurbs plane visiblity off to toony setups
+setAttr "lt_UpperArm_GEO.visibility" 0;
+setAttr "rt_LowerLeg_GEO.visibility" 0;
+setAttr "rt_UpperLeg_GEO.visibility" 0;
+setAttr "lt_LowerLeg_GEO.visibility" 0;
+setAttr "lt_UpperLeg_GEO.visibility" 0;
+setAttr "rt_LowerArm_GEO.visibility" 0;
+setAttr "rt_UpperArm_GEO.visibility" 0;
+setAttr "lt_LowerArm_GEO.visibility" 0;
+setAttr -lock true "lt_UpperArm_GEO.v";
+setAttr -lock true "rt_LowerLeg_GEO.v";
+setAttr -lock true "rt_UpperLeg_GEO.v";
+setAttr -lock true "lt_LowerLeg_GEO.v";
+setAttr -lock true "lt_UpperLeg_GEO.v";
+setAttr -lock true "rt_LowerArm_GEO.v";
+setAttr -lock true "rt_UpperArm_GEO.v";
+setAttr -lock true "lt_LowerArm_GEO.v";
+
+//finally scale fix to the toony setups
+connectAttr Placer_ctrl.scale lt_LowerLeg_2_FLC.scale;
+connectAttr Placer_ctrl.scale lt_UpperArm_3_FLC.scale;
+connectAttr Placer_ctrl.scale lt_LowerLeg_3_FLC.scale;
+connectAttr Placer_ctrl.scale rt_LowerLeg_1_FLC.scale;
+connectAttr Placer_ctrl.scale lt_UpperArm_2_FLC.scale;
+connectAttr Placer_ctrl.scale lt_UpperArm_1_FLC.scale;
+connectAttr Placer_ctrl.scale rt_LowerArm_2_FLC.scale;
+connectAttr Placer_ctrl.scale lt_LowerArm_2_FLC.scale;
+connectAttr Placer_ctrl.scale rt_UpperArm_3_FLC.scale;
+connectAttr Placer_ctrl.scale rt_LowerArm_3_FLC.scale;
+connectAttr Placer_ctrl.scale rt_UpperArm_1_FLC.scale;
+connectAttr Placer_ctrl.scale lt_LowerArm_1_FLC.scale;
+connectAttr Placer_ctrl.scale rt_LowerLeg_2_FLC.scale;
+connectAttr Placer_ctrl.scale lt_LowerArm_3_FLC.scale;
+connectAttr Placer_ctrl.scale rt_LowerArm_M_HLP.scale;
+connectAttr Placer_ctrl.scale lt_LowerLeg_1_FLC.scale;
+connectAttr Placer_ctrl.scale lt_LowerLeg_M_HLP.scale;
+connectAttr Placer_ctrl.scale lt_UpperLeg_2_FLC.scale;
+connectAttr Placer_ctrl.scale lt_UpperLeg_1_FLC.scale;
+connectAttr Placer_ctrl.scale rt_UpperLeg_M_HLP.scale;
+connectAttr Placer_ctrl.scale rt_UpperArm_2_FLC.scale;
+connectAttr Placer_ctrl.scale rt_UpperLeg_1_FLC.scale;
+connectAttr Placer_ctrl.scale lt_LowerArm_M_HLP.scale;
+connectAttr Placer_ctrl.scale rt_LowerLeg_3_FLC.scale;
+connectAttr Placer_ctrl.scale rt_UpperArm_M_HLP.scale;
+connectAttr Placer_ctrl.scale lt_UpperLeg_3_FLC.scale;
+connectAttr Placer_ctrl.scale lt_UpperArm_M_HLP.scale;
+connectAttr Placer_ctrl.scale rt_LowerArm_1_FLC.scale;
+connectAttr Placer_ctrl.scale lt_UpperLeg_M_HLP.scale;
+connectAttr Placer_ctrl.scale rt_UpperLeg_2_FLC.scale;
+connectAttr Placer_ctrl.scale rt_UpperLeg_3_FLC.scale;
+connectAttr Placer_ctrl.scale rt_LowerLeg_M_HLP.scale;
 
 
+
+//create skinned joints sets
+select -r lt_middle2_jnt lt_pinky1_jnt rt_LowerArm_2_JNT lt_UpperLeg_2_JNT lt_ring4_jnt lt_middle4_jnt lt_LowerLeg_3_JNT spineHips_jnt spine4_jnt lt_thumb2_jnt lt_index4_jnt lt_wrist_jnt rt_UpperArm_3_JNT rt_UpperArm_1_JNT lt_index2_jnt rt_pinky1_jnt rt_ring4_jnt rt_index4_jnt spineDef4_jnt rt_middle1_jnt rt_wrist_jnt rt_ring5_jnt rt_UpperLeg_2_JNT rt_pinky2_jnt rt_middle3_jnt spineDef5_jnt rt_ring3_jnt lt_UpperArm_3_JNT lt_ball_jnt lt_ankle_jnt rt_UpperArm_2_JNT lt_LowerArm_2_JNT spineDef3_jnt rt_LowerArm_3_JNT lt_UpperLeg_3_JNT spineDef2_jnt lt_pinky5_jnt lt_hip_jnt rt_ball_jnt neckDef1_jnt lt_ring2_jnt rt_thumb4_jnt rt_index1_jnt lt_middle3_jnt rt_thumb1_jnt rt_index3_jnt rt_hip_jnt Jaw_JNT head1_jnt lt_pinky2_jnt lt_shoulder_jnt1 lt_LowerLeg_2_JNT lt_pinky3_jnt lt_pinky4_jnt rt_LowerArm_1_JNT lt_LowerLeg_1_JNT lt_ring3_jnt rt_pinky5_jnt lt_UpperArm_2_JNT lt_index5_jnt lt_thumb3_jnt lt_thumb4_jnt rt_UpperLeg_1_JNT rt_LowerLeg_3_JNT lt_index3_jnt rt_middle2_jnt rt_index5_jnt rt_middle5_jnt lt_LowerArm_3_JNT lt_LowerArm_1_JNT rt_LowerLeg_1_JNT lt_index1_jnt lt_middle1_jnt rt_pinky3_jnt rt_ring2_jnt rt_UpperLeg_3_JNT rt_ring1_jnt rt_middle4_jnt lt_thumb1_jnt lt_UpperArm_1_JNT rt_pinky4_jnt lt_UpperLeg_1_JNT rt_LowerLeg_2_JNT rt_clav_jnt lt_ring5_jnt rt_ankle_jnt rt_shoulder_jnt1 lt_clav_jnt lt_middle5_jnt neckDef3_jnt rt_index2_jnt neckDef2_jnt lt_ring1_jnt rt_thumb3_jnt rt_thumb2_jnt ;
+select -add spineDef6_jnt ;
+select -add spineDef7_jnt ;
+select -d neckDef3_jnt ;
+$createSetResult = `sets -name "SkinJoints"`;
 
 }
 
@@ -3518,6 +3580,9 @@ parentConstraint -mo -weight 1;
 
 
 studio56RigTools;
+
+
+
 
 
 
