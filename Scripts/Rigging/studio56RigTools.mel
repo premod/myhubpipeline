@@ -3564,6 +3564,48 @@ connectAttr Placer_ctrl.scale rt_UpperLeg_2_FLC.scale;
 connectAttr Placer_ctrl.scale rt_UpperLeg_3_FLC.scale;
 connectAttr Placer_ctrl.scale rt_LowerLeg_M_HLP.scale;
 
+//finger D setup
+string $ctrls []  = {"lt_armSwitches_ctrl","rt_armSwitches_ctrl"};
+
+for ($name in $ctrls)
+{
+	addAttr -ln "Index_D_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Index_D_Curl");
+		addAttr -ln "Mid_D_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Mid_D_Curl");
+			addAttr -ln "Ring_D_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Ring_D_Curl");
+		addAttr -ln "Pinky_D_Curl"  -at double   $name;
+	setAttr -e-keyable true  ($name + ".Pinky_D_Curl");
+
+	CBunlockAttr "frzRt_index4_jnt_grp.rz";
+    CBunlockAttr "frzRt_pinky4_jnt_grp.rz";
+    CBunlockAttr "frzRt_ring4_jnt_grp.rz";
+    CBunlockAttr "frzRt_middle4_jnt_grp.rz";
+	CBunlockAttr "frzLt_pinky4_jnt_grp.rz";
+    CBunlockAttr "frzLt_index4_jnt_grp.rz";
+    CBunlockAttr "frzLt_middle4_jnt_grp.rz";
+    CBunlockAttr "frzLt_ring4_jnt_grp.rz";
+	connectAttr -f lt_armSwitches_ctrl.Index_D_Curl frzLt_index4_jnt_grp.rz;
+	connectAttr -f lt_armSwitches_ctrl.Mid_D_Curl frzLt_middle4_jnt_grp.rz;
+	connectAttr -f lt_armSwitches_ctrl.Ring_D_Curl frzLt_ring4_jnt_grp.rz;
+	connectAttr -f lt_armSwitches_ctrl.Pinky_D_Curl frzLt_pinky4_jnt_grp.rz;
+
+	connectAttr -f rt_armSwitches_ctrl.Index_D_Curl frzRt_index4_jnt_grp.rz;
+	connectAttr -f rt_armSwitches_ctrl.Mid_D_Curl frzRt_middle4_jnt_grp.rz;
+    connectAttr -f rt_armSwitches_ctrl.Ring_D_Curl frzRt_ring4_jnt_grp.rz;
+	connectAttr -f rt_armSwitches_ctrl.Pinky_D_Curl frzRt_pinky4_jnt_grp.rz;
+
+	setAttr -lock true "frzRt_pinky4_jnt_grp.rz";
+    setAttr -lock true "frzLt_index4_jnt_grp.rz";
+    setAttr -lock true "frzLt_middle4_jnt_grp.rz";
+    setAttr -lock true "frzLt_ring4_jnt_grp.rz";
+    setAttr -lock true "frzLt_pinky4_jnt_grp.rz";
+    setAttr -lock true "frzRt_index4_jnt_grp.rz";
+    setAttr -lock true "frzRt_middle4_jnt_grp.rz";
+    setAttr -lock true "frzRt_ring4_jnt_grp.rz";
+
+	}
 
 
 //create skinned joints sets
