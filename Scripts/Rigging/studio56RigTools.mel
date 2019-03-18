@@ -3586,15 +3586,105 @@ for ($name in $ctrls)
     CBunlockAttr "frzLt_index4_jnt_grp.rz";
     CBunlockAttr "frzLt_middle4_jnt_grp.rz";
     CBunlockAttr "frzLt_ring4_jnt_grp.rz";
-	connectAttr -f lt_armSwitches_ctrl.Index_D_Curl frzLt_index4_jnt_grp.rz;
-	connectAttr -f lt_armSwitches_ctrl.Mid_D_Curl frzLt_middle4_jnt_grp.rz;
-	connectAttr -f lt_armSwitches_ctrl.Ring_D_Curl frzLt_ring4_jnt_grp.rz;
-	connectAttr -f lt_armSwitches_ctrl.Pinky_D_Curl frzLt_pinky4_jnt_grp.rz;
 
-	connectAttr -f rt_armSwitches_ctrl.Index_D_Curl frzRt_index4_jnt_grp.rz;
-	connectAttr -f rt_armSwitches_ctrl.Mid_D_Curl frzRt_middle4_jnt_grp.rz;
-    connectAttr -f rt_armSwitches_ctrl.Ring_D_Curl frzRt_ring4_jnt_grp.rz;
-	connectAttr -f rt_armSwitches_ctrl.Pinky_D_Curl frzRt_pinky4_jnt_grp.rz;
+
+addAttr -ln "CurlOffsetS4"  -at double  -dv 1.200 lt_armSwitches_ctrl;
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "lt_fingerCurlAdjust_4_mdl";
+connectAttr lt_armSwitches_ctrl.CurlOffsetS4 lt_fingerCurlAdjust_4_mdl.input2;
+connectAttr lt_armSwitches_ctrl.fullCurl lt_fingerCurlAdjust_4_mdl.input1;
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "lt_pinky4_jnt_ctrl_rZ_adl";
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "lt_ring4_jnt_ctrl_rZ_adl";
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "lt_middle4_jnt_ctrl_rZ_adl";
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "lt_index4_jnt_ctrl_rZ_adl";
+connectAttr lt_fingerCurlAdjust_4_mdl.output lt_pinky4_jnt_ctrl_rZ_adl.input1;
+connectAttr lt_fingerCurlAdjust_4_mdl.output lt_ring4_jnt_ctrl_rZ_adl.input1;
+connectAttr lt_fingerCurlAdjust_4_mdl.output lt_middle4_jnt_ctrl_rZ_adl.input1;
+connectAttr lt_fingerCurlAdjust_4_mdl.output lt_index4_jnt_ctrl_rZ_adl.input1;
+connectAttr lt_armSwitches_ctrl.Pinky_D_Curl lt_pinky4_jnt_ctrl_rZ_adl.input2;
+connectAttr lt_armSwitches_ctrl.Ring_D_Curl lt_ring4_jnt_ctrl_rZ_adl.input2;
+connectAttr lt_armSwitches_ctrl.Index_D_Curl lt_index4_jnt_ctrl_rZ_adl.input2;
+connectAttr lt_armSwitches_ctrl.Mid_D_Curl lt_middle4_jnt_ctrl_rZ_adl.input2;
+connectAttr lt_pinky4_jnt_ctrl_rZ_adl.output  frzLt_pinky4_jnt_grp.rotateZ;
+connectAttr lt_ring4_jnt_ctrl_rZ_adl.output  frzLt_ring4_jnt_grp.rotateZ;
+connectAttr lt_middle4_jnt_ctrl_rZ_adl.output  frzLt_middle4_jnt_grp.rotateZ;
+connectAttr lt_index4_jnt_ctrl_rZ_adl.output  frzLt_index4_jnt_grp.rotateZ;
+setAttr "lt_armSwitches_ctrl.curlOffset_s3" 1.9;
+
+addAttr -ln "thumbCurlOffsetS1"  -at double  -dv 0 lt_armSwitches_ctrl;
+addAttr -ln "thumbCurlOffsetS2"  -at double  -dv 0 lt_armSwitches_ctrl;
+addAttr -ln "thumbCurlOffsetS3"  -at double  -dv 0 lt_armSwitches_ctrl;
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "lt_thumbCurlAdjust_1_mdl";
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "lt_thumbCurlAdjust_2_mdl";
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "lt_thumbCurlAdjust_3_mdl";
+connectAttr -f lt_armSwitches_ctrl.fullCurl lt_thumbCurlAdjust_1_mdl.input1;
+connectAttr -f lt_armSwitches_ctrl.thumbCurlOffsetS1 lt_thumbCurlAdjust_1_mdl.input2;
+connectAttr -f lt_thumbCurlAdjust_1_mdl.output lt_thumb1_jnt_ctrl_rZ_adl.input1;
+
+connectAttr -f lt_armSwitches_ctrl.fullCurl lt_thumbCurlAdjust_2_mdl.input1;
+connectAttr -f lt_armSwitches_ctrl.thumbCurlOffsetS2 lt_thumbCurlAdjust_2_mdl.input2;
+connectAttr -f lt_thumbCurlAdjust_2_mdl.output lt_thumb2_jnt_ctrl_rZ_adl.input1;
+
+connectAttr -f lt_armSwitches_ctrl.fullCurl lt_thumbCurlAdjust_3_mdl.input1;
+connectAttr -f lt_armSwitches_ctrl.thumbCurlOffsetS3 lt_thumbCurlAdjust_3_mdl.input2;
+connectAttr -f lt_thumbCurlAdjust_3_mdl.output lt_thumb3_jnt_ctrl_rZ_adl.input1;
+
+
+
+addAttr -ln "CurlOffsetS4"  -at double  -dv 1.200 rt_armSwitches_ctrl;
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "rt_fingerCurlAdjust_4_mdl";
+connectAttr rt_armSwitches_ctrl.CurlOffsetS4 rt_fingerCurlAdjust_4_mdl.input2;
+connectAttr rt_armSwitches_ctrl.fullCurl rt_fingerCurlAdjust_4_mdl.input1;
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "rt_pinky4_jnt_ctrl_rZ_adl";
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "rt_ring4_jnt_ctrl_rZ_adl";
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "rt_middle4_jnt_ctrl_rZ_adl";
+shadingNode -asUtility addDoubleLinear;
+rename "addDoubleLinear1" "rt_index4_jnt_ctrl_rZ_adl";
+connectAttr rt_fingerCurlAdjust_4_mdl.output rt_pinky4_jnt_ctrl_rZ_adl.input1;
+connectAttr rt_fingerCurlAdjust_4_mdl.output rt_ring4_jnt_ctrl_rZ_adl.input1;
+connectAttr rt_fingerCurlAdjust_4_mdl.output rt_middle4_jnt_ctrl_rZ_adl.input1;
+connectAttr rt_fingerCurlAdjust_4_mdl.output rt_index4_jnt_ctrl_rZ_adl.input1;
+connectAttr rt_armSwitches_ctrl.Pinky_D_Curl rt_pinky4_jnt_ctrl_rZ_adl.input2;
+connectAttr rt_armSwitches_ctrl.Ring_D_Curl rt_ring4_jnt_ctrl_rZ_adl.input2;
+connectAttr rt_armSwitches_ctrl.Index_D_Curl rt_index4_jnt_ctrl_rZ_adl.input2;
+connectAttr rt_armSwitches_ctrl.Mid_D_Curl rt_middle4_jnt_ctrl_rZ_adl.input2;
+connectAttr rt_pinky4_jnt_ctrl_rZ_adl.output  frzRt_pinky4_jnt_grp.rotateZ;
+connectAttr rt_ring4_jnt_ctrl_rZ_adl.output  frzRt_ring4_jnt_grp.rotateZ;
+connectAttr rt_middle4_jnt_ctrl_rZ_adl.output  frzRt_middle4_jnt_grp.rotateZ;
+connectAttr rt_index4_jnt_ctrl_rZ_adl.output  frzRt_index4_jnt_grp.rotateZ;
+setAttr "rt_armSwitches_ctrl.curlOffset_s3" 1.9;
+
+addAttr -ln "thumbCurlOffsetS1"  -at double  -dv 0 rt_armSwitches_ctrl;
+addAttr -ln "thumbCurlOffsetS2"  -at double  -dv 0 rt_armSwitches_ctrl;
+addAttr -ln "thumbCurlOffsetS3"  -at double  -dv 0 rt_armSwitches_ctrl;
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "rt_thumbCurlAdjust_1_mdl";
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "rt_thumbCurlAdjust_2_mdl";
+shadingNode -asUtility multDoubleLinear;
+rename "multDoubleLinear1" "rt_thumbCurlAdjust_3_mdl";
+connectAttr -f rt_armSwitches_ctrl.fullCurl rt_thumbCurlAdjust_1_mdl.input1;
+connectAttr -f rt_armSwitches_ctrl.thumbCurlOffsetS1 rt_thumbCurlAdjust_1_mdl.input2;
+connectAttr -f rt_thumbCurlAdjust_1_mdl.output rt_thumb1_jnt_ctrl_rZ_adl.input1;
+
+connectAttr -f rt_armSwitches_ctrl.fullCurl rt_thumbCurlAdjust_2_mdl.input1;
+connectAttr -f rt_armSwitches_ctrl.thumbCurlOffsetS2 rt_thumbCurlAdjust_2_mdl.input2;
+connectAttr -f rt_thumbCurlAdjust_2_mdl.output rt_thumb2_jnt_ctrl_rZ_adl.input1;
+
+connectAttr -f rt_armSwitches_ctrl.fullCurl rt_thumbCurlAdjust_3_mdl.input1;
+connectAttr -f rt_armSwitches_ctrl.thumbCurlOffsetS3 rt_thumbCurlAdjust_3_mdl.input2;
+connectAttr -f rt_thumbCurlAdjust_3_mdl.output rt_thumb3_jnt_ctrl_rZ_adl.input1;
 
 	setAttr -lock true "frzRt_pinky4_jnt_grp.rz";
     setAttr -lock true "frzLt_index4_jnt_grp.rz";
