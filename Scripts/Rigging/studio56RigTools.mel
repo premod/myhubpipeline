@@ -3577,7 +3577,7 @@ for ($name in $ctrls)
 	setAttr -e-keyable true  ($name + ".Ring_D_Curl");
 		addAttr -ln "Pinky_D_Curl"  -at double   $name;
 	setAttr -e-keyable true  ($name + ".Pinky_D_Curl");
-
+}
 	CBunlockAttr "frzRt_index4_jnt_grp.rz";
     CBunlockAttr "frzRt_pinky4_jnt_grp.rz";
     CBunlockAttr "frzRt_ring4_jnt_grp.rz";
@@ -3695,7 +3695,27 @@ connectAttr -f rt_thumbCurlAdjust_3_mdl.output rt_thumb3_jnt_ctrl_rZ_adl.input1;
     setAttr -lock true "frzRt_middle4_jnt_grp.rz";
     setAttr -lock true "frzRt_ring4_jnt_grp.rz";
 
-	}
+
+// free hip
+select -r spineHips_jnt ;
+source "wireShape.mel"; wireShape("circleX");
+rename nurbsCircle1 freeHip_ctrl;
+parent freeHip_ctrl spine1_jnt ;
+parent spineHips_jnt freeHip_ctrl ;
+select -r freeHip_ctrl ;
+source "zeroOut.mel"; zeroOut("");
+delete spineHips_jnt_parentConstraint1;
+select -r hip_ctrl ;
+select -add FreeHip_ctrl_offset ;
+doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+parentConstraint -mo -weight 1;
+setAttr -lock true -keyable false -channelBox false "freeHip_ctrl.sx";
+setAttr -lock true -keyable false -channelBox false "freeHip_ctrl.sy";
+setAttr -lock true -keyable false -channelBox false "freeHip_ctrl.sz";
+setAttr -lock true -keyable false -channelBox false "freeHip_ctrl.v";
+disconnectAttr makeNurbCircle2.outputCurve freeHip_ctrlShape.create;
+
+
 
 
 //create skinned joints sets
