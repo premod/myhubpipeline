@@ -70,7 +70,7 @@ def assetCleanerRig(*args):
 
 def riggingMenu():
 	gMainWindow=maya.mel.eval('string $temp=$gMainWindow')
-	showMyMenu=cmds.menu(parent=gMainWindow,tearOff=True,label='Studio56 Rigging')
+	showMyMenu=cmds.menu(parent=gMainWindow,tearOff=True,label='Rigging_Py')
 	cmds.menuItem(label = 'Auto Save',command=('autoSave()'))
 	cmds.menuItem(label = 'Write Folder Contents',command=('writeFolderFiles()'))
 	cmds.menuItem(label = 'Artist(s) SignOff',command=('openURLforAssetSignOff()'))
