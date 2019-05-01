@@ -26,7 +26,6 @@ global proc userSetup()
 	menuItem -l "vertex smooth weights" -c "advancedSkin(\"vertexSmooth\") ";
 	menuItem -l "copy skin (wrapping)" -c "advancedSkin(\"copySkin\") ";
 	setParent -menu..; 
-	menuItem -l "deformer to skinCluster" -c "python("import smartDeformer; smartDeformer.show_window()");
 	menuItem -label "Hyper Real Mesh Parent" -c "hyperRealMeshParent";
 	menuItem -label "Create Controllers" -c "rig101wireControllers";
 	menuItem -divider true;
