@@ -3,8 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="29d09ecc-e1c6-47c1-b877-7c73d391c1bf" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/userSetup.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/usersetup.mel" beforeDir="false" afterPath="$PROJECT_DIR$/usersetup.mel" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/userSetup.mel" beforeDir="false" afterPath="$PROJECT_DIR$/userSetup.mel" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/usrSetup.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,17 +17,17 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/studio56RigTools.mel">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="433">
+            <state relative-caret-position="75096">
               <caret line="3576" column="43" selection-start-line="3576" selection-start-column="43" selection-end-line="3576" selection-end-column="43" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/usersetup.mel">
+        <entry file="file://$PROJECT_DIR$/userSetup.mel">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="231">
-              <caret line="107" lean-forward="true" selection-start-line="107" selection-end-line="107" />
+            <state relative-caret-position="273">
+              <caret line="109" column="49" selection-start-line="109" selection-start-column="49" selection-end-line="109" selection-end-column="49" />
             </state>
           </provider>
         </entry>
@@ -46,9 +46,9 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/studio56RigTools.mel" />
-        <option value="$PROJECT_DIR$/userSetup.mel" />
         <option value="$PROJECT_DIR$/userSetup.py" />
         <option value="$PROJECT_DIR$/usersetup.mel" />
+        <option value="$PROJECT_DIR$/userSetup.mel" />
       </list>
     </option>
   </component>
@@ -66,7 +66,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -78,6 +77,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -240,7 +240,28 @@
       <option name="project" value="LOCAL" />
       <updated>1556698148811</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="updated final">
+      <created>1556698520560</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1556698520560</updated>
+    </task>
+    <task id="LOCAL-00021" summary="updated final">
+      <created>1556698533549</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1556698533549</updated>
+    </task>
+    <task id="LOCAL-00022" summary="updated final">
+      <created>1556698614344</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1556698614345</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -309,27 +330,27 @@
     <entry file="file://$PROJECT_DIR$/transferUV_Shader.mel">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/userSetup.py">
+    <entry file="file://$PROJECT_DIR$/userSetup.py" />
+    <entry file="file://$PROJECT_DIR$/studio56RigTools.mel">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="294">
-          <caret line="101" column="35" lean-forward="true" selection-start-line="101" selection-start-column="35" selection-end-line="101" selection-end-column="35" />
+        <state relative-caret-position="75096">
+          <caret line="3576" column="43" selection-start-line="3576" selection-start-column="43" selection-end-line="3576" selection-end-column="43" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/usrSetup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
           <folding>
             <element signature="e#0#24#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/studio56RigTools.mel">
+    <entry file="file://$PROJECT_DIR$/userSetup.mel">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="433">
-          <caret line="3576" column="43" selection-start-line="3576" selection-start-column="43" selection-end-line="3576" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/usersetup.mel">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="231">
-          <caret line="107" lean-forward="true" selection-start-line="107" selection-end-line="107" />
+        <state relative-caret-position="273">
+          <caret line="109" column="49" selection-start-line="109" selection-start-column="49" selection-end-line="109" selection-end-column="49" />
         </state>
       </provider>
     </entry>
