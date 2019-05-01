@@ -1,9 +1,12 @@
 
 global proc userSetup()
 {
-    	global string $gMainWindow;
+
+
+    global string $gMainWindow;
 	setParent $gMainWindow;
 	menu -label "Rigging_Mel" -parent $gMainWindow -tearOff on;
+	python ("import userSetup; reload(userSetup); userSetup.riggingMenu()");
 	menuItem -label "Auto Save" -c "NPautoSaveOptions";
 	menuItem -label "Optimize and Save" -c "fileOptimisation";
 	menuItem -label "Remove Namespace"-c "removeNsPrefix;";
@@ -107,7 +110,7 @@ source "cometMenu.mel";
 cgmToolbox();
 
 
-python ("import menuserSetup; reload(menuserSetup); menuserSetup.riggingMenu()");
+
 
 
 
