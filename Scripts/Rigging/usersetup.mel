@@ -12,10 +12,10 @@ global proc userSetup()
 	menuItem -label "Remove Namespace"-c "removeNsPrefix;";
 	menuItem -divider true;
 	menuItem -sm on -tearOff true -label "UV transfer";
-		menuItem -l "Transfer UV" -c "transferUV_Shader (\"copyUV\") ";
-		menuItem -l "Transfer Shader" -c "transferUV_Shader (\"copyShader\") ";
-		menuItem -divider true;
-		menuItem -l "Transfer Both" -c "transferUV_Shader (\"both\")  ";
+	menuItem -l "Transfer UV" -c "transferUV_Shader (\"copyUV\") ";
+	menuItem -l "Transfer Shader" -c "transferUV_Shader (\"copyShader\") ";
+	menuItem -divider true;
+	menuItem -l "Transfer Both" -c "transferUV_Shader (\"both\")  ";
 	setParent -menu..; 
 	menuItem -label "UV transfer w/o history"-c "zbw_cleanTransferUV";
 	menuItem -label "Texture Manager" -c "FileTextureManager";
@@ -23,22 +23,22 @@ global proc userSetup()
 	menuItem -label "studio56 Rig tools" -c "studio56RigTools";
 	menuItem -label "poseDeformer" -c "poseDeformerUI";
 	menuItem -label "Advanced Skin" -sm true -tearOff true;
-		menuItem -l "vertex smooth weights" -c "advancedSkin(\"vertexSmooth\") ";
-		menuItem -l "copy skin (wrapping)" -c "advancedSkin(\"copySkin\") "; 
+	menuItem -l "vertex smooth weights" -c "advancedSkin(\"vertexSmooth\") ";
+	menuItem -l "copy skin (wrapping)" -c "advancedSkin(\"copySkin\") ";
 	setParent -menu..; 
-	
+	menuItem -l "deformer to skinCluster" -c "python("import smartDeformer; smartDeformer.show_window()");
 	menuItem -label "Hyper Real Mesh Parent" -c "hyperRealMeshParent";
 	menuItem -label "Create Controllers" -c "rig101wireControllers";
 	menuItem -divider true;
-menuItem -label "BlendshapeXtract" -c "extractBlendShape";
-menuItem -label "CorrectiveBlendshape" -c "icExtractDeltas";	
-	//menuItem -label "Selector:Utilities" -c "asUtilities";
+    menuItem -label "BlendshapeXtract" -c "extractBlendShape";
+    menuItem -label "CorrectiveBlendshape" -c "icExtractDeltas";
+	menuItem -label "Selector:Utilities" -c "asUtilities";
 	menuItem -label "Character Picker" -c "asSelectorbiped";
 	menuItem -label "Report DuplicateNodes" -c "reportDuplicateNodes";
 	menuItem -divider true;
 	menuItem -label "Rigging Cleaner" -c "riggingCleaner";
 	
-menuItem -label "Delete Empty Layers" -c "deleteEmptyLayers";
+    menuItem -label "Delete Empty Layers" -c "deleteEmptyLayers";
 
 	menuItem -label "Comments" -c "comments" ;
 
