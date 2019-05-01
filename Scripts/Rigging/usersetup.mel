@@ -26,7 +26,7 @@ global proc userSetup()
 	menuItem -l "vertex smooth weights" -c "advancedSkin(\"vertexSmooth\") ";
 	menuItem -l "copy skin (wrapping)" -c "advancedSkin(\"copySkin\") ";
 	setParent -menu..;
-	menuItem -l "deformer to skinCluster" -c python("import smartDeformer; smartDeformer.show_window()");
+	menuItem -l "deformer to skinCluster" -c "deform2skin";
 	menuItem -label "Hyper Real Mesh Parent" -c "hyperRealMeshParent";
 	menuItem -label "Create Controllers" -c "rig101wireControllers";
 	menuItem -divider true;
@@ -109,7 +109,12 @@ optionVar -iv incrementalSaveMaxBackups 10;
 source "cometMenu.mel";
 
 cgmToolbox();
-python ("import userSetup; reload(userSetup); userSetup.riggingMenu()");
+//python ("import userSetup; reload(userSetup); userSetup.riggingMenu()");
+
+global proc string deform2skin()
+{
+python("import smartDeformer; smartDeformer.show_window()");
+}
 
 
 
