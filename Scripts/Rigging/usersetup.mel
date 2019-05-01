@@ -1,9 +1,9 @@
 
-global proc usersetup()
+global proc userSetup()
 {
     	global string $gMainWindow;
 	setParent $gMainWindow;
-	menu -label "Rigging_TD" -parent $gMainWindow -tearOff on;
+	menu -label "Rigging_Mel" -parent $gMainWindow -tearOff on;
 	menuItem -label "Auto Save" -c "NPautoSaveOptions";
 	menuItem -label "Optimize and Save" -c "fileOptimisation";
 	menuItem -label "Remove Namespace"-c "removeNsPrefix;";
@@ -39,7 +39,7 @@ menuItem -label "Delete Empty Layers" -c "deleteEmptyLayers";
 
 	menuItem -label "Comments" -c "comments" ;
 }
-usersetup;
+userSetup;
 
 /* headsUpDisplay 
                -section          8
@@ -105,6 +105,8 @@ optionVar -iv incrementalSaveMaxBackups 10;
 source "cometMenu.mel";
 
 cgmToolbox();
+
+python ("import userSetup.riggingMenu()");
 
 
 
