@@ -68,7 +68,7 @@ def deleteSelected(*args):
 def assetCleanerRig(*args):
 	maya.mel.eval('assetCleanerRig')
 
-def userSetup():
+def riggingMenu():
 	gMainWindow=maya.mel.eval('string $temp=$gMainWindow')
 	showMyMenu=cmds.menu(parent=gMainWindow,tearOff=True,label='Rigging_Py')
 	cmds.menuItem(label = 'Auto Save',command=('autoSave()'))
@@ -99,5 +99,5 @@ def userSetup():
 	cmds.menuItem(label = 'Delete Selected',command=('deleteSelected()'))
 	cmds.menuItem(label = 'File Cleaner',command=('assetCleanerRig()'))
 
-mu.executeDeferred('userSetup()')
+mu.executeDeferred('riggingMenu()')
 
