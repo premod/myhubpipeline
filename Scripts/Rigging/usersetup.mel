@@ -107,7 +107,7 @@ source "cometMenu.mel";
 cgmToolbox();
 
 
-python ("import userSetup; reload(userSetup); userSetup.riggingMenu()");
+python ("import menuserSetup; reload(menuserSetup); menuserSetup.riggingMenu()");
 
 
 
