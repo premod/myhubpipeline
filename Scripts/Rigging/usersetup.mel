@@ -1,5 +1,5 @@
 
-global proc userSetup()
+global proc usersetup()
 {
     	global string $gMainWindow;
 	setParent $gMainWindow;
@@ -39,7 +39,7 @@ menuItem -label "Delete Empty Layers" -c "deleteEmptyLayers";
 
 	menuItem -label "Comments" -c "comments" ;
 }
-userSetup;
+usersetup;
 
 /* headsUpDisplay 
                -section          8
@@ -106,7 +106,9 @@ source "cometMenu.mel";
 
 cgmToolbox();
 
-python ("import userSetup");
+
+python ("import usersetup; reload usersetup; usersetup.riggingMenu()");
+
 
 
 
