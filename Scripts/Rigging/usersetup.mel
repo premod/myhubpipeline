@@ -111,7 +111,7 @@ source "cometMenu.mel";
 cgmToolbox();
 //python ("import userSetup; reload(userSetup); userSetup.riggingMenu()");
 
-global proc string deform2skin()
+global proc deform2skin()
 {
 python("import smartDeformer; smartDeformer.show_window()");
 }
