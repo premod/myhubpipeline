@@ -8,7 +8,7 @@ global proc welcomeWindow()
 	columnLayout -adj 1;
 	text -l "Hi";
 	text -l $getName -fn "boldLabelFont";
-	image  -image   "E:/Scripts/Animation/STUDIO56.jpg" -w 400 -h 140;
+	image  -image   "F:/website/logo/Final_Thinkgazer_logo/Thinkgazer_Webiste_Logo.png" -w 400 -h 140;
 	text -l "Welcome's U.";
 	showWindow;
 
