@@ -1,3 +1,4 @@
+"""
 import maya.cmds as cmds
 import maya.mel 
 import maya.utils as mu
@@ -101,3 +102,4 @@ def riggingMenu():
 
 mu.executeDeferred('riggingMenu()')
 
+"""
