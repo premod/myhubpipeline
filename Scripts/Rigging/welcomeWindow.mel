@@ -1,21 +1,21 @@
 global proc welcomeWindow()
 {
 	if ((`window -ex welcomeWin`)== true) deleteUI welcomeWin;
-	window -t "Thinkgazer.com" -wh 270 100 -s 0  welcomeWin;
+	window -t "Thinkgazer.com" -wh 270 50 -s 1  welcomeWin;
 	menuBarLayout ;
-		paneLayout;
+	paneLayout;
 	string $getName = `getenv USERNAME`;
 	columnLayout -adj 1;
 	text -l "Hi";
-	text -l $getName -fn "boldLabelFont";
-	image  -image   "F:/website/logo/Final_Thinkgazer_logo/Thinkgazer_Webiste_Logo.png" -w 254 -h 70;
-	text -l "Welcome's U.";
+	text  -l $getName -fn "boldLabelFont";
+	//text "";
+	image -image "F:/website/logo/Final_Thinkgazer_logo/Thinkgazer_Webiste_Logo.png";
+	//text "";
+	setParent;
+	text  -l "Welcome's You" -fn "boldLabelFont";
 	showWindow;
 
 }
 welcomeWindow;
 NPautoSaveOptions();
-
-
-
 
