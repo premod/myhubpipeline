@@ -3798,6 +3798,11 @@ setAttr -lock true "frzRt_middle4_jnt_grp.rz";
 setAttr -lock true "frzRt_ring4_jnt_grp.rz";
 
 
+setAttr "lt_armSwitches_ctrl.thumbCurlOffsetS2" 0.6;
+setAttr "lt_armSwitches_ctrl.thumbCurlOffsetS3" 1;
+setAttr "rt_armSwitches_ctrl.thumbCurlOffsetS2" 0.6;
+setAttr "rt_armSwitches_ctrl.thumbCurlOffsetS3" 1;
+
 print ("Completed : Finger D setup.\n");
 
 // free hip
