@@ -3788,17 +3788,22 @@ connectAttr -f rt_armSwitches_ctrl.fullCurl rt_thumbCurlAdjust_3_mdl.input1;
 connectAttr -f rt_armSwitches_ctrl.thumbCurlOffsetS3 rt_thumbCurlAdjust_3_mdl.input2;
 connectAttr -f rt_thumbCurlAdjust_3_mdl.output rt_thumb3_jnt_ctrl_rZ_adl.input1;
 
-	setAttr -lock true "frzRt_pinky4_jnt_grp.rz";
-    setAttr -lock true "frzLt_index4_jnt_grp.rz";
-    setAttr -lock true "frzLt_middle4_jnt_grp.rz";
-    setAttr -lock true "frzLt_ring4_jnt_grp.rz";
-    setAttr -lock true "frzLt_pinky4_jnt_grp.rz";
-    setAttr -lock true "frzRt_index4_jnt_grp.rz";
-    setAttr -lock true "frzRt_middle4_jnt_grp.rz";
-    setAttr -lock true "frzRt_ring4_jnt_grp.rz";
+setAttr -lock true "frzRt_pinky4_jnt_grp.rz";
+setAttr -lock true "frzLt_index4_jnt_grp.rz";
+setAttr -lock true "frzLt_middle4_jnt_grp.rz";
+setAttr -lock true "frzLt_ring4_jnt_grp.rz";
+setAttr -lock true "frzLt_pinky4_jnt_grp.rz";
+setAttr -lock true "frzRt_index4_jnt_grp.rz";
+setAttr -lock true "frzRt_middle4_jnt_grp.rz";
+setAttr -lock true "frzRt_ring4_jnt_grp.rz";
 
+
+print ("Completed : Finger D setup.\n");
 
 // free hip
+
+print ("Begins : Free Hip setup.\n");
+
 select -r spineHips_jnt ;
 source "wireShape.mel"; wireShape("circleX");
 rename nurbsCircle1 freeHip_ctrl;
@@ -3817,6 +3822,8 @@ setAttr -lock true -keyable false -channelBox false "freeHip_ctrl.sz";
 setAttr -lock true -keyable false -channelBox false "freeHip_ctrl.v";
 disconnectAttr makeNurbCircle2.outputCurve freeHip_ctrlShape.create;
 
+
+print ("Completed : Free Hip setup.\n");
 
 }
 global proc selJointSet()
