@@ -3323,7 +3323,7 @@ parent lt_Arm_Mid_CTRL lt_elbow_jnt ;
 //delete lt_UpperArm_E_HLP_parentConstraint2 lt_LowerArm_S_HLP_parentConstraint2;
 select -r lt_Arm_Mid_CTRL ;
 source "zeroOut.mel"; zeroOut("");
-rename Lt_Arm_Mid_CTRL_offset w;
+rename Lt_Arm_Mid_CTRL_offset lt_Elbow_Toony_grp;
 select -r lt_UpperArm_E_HLP lt_LowerArm_S_HLP ;
 source "zeroOut.mel"; zeroOut("");
 rename "lt_LowerArm_S_HLP" "lt_LowerArm_S_Toony";
