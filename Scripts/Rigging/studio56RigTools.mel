@@ -3824,6 +3824,7 @@ disconnectAttr makeNurbCircle2.outputCurve freeHip_ctrlShape.create;
 
 
 print ("Completed : Free Hip setup.\n");
+print ("Congrats, Completed the toony setup.\n");
 
 }
 global proc selJointSet()
