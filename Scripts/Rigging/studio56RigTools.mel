@@ -3250,7 +3250,7 @@ connectAttr -f lt_shoulder_jnt1.rotateOrder lt_shoulder_jnt_parentConstraint1.co
 connectAttr -f lt_shoulder_jnt1.segmentScaleCompensate lt_UpperArm_S_HLP_parentConstraint1.target[0].targetScaleCompensate;
 connectAttr -f lt_shoulder_jnt1.segmentScaleCompensate frzLt_lt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetScaleCompensate;
 
-print ("left hand part done.\n");
+print ("successfully completed : left hand part done.\n");
 
 
 select -r rt_shoulder_jnt_parentConstraint1 rt_shoulder_jnt_seg_1_joint rt_UpperArm_S_HLP ;
@@ -3271,42 +3271,48 @@ doCreatePointConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
 pointConstraint -offset 0 0 0 -weight 1;
 connectAttr -f rt_armSwitches_ctrl_IK_FK_Rev.outputX rt_shoulder_jnt1_pointConstraint1.rt_fk_rt_shoulder_jnt_ctrlW0;
 
+select -r rt_shoulder_jnt ;
+select -add rt_UpperArm_S_HLP ;
+doCreateParentConstraintArgList 1 { "1","0","0","0","0","1","1","1","1","","1" };
+parentConstraint -mo -skipRotate x -skipRotate y -skipRotate z -weight 1;
+
 connectAttr -f rt_shoulder_jnt_parentConstraint1.constraintRotateY rt_shoulder_jnt1.rotateY;
 connectAttr -f rt_shoulder_jnt_parentConstraint1.constraintRotateZ rt_shoulder_jnt1.rotateZ;
 connectAttr -f unitConversion47.output rt_shoulder_jnt1.rotateX;
 connectAttr -f rt_shoulder_jnt1.inverseScale frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetInverseScale;
-connectAttr -f rt_shoulder_jnt1.inverseScale rt_UpperArm_S_HLP_parentConstraint2.target[0].targetInverseScale;
+connectAttr -f rt_shoulder_jnt1.inverseScale rt_UpperArm_S_HLP_parentConstraint1.target[0].targetInverseScale;
 connectAttr -f rt_shoulder_jnt1.scalePower rt_shoulder_jnt_frameCache.stream;
 connectAttr -f rt_shoulder_jnt1.scalePower rt_shoulder_jnt_seg_2_joint_frameCache.stream;
 connectAttr -f rt_shoulder_jnt1.scalePower rt_shoulder_jnt_seg_1_joint_frameCache.stream;
 connectAttr -f rt_shoulder_jnt1.rotatePivotTranslate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotateTranslate;
-connectAttr -f rt_shoulder_jnt1.rotatePivotTranslate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotateTranslate;
+connectAttr -f rt_shoulder_jnt1.rotatePivotTranslate rt_UpperArm_S_HLP_parentConstraint1.target[0].targetRotateTranslate;
 connectAttr -f rt_shoulder_jnt1.rotatePivotTranslate rt_shoulder_jnt_parentConstraint1.constraintRotateTranslate;
 connectAttr -f rt_shoulder_jnt1.rotatePivot frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotatePivot;
-connectAttr -f rt_shoulder_jnt1.rotatePivot rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotatePivot;
+connectAttr -f rt_shoulder_jnt1.rotatePivot rt_UpperArm_S_HLP_parentConstraint1.target[0].targetRotatePivot;
 connectAttr -f rt_shoulder_jnt1.rotatePivot rt_shoulder_jnt_parentConstraint1.constraintRotatePivot;
 connectAttr -f rt_shoulder_jnt1.pow rt_rt_shoulder_jnt_revPowOutput_md.input2X;
 connectAttr -f rt_shoulder_jnt1.parentInverseMatrix[0] rt_shoulder_jnt_parentConstraint1.constraintParentInverseMatrix;
 connectAttr -f rt_shoulder_jnt1.parentMatrix[0] frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetParentMatrix;
-connectAttr -f rt_shoulder_jnt1.parentMatrix[0] rt_UpperArm_S_HLP_parentConstraint2.target[0].targetParentMatrix;
+connectAttr -f rt_shoulder_jnt1.parentMatrix[0] rt_UpperArm_S_HLP_parentConstraint1.target[0].targetParentMatrix;
 connectAttr -f rt_shoulder_jnt1.jointOrient frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetJointOrient;
-connectAttr -f rt_shoulder_jnt1.jointOrient rt_UpperArm_S_HLP_parentConstraint2.target[0].targetJointOrient;
+connectAttr -f rt_shoulder_jnt1.jointOrient rt_UpperArm_S_HLP_parentConstraint1.target[0].targetJointOrient;
 connectAttr -f rt_shoulder_jnt1.jointOrient rt_shoulder_jnt_parentConstraint1.constraintJointOrient;
 connectAttr -f rt_shoulder_jnt1.scale frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetScale;
-connectAttr -f rt_shoulder_jnt1.scale rt_UpperArm_S_HLP_parentConstraint2.target[0].targetScale;
+connectAttr -f rt_shoulder_jnt1.scale rt_UpperArm_S_HLP_parentConstraint1.target[0].targetScale;
 connectAttr -f rt_shoulder_jnt1.scaleX rt_rt_shoulder_jnt_revPowInput_md.input1X;
 connectAttr -f rt_shoulder_jnt1.rotate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotate;
-connectAttr -f rt_shoulder_jnt1.rotate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotate;
+connectAttr -f rt_shoulder_jnt1.rotate rt_UpperArm_S_HLP_parentConstraint1.target[0].targetRotate;
 connectAttr -f rt_shoulder_jnt1.translate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetTranslate;
-connectAttr -f rt_shoulder_jnt1.translate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetTranslate;
+connectAttr -f rt_shoulder_jnt1.translate rt_UpperArm_S_HLP_parentConstraint1.target[0].targetTranslate;
 connectAttr -f rt_shoulder_jnt1.instObjGroups[0] SkinJoints_set.dagSetMembers[15];
 connectAttr -f rt_shoulder_jnt1.rotateOrder frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetRotateOrder;
-connectAttr -f rt_shoulder_jnt1.rotateOrder rt_UpperArm_S_HLP_parentConstraint2.target[0].targetRotateOrder;
+connectAttr -f rt_shoulder_jnt1.rotateOrder rt_UpperArm_S_HLP_parentConstraint1.target[0].targetRotateOrder;
 connectAttr -f rt_shoulder_jnt1.rotateOrder rt_shoulder_jnt_parentConstraint1.constraintRotateOrder;
-connectAttr -f rt_shoulder_jnt1.segmentScaleCompensate rt_UpperArm_S_HLP_parentConstraint2.target[0].targetScaleCompensate;
+connectAttr -f rt_shoulder_jnt1.segmentScaleCompensate rt_UpperArm_S_HLP_parentConstraint1.target[0].targetScaleCompensate;
 connectAttr -f rt_shoulder_jnt1.segmentScaleCompensate frzRt_rt_shoulder_jnt_twist_grp_parentConstraint1.target[0].targetScaleCompensate;
 
 
+print ("successfully completed : right hand part done.\n");
 
 select -r lt_UpperArm_E_HLP ;
 source "wireShape.mel"; wireShape("sphere");
