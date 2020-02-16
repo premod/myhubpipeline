@@ -3504,7 +3504,7 @@ orientConstraint -offset 0 0 0 -weight 1;
 delete lt_Elbow_Toony_grp_orientConstraint1 ;
 parent lt_Arm_Elbow_Toony lt_Elbow_Toony_grp;
 select -r lt_Arm_Elbow_Toony;
-source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 15;
+source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 18;
 
 
 setAttr "rt_Arm_Elbow_Toony.overrideEnabled" 1;
@@ -3522,7 +3522,7 @@ orientConstraint -offset 0 0 0 -weight 1;
 delete rt_Elbow_Toony_grp_orientConstraint1 ;
 parent rt_Arm_Elbow_Toony rt_Elbow_Toony_grp;
 select -r rt_Arm_Elbow_Toony;
-source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 15;
+source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 18;
 
 
 
@@ -3541,7 +3541,7 @@ orientConstraint -offset 0 0 0 -weight 1;
 delete rt_Knee_Toony_grp_orientConstraint1 ;
 parent rt_Leg_Elbow_Toony rt_Knee_Toony_grp;
 select -r rt_Leg_Elbow_Toony;
-source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 15;
+source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 18;
 
 
 setAttr "lt_Leg_Elbow_Toony.overrideEnabled" 1;
@@ -3559,7 +3559,7 @@ orientConstraint -offset 0 0 0 -weight 1;
 delete lt_Knee_Toony_grp_orientConstraint1 ;
 parent lt_Leg_Elbow_Toony lt_Knee_Toony_grp;
 select -r lt_Leg_Elbow_Toony;
-source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 15;
+source "cr_curveUtil.mel"; cr_curveUtil(); cr_updateColorSlider 18;
 
 print ("Completed : Toony Controls features.\n");
 
