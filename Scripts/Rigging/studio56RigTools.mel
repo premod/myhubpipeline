@@ -1364,6 +1364,7 @@ global proc toony()
 	select -r ($name + "_control") ;
 	select -tgl ($name + "_driverend") ;
 	doCreateParentConstraintArgList 1 { "1","0","0","0","1","1","1","1","","1" };
+	parentConstraint -mo -weight 1;
 	float $scalevalue = `getAttr ($name + "_driverend.translateX")`;
 	setAttr ($name + "_StretchFactor_MulDIV.input2X") $scalevalue;
 	connectAttr -f ($name + "_driverend.translateX") ($name + "_StretchFactor_MulDIV.input1X");
