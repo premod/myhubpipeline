@@ -1965,9 +1965,9 @@ global proc VisControlAdd()
 
 	string $contrl[] = `textCurves  -ch 0 -f "Times New Roman|h-13|w400|c0" -t "V"`;
 	CenterPivot;
-	rename  Text_V_1|Char_V_1|curve10 "Visibility";
-	parent -world Visibility ;
-	delete Text_V_1;
+	rename  Text_V_1 "Visibility";
+	//parent -world Visibility ;
+	//delete Text_V_1;
 
 	setAttr -lock true -keyable false -channelBox false "Visibility.tx";
 	setAttr -lock true -keyable false -channelBox false "Visibility.ty";
