@@ -1,0 +1,17 @@
+select -r centipede_animPath;
+arclen -ch 1;
+
+
+connectAttr -f curveInfo1.arcLength MD.input2X;
+select -r chest_ctrl;
+source "zeroOut.mel"; zeroOut("");
+addAttr -ln "travel_position"  -at double  -dv 0 Chest_ctrl_offset;
+setAttr -e-keyable true Chest_ctrl_offset.travel_position;
+addAttr -ln "control_distance"  -at double  -dv 0 Chest_ctrl_offset;
+setAttr -e-keyable true Chest_ctrl_offset.control_distance;
+
+string $sel[] = `ls -sl `;
+for ($i = 0; $i<= size($sel); $i++)
+{
+createNode multiplyDivide -n ("MD" +$i);
+}

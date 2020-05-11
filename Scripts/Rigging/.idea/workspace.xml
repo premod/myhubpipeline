@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="29d09ecc-e1c6-47c1-b877-7c73d391c1bf" name="Default Changelist" comment="updated the smart deformer (deformer to skinCluster)">
-      <change beforePath="$PROJECT_DIR$/../Rigging.bat" beforeDir="false" afterPath="$PROJECT_DIR$/../Rigging.bat" afterDir="false" />
+    <list default="true" id="29d09ecc-e1c6-47c1-b877-7c73d391c1bf" name="Default Changelist" comment="updated the with //">
+      <change afterPath="$PROJECT_DIR$/snakeMotionPath.mel" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/welcomeWindow.mel" beforeDir="false" afterPath="$PROJECT_DIR$/welcomeWindow.mel" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -13,23 +12,10 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/userSetup.mel">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="588">
-              <caret line="109" selection-start-line="109" selection-end-line="109" />
-            </state>
-          </provider>
-        </entry>
-      </file>
+    <leaf>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/welcomeWindow.mel">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="294">
-              <caret line="14" column="1" lean-forward="true" selection-start-line="14" selection-start-column="1" selection-end-line="14" selection-end-column="1" />
-            </state>
-          </provider>
+        <entry file="file://$PROJECT_DIR$/hyperRealMeshParent.MEL">
+          <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
     </leaf>
@@ -37,27 +23,34 @@
   <component name="FindInProjectRecents">
     <findStrings>
       <find>toolboxWindo</find>
+      <find>snake</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="premod" />
+      </list>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/studio56RigTools.mel" />
         <option value="$PROJECT_DIR$/usersetup.mel" />
-        <option value="$PROJECT_DIR$/userSetup.py" />
         <option value="$PROJECT_DIR$/userSetup.mel" />
         <option value="$PROJECT_DIR$/welcomeWindow.mel" />
+        <option value="$PROJECT_DIR$/userSetup.py" />
+        <option value="$PROJECT_DIR$/snakeMotionPath.mel" />
+        <option value="$PROJECT_DIR$/studio56RigTools.mel" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="5" />
-    <option name="y" value="-15" />
-    <option name="width" value="1680" />
-    <option name="height" value="1080" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="80" />
+    <option name="y" value="20" />
+    <option name="width" value="1730" />
+    <option name="height" value="870" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
@@ -67,7 +60,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -79,6 +71,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -304,14 +297,133 @@
       <option name="project" value="LOCAL" />
       <updated>1556946500338</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="updated">
+      <created>1556946680241</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1556946680241</updated>
+    </task>
+    <task id="LOCAL-00030" summary="updated">
+      <created>1556947684769</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1556947684769</updated>
+    </task>
+    <task id="LOCAL-00031" summary="commented, not for use now">
+      <created>1556948065078</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1556948065078</updated>
+    </task>
+    <task id="LOCAL-00032" summary="updated the left hand shoulder part">
+      <created>1581818500931</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1581818500931</updated>
+    </task>
+    <task id="LOCAL-00033" summary="updated the right hand shoulder part">
+      <created>1581818864892</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1581818864892</updated>
+    </task>
+    <task id="LOCAL-00034" summary="updated the with //">
+      <created>1581819412651</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1581819412651</updated>
+    </task>
+    <task id="LOCAL-00035" summary="updated the with //Printing the finished commands">
+      <created>1581820106403</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1581820106403</updated>
+    </task>
+    <task id="LOCAL-00036" summary="updated the with //Printing the Completed successfully the toony rig">
+      <created>1581826993092</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1581826993092</updated>
+    </task>
+    <task id="LOCAL-00037" summary="updated the with //toony mid controls orientation">
+      <created>1581829711681</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1581829711681</updated>
+    </task>
+    <task id="LOCAL-00038" summary="Revert &quot;updated the with //Printing the Completed successfully the toony rig&quot;&#10;&#10;This reverts commit 333aa30d">
+      <created>1581830232974</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1581830232974</updated>
+    </task>
+    <task id="LOCAL-00039" summary="updated the with //Toony mid control orientation&quot;">
+      <created>1581830594977</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1581830594977</updated>
+    </task>
+    <task id="LOCAL-00040" summary="updated the with //bugs fixed_001">
+      <created>1581835965601</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1581835965601</updated>
+    </task>
+    <task id="LOCAL-00041" summary="updated the with //bugs fixed_001">
+      <created>1581836033571</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1581836033571</updated>
+    </task>
+    <task id="LOCAL-00042" summary="updated the with // the toony curve color">
+      <created>1581836289360</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1581836289360</updated>
+    </task>
+    <task id="LOCAL-00043" summary="updated the with //thumb curl offset values">
+      <created>1581845035806</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1581845035806</updated>
+    </task>
+    <task id="LOCAL-00044" summary="updated the with //Visibility control">
+      <created>1581911763036</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1581911763036</updated>
+    </task>
+    <task id="LOCAL-00045" summary="updated the with //the toony head part">
+      <created>1581956918301</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1581956918301</updated>
+    </task>
+    <option name="localTasksCounter" value="46" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-7" y="-7" width="1550" height="878" extended-state="6" />
+    <frame x="64" y="16" width="1384" height="696" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.30601454" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.17371938" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -321,14 +433,24 @@
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Version Control" order="7" weight="0.3297587" />
-      <window_info anchor="bottom" id="Terminal" order="8" />
+      <window_info anchor="bottom" id="Version Control" order="7" weight="0.3285968" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.329235" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" weight="0.32947975" />
       <window_info anchor="bottom" id="Python Console" order="10" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
     </layout>
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ORDER">
+      <list>
+        <option value="0" />
+        <option value="2" />
+        <option value="3" />
+        <option value="1" />
+      </list>
+    </option>
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -371,8 +493,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="updated the creature rig setup script" />
-    <MESSAGE value="updated the creature rig setup script&#10;and updated the toony setup for creature setup rigs" />
     <MESSAGE value="updated the wrist setup" />
     <MESSAGE value="updated the wrist setup finger part naming issue" />
     <MESSAGE value="updated the wrist point constraint issue on wrists" />
@@ -383,7 +503,22 @@
     <MESSAGE value="updated final" />
     <MESSAGE value="removed the deformer to skin" />
     <MESSAGE value="udpated the path of image" />
-    <option name="LAST_COMMIT_MESSAGE" value="udpated the path of image" />
+    <MESSAGE value="updated" />
+    <MESSAGE value="commented, not for use now" />
+    <MESSAGE value="updated the left hand shoulder part" />
+    <MESSAGE value="updated the right hand shoulder part" />
+    <MESSAGE value="updated the with //" />
+    <MESSAGE value="updated the with //Printing the finished commands" />
+    <MESSAGE value="updated the with //Printing the Completed successfully the toony rig" />
+    <MESSAGE value="updated the with //toony mid controls orientation" />
+    <MESSAGE value="Revert &quot;updated the with //Printing the Completed successfully the toony rig&quot;&#10;&#10;This reverts commit 333aa30d" />
+    <MESSAGE value="updated the with //Toony mid control orientation&quot;" />
+    <MESSAGE value="updated the with //bugs fixed_001" />
+    <MESSAGE value="updated the with // the toony curve color" />
+    <MESSAGE value="updated the with //thumb curl offset values" />
+    <MESSAGE value="updated the with //Visibility control" />
+    <MESSAGE value="updated the with //the toony head part" />
+    <option name="LAST_COMMIT_MESSAGE" value="updated the with //the toony head part" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/rr_sub_double_group.py">
@@ -417,22 +552,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/usrSetup.py" />
     <entry file="file://$PROJECT_DIR$/menuserSetup.py" />
-    <entry file="file://$USER_HOME$/Documents/maya/2015-x64/scripts/userSetup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#24#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/userSetup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="357">
-          <caret line="88" column="74" lean-forward="true" selection-start-line="88" selection-start-column="74" selection-end-line="88" selection-end-column="74" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$USER_HOME$/Documents/maya/2015-x64/scripts/userSetup.py" />
     <entry file="file://$PROJECT_DIR$/smartDeformer/call.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="21">
@@ -440,26 +560,96 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/studio56RigTools.mel">
+    <entry file="file://$PROJECT_DIR$/welcomeWindow.mel">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="679">
-          <caret line="3576" column="43" selection-start-line="3576" selection-start-column="43" selection-end-line="3576" selection-end-column="43" />
+        <state relative-caret-position="441">
+          <caret line="21" selection-start-line="21" selection-end-line="21" />
         </state>
       </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rr_main_curves.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="336">
+          <caret line="16" column="32" selection-start-line="16" selection-start-column="32" selection-end-line="16" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rr_sub_curve_creation.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="3" selection-start-column="3" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/userSetup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="656">
+          <caret line="104" column="3" selection-start-line="104" selection-start-column="3" selection-end-line="104" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://D:/Rigging_TD/Backup/RND/MEL/backup studio56RigTools/studio56RigTools.mel">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://D:/Rigging_TD/Backup/RND/MEL/studio56RigTools.mel">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7959">
+          <caret line="379" column="58" selection-start-line="379" selection-start-column="58" selection-end-line="379" selection-end-column="58" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://D:/Rigging_TD/Backup/Scripts/Rigging/studio56RigTools.mel">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$USER_HOME$/AppData/Local/Packages/Microsoft.MicrosoftEdge_8wekyb3d8bbwe/TempState/Downloads/studio56RigTools.mel" />
+    <entry file="file://$USER_HOME$/AppData/Local/Packages/Microsoft.MicrosoftEdge_8wekyb3d8bbwe/TempState/Downloads/easyDynamicRigSetup.mel" />
+    <entry file="file://$USER_HOME$/AppData/Local/Packages/Microsoft.MicrosoftEdge_8wekyb3d8bbwe/TempState/Downloads/studio56RigTools (1).mel" />
+    <entry file="file://$USER_HOME$/Documents/maya/2015-x64/scripts/libString.mel">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="378">
+          <caret line="18" column="20" selection-end-line="355" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/backup/studio56RigTools.mel">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/easyDynamicRigSetup.mel">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-126" />
+      </provider>
+    </entry>
+    <entry file="file://D:/Rigging_TD/Backup/RND/MEL/backup easy dynamic Rig setup/easyDynamicRigSetup.mel">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-189" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/snakeMotionPath.mel">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="336">
+          <caret line="16" column="1" selection-start-line="16" selection-start-column="1" selection-end-line="16" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/studio56RigTools.mel">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="1364" column="40" selection-start-line="1364" selection-start-column="40" selection-end-line="1364" selection-end-column="40" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/backup/cometMenu.mel">
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/userSetup.mel">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="588">
-          <caret line="109" selection-start-line="109" selection-end-line="109" />
+        <state relative-caret-position="21">
+          <caret line="7" column="63" selection-start-line="7" selection-start-column="63" selection-end-line="7" selection-end-column="63" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/welcomeWindow.mel">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="294">
-          <caret line="14" column="1" lean-forward="true" selection-start-line="14" selection-start-column="1" selection-end-line="14" selection-end-column="1" />
-        </state>
-      </provider>
+    <entry file="file://$PROJECT_DIR$/hyperRealMeshParent.MEL">
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
   </component>
 </project>

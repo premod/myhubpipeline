@@ -1,0 +1,1 @@
+MAYA_PLUG_IN_PATH=D:\Pipeline_TD_tools\myhubpipeline\pipelineplugins;
